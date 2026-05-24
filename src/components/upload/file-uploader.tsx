@@ -122,14 +122,15 @@ export function FileUploader() {
 
   const handleFile = useCallback(
     async (file: File) => {
+      console.log("[upload] handleFile called:", file.name, file.size);
       setError(null);
       setWarnings([]);
       setIsParsing(true);
       setPipelineState("processing" as never);
-      // Keep it at "processing" and then back to idle after parsing
 
       try {
         const format = detectFormat(file.name);
+        console.log("[upload] detected format:", format);
         let result: ParseResult;
 
         switch (format) {
@@ -144,7 +145,9 @@ export function FileUploader() {
             break;
         }
 
+        console.log("[upload] parsed:", result.data.rowCount, "rows ×", result.data.colCount, "cols, calling setRawData...");
         setRawData(result.data);
+        console.log("[upload] setRawData called");
         setWarnings(result.warnings);
         setPipelineState("idle" as never);
       } catch (err) {
