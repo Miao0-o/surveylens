@@ -244,9 +244,9 @@ function computeConfidence(results: AnalysisResults, flags: ValidationFlag[]): C
   else if (alpha >= 0.60) relScore = 0.50;
   else relScore = 0.25;
 
-  // Penalty for negative item-total correlations
+  // Penalty for negative item-total correlations (capped)
   const negItems = Object.values(reliability.itemTotalCorrelation).filter((v) => v < 0).length;
-  relScore -= negItems * 0.1;
+  relScore = Math.max(0, relScore - Math.min(negItems, 5) * 0.05);
   const reliabilityScore = clamp(relScore, 0, 1);
 
   // Validity score
@@ -272,8 +272,9 @@ function computeConfidence(results: AnalysisResults, flags: ValidationFlag[]): C
   }
   const totalVar = efa.varianceExplained.reduce((a, b) => a + b, 0);
   if (totalVar < 0.40) stabScore -= 0.15;
-  const errorCount = flags.filter((f) => f.type === "error").length;
-  stabScore -= errorCount * 0.1;
+  // Only count stability/EFA-related errors
+  const stabErrors = flags.filter((f) => f.type === "error" && (f.source === "stability" || f.source === "efa")).length;
+  stabScore -= stabErrors * 0.05;
   const factorStabilityScore = clamp(stabScore, 0, 1);
 
   // Overall: weighted average
