@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppStore } from "@/lib/store";
+import { classifyDataset } from "@/lib/stats/data-classifier";
 import { useMemo } from "react";
 import type { ColumnInfo } from "@/types";
 
@@ -73,9 +74,11 @@ export function DataPreview() {
   const columns = useMemo(() => {
     if (!rawData) return [];
     const cols = profileColumns(rawData.headers, rawData.rows);
-    // Side-effect: update store (ok in useMemo for derived state sync)
     setColumns(cols);
     setLikertColumns(cols.filter((c) => c.type === "likert").map((c) => c.name));
+    // Run data classification
+    const classResult = classifyDataset(cols, rawData);
+    useAppStore.getState().setClassification(classResult);
     return cols;
   }, [rawData, setColumns, setLikertColumns]);
 

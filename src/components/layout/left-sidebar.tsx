@@ -7,6 +7,7 @@ import { ResearchInfo } from "@/components/upload/research-info";
 import { MissingHandler } from "@/components/preprocessing/missing-handler";
 import { ReverseDetector } from "@/components/preprocessing/reverse-detector";
 import { DimensionManager } from "@/components/preprocessing/dimension-manager";
+import type { ClassificationResult } from "@/lib/stats/data-classifier";
 import {
   Upload,
   Wrench,
@@ -26,7 +27,7 @@ const STEPS: { id: LeftStep; label: string; icon: typeof Upload }[] = [
 export function LeftSidebar() {
   const pipelineState = useAppStore((s) => s.pipelineState);
   const hasData = useAppStore((s) => s.rawData !== null);
-  const hasLikert = useAppStore((s) => s.likertColumns.length > 0);
+  const classification = useAppStore((s) => s.classification);
   const [activeStep, setActiveStep] = useState<LeftStep>("upload");
 
   return (
@@ -87,15 +88,7 @@ export function LeftSidebar() {
       {/* Bottom actions */}
       <div className="space-y-2 shrink-0">
         <hr className="border-border" />
-        {hasData && !hasLikert && (
-          <div className="px-3 py-2 rounded-lg bg-amber-50 border border-amber-100">
-            <p className="text-xs text-amber-600 text-center">
-              未检测到 Likert 题项（需 2-7 级数值列）。
-              <br />
-              请确认数据中包含量表题项。
-            </p>
-          </div>
-        )}
+        {hasData && <DataClassificationWarnings />}
         <PipelineControl />
         <p className="text-xs text-muted-foreground text-center">
           {!hasData
@@ -109,6 +102,38 @@ export function LeftSidebar() {
                   : "就绪，点击开始分析"}
         </p>
       </div>
+    </div>
+  );
+}
+
+function DataClassificationWarnings() {
+  const classification = useAppStore((s) => s.classification);
+  if (!classification || classification.warnings.length === 0) return null;
+
+  const isMetadataOnly = classification.datasetType === "metadata_only";
+  const isInsufficient = classification.datasetType === "insufficient";
+
+  return (
+    <div className="space-y-1.5">
+      {classification.warnings.map((w, i) => (
+        <div
+          key={i}
+          className={`px-3 py-2 rounded-lg border text-xs ${
+            isMetadataOnly || isInsufficient
+              ? "bg-red-50 border-red-100 text-red-600"
+              : "bg-amber-50 border-amber-100 text-amber-600"
+          }`}
+        >
+          {w}
+        </div>
+      ))}
+      {classification.metadataColumns.length > 0 && classification.itemColumns.length > 0 && (
+        <p className="text-[10px] text-muted-foreground px-1">
+          已自动排除 {classification.metadataColumns.length} 个非量表列：
+          {classification.metadataColumns.slice(0, 3).join(", ")}
+          {classification.metadataColumns.length > 3 ? " ..." : ""}
+        </p>
+      )}
     </div>
   );
 }

@@ -3,6 +3,8 @@
 // schemaVersion: 1.0.0
 // ============================================================
 
+import type { ClassificationResult } from "@/lib/stats/data-classifier";
+
 // ---- Pipeline State (coarse) ----
 export type PipelineState =
   | "idle"
@@ -233,6 +235,7 @@ export interface AppState {
   // Data
   rawData: ParsedData | null;
   columns: ColumnInfo[];
+  classification: ClassificationResult | null;
   likertColumns: string[];
   reverseItemWarnings: ReverseItemWarning[];
   dimensions: DimensionGroup[];

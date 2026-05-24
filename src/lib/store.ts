@@ -23,6 +23,7 @@ import type {
   ValidationReport,
   MissingStrategy,
 } from "@/types";
+import type { ClassificationResult } from "@/lib/stats/data-classifier";
 
 const AI_KEY_STORAGE = "ai-reliability-key";
 const AI_RESULTS_CACHE = "ai-reliability-cache";
@@ -63,6 +64,7 @@ interface AppActions {
   // Data
   setRawData: (data: ParsedData) => void;
   setColumns: (columns: ColumnInfo[]) => void;
+  setClassification: (result: ClassificationResult) => void;
   setLikertColumns: (cols: string[]) => void;
   setReverseItemWarnings: (warnings: ReverseItemWarning[]) => void;
   setDimensions: (dims: DimensionGroup[]) => void;
@@ -109,6 +111,7 @@ const initialMissingStrategy: MissingStrategy = {
 const initialState: AppState = {
   rawData: null,
   columns: [],
+  classification: null,
   likertColumns: [],
   reverseItemWarnings: [],
   dimensions: [],
@@ -143,6 +146,7 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
     set({ rawData: data, pipelineStep: "upload", analysisStage: "uploading", error: null }),
 
   setColumns: (columns) => set({ columns }),
+  setClassification: (classification) => set({ classification }),
   setLikertColumns: (cols) => set({ likertColumns: cols }),
   setReverseItemWarnings: (warnings) => set({ reverseItemWarnings: warnings }),
   setDimensions: (dims) => set({ dimensions: dims }),
