@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useAppStore } from "@/lib/store";
-import type { AnalysisResults } from "@/types";
-import { CheckCircle2, AlertTriangle, XCircle, Shield } from "lucide-react";
+import type { AnalysisResults, ValidationFlag } from "@/types";
+import { CheckCircle2, AlertTriangle, XCircle, Shield, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Props {
   results: AnalysisResults;
@@ -205,15 +206,9 @@ export function OverviewDashboard({ results }: Props) {
               </div>
             ))}
           </div>
-          {/* Validation flags summary */}
+          {/* Validation flags summary — expandable */}
           {validationReport.flags.length > 0 && (
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-              <span className="text-amber-500">{validationReport.flags.filter(f => f.type === "error").length} 个错误</span>
-              <span>·</span>
-              <span className="text-amber-400">{validationReport.flags.filter(f => f.type === "warning").length} 个警告</span>
-              <span>·</span>
-              <span>{validationReport.flags.filter(f => f.type === "info").length} 个提示</span>
-            </div>
+            <ValidationFlagsList flags={validationReport.flags} />
           )}
         </div>
       )}
@@ -261,3 +256,58 @@ export function OverviewDashboard({ results }: Props) {
     </div>
   );
 }
+
+function ValidationFlagsList({ flags }: { flags: ValidationFlag[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const errors = flags.filter((f) => f.type === "error");
+  const warnings = flags.filter((f) => f.type === "warning");
+  const infos = flags.filter((f) => f.type === "info");
+
+  const typeConfig = {
+    error: { dot: "bg-red-400", text: "text-red-600", bg: "bg-red-50/50", border: "border-red-100", label: "错误" },
+    warning: { dot: "bg-amber-400", text: "text-amber-600", bg: "bg-amber-50/50", border: "border-amber-100", label: "警告" },
+    info: { dot: "bg-blue-400", text: "text-blue-600", bg: "bg-blue-50/50", border: "border-blue-100", label: "提示" },
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          {errors.length > 0 && <span className="text-red-500">{errors.length} 错误</span>}
+          {warnings.length > 0 && <span className="text-amber-500">{warnings.length} 警告</span>}
+          {infos.length > 0 && <span>{infos.length} 提示</span>}
+        </div>
+        {expanded ? (
+          <ChevronUp className="w-3 h-3" strokeWidth={1.5} />
+        ) : (
+          <ChevronDown className="w-3 h-3" strokeWidth={1.5} />
+        )}
+      </button>
+
+      {expanded && (
+        <div className="max-h-[200px] overflow-y-auto space-y-1">
+          {[...errors, ...warnings, ...infos].map((flag, i) => {
+            const config = typeConfig[flag.type];
+            return (
+              <div
+                key={i}
+                className={`flex items-start gap-1.5 px-2 py-1.5 rounded text-[10px] ${config.bg} border ${config.border}`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${config.dot} shrink-0 mt-1`} />
+                <div className="min-w-0">
+                  <span className={`font-medium ${config.text}`}>[{flag.code}]</span>{" "}
+                  <span className="text-foreground/80">{flag.message}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
