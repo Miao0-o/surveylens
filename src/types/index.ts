@@ -3,7 +3,7 @@
 // schemaVersion: 1.0.0
 // ============================================================
 
-// ---- Pipeline State ----
+// ---- Pipeline State (coarse) ----
 export type PipelineState =
   | "idle"
   | "processing"
@@ -18,6 +18,59 @@ export type PipelineStep =
   | "stability"
   | "ai"
   | "export";
+
+// ---- Analysis Stage (fine-grained for progress UI) ----
+export type AnalysisStage =
+  | "idle"
+  | "uploading"
+  | "parsing"
+  | "cleaning"
+  | "grouping"
+  | "reliability"
+  | "validity"
+  | "efa"
+  | "stability"
+  | "ai"
+  | "completed"
+  | "error";
+
+export const STAGE_LABELS: Record<AnalysisStage, string> = {
+  idle: "",
+  uploading: "正在读取文件...",
+  parsing: "正在解析数据...",
+  cleaning: "正在检测缺失值与反向题...",
+  grouping: "正在构建维度分组...",
+  reliability: "正在计算 Cronbach's α...",
+  validity: "正在进行 Bartlett 球形检验...",
+  efa: "正在生成因子结构...",
+  stability: "正在进行 Bootstrap 稳定性评估...",
+  ai: "AI 正在生成解读...",
+  completed: "分析完成",
+  error: "分析出错",
+};
+
+// ---- AI Connection Mode ----
+export type AIMode = "none" | "configured" | "connected" | "offline";
+
+// ---- AI Streaming Stage ----
+export type AIStreamingStage =
+  | "idle"
+  | "interpreting_reliability"
+  | "interpreting_validity"
+  | "diagnosing"
+  | "generating_apa"
+  | "done"
+  | "error";
+
+export const AI_STREAM_LABELS: Record<AIStreamingStage, string> = {
+  idle: "",
+  interpreting_reliability: "正在分析信度结果...",
+  interpreting_validity: "正在解读效度指标...",
+  diagnosing: "正在生成诊断建议...",
+  generating_apa: "正在生成 APA 结果...",
+  done: "AI 解读完成",
+  error: "AI 解读出错",
+};
 
 // ---- Upload ----
 export interface ParsedData {
@@ -48,7 +101,7 @@ export interface ReverseItemWarning {
 
 export interface MissingStrategy {
   method: "listwise" | "mean_imputation";
-  threshold: number; // max fraction of missing per row/col
+  threshold: number;
 }
 
 // ---- Dimension / Grouping ----
@@ -86,9 +139,9 @@ export interface ValidityResult {
 
 export interface EFAResult {
   eigenvalues: number[];
-  loadings: number[][]; // items × factors
+  loadings: number[][];
   communalities: number[];
-  varianceExplained: number[]; // per factor
+  varianceExplained: number[];
   rotation: "varimax" | "oblimin";
   suggestedFactors: number;
   itemLabels: string[];
@@ -146,6 +199,8 @@ export interface AIResults {
     reverseItemRisks: string[];
   };
   apaResult: string;
+  /** Cache key to avoid re-running on same results */
+  cachedAt?: number;
 }
 
 // ---- App State ----
@@ -164,8 +219,14 @@ export interface AppState {
   // Pipeline
   pipelineState: PipelineState;
   pipelineStep: PipelineStep;
-  progress: number; // 0-100
+  analysisStage: AnalysisStage;
+  progress: number;
   error: string | null;
+
+  // AI
+  aiMode: AIMode;
+  aiStreamingStage: AIStreamingStage;
+  aiError: string | null;
 
   // Results
   results: AnalysisResults | null;

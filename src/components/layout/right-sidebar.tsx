@@ -1,69 +1,36 @@
 "use client";
 
+import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { useAI } from "@/hooks/use-ai";
-import { Sparkles, Key, Eye, Copy, CheckCircle2, AlertTriangle, Info, Loader2, Zap } from "lucide-react";
-import { useState } from "react";
-
-function APIKeyInput() {
-  const apiKey = useAppStore((s) => s.apiKey);
-  const setApiKey = useAppStore((s) => s.setApiKey);
-  const [show, setShow] = useState(false);
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-1.5">
-        <Key className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
-        <label className="text-sm font-medium text-foreground">Claude API Key</label>
-      </div>
-      <div className="relative">
-        <input
-          type={show ? "text" : "password"}
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-          placeholder="sk-ant-api-..."
-          className="w-full rounded-lg border border-border bg-background px-3 py-2.5 pr-8 text-sm text-foreground placeholder:text-muted-foreground/40
-            focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring transition-colors font-mono"
-        />
-        <button
-          onClick={() => setShow(!show)}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Eye className="w-3.5 h-3.5" strokeWidth={1.5} />
-        </button>
-      </div>
-      <p className="text-xs text-muted-foreground/70">
-        Key 仅保存在浏览器本地，经后端代理转发。
-      </p>
-    </div>
-  );
-}
+import {
+  Sparkles,
+  AlertTriangle,
+  Info,
+  Copy,
+  CheckCircle2,
+  Loader2,
+  Zap,
+  ChevronRight,
+} from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
   return (
     <button
-      onClick={handleCopy}
-      className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+      onClick={() => {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        });
+      }}
+      className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
     >
       {copied ? (
-        <>
-          <CheckCircle2 className="w-3 h-3 text-emerald-400" strokeWidth={1.5} />
-          已复制
-        </>
+        <><CheckCircle2 className="w-3 h-3 text-emerald-400" strokeWidth={1.5} /> 已复制</>
       ) : (
-        <>
-          <Copy className="w-3 h-3" strokeWidth={1.5} />
-          复制
-        </>
+        <><Copy className="w-3 h-3" strokeWidth={1.5} /> 复制</>
       )}
     </button>
   );
@@ -72,129 +39,121 @@ function CopyButton({ text }: { text: string }) {
 export function RightSidebar() {
   const aiResults = useAppStore((s) => s.aiResults);
   const pipelineState = useAppStore((s) => s.pipelineState);
-  const apiKey = useAppStore((s) => s.apiKey);
-  const { status: aiStatus, error: aiError, runAI } = useAI();
+  const analysisStage = useAppStore((s) => s.analysisStage);
+  const results = useAppStore((s) => s.results);
+  const aiMode = useAppStore((s) => s.aiMode);
+  const aiError = useAppStore((s) => s.aiError);
+  const aiStreamingStage = useAppStore((s) => s.aiStreamingStage);
 
-  const showAPIInput =
-    pipelineState === "idle" ||
-    pipelineState === "completed" ||
-    pipelineState === "error";
+  const hasAI = aiMode === "connected";
 
-  // ---- Empty / idle state ----
-  if (pipelineState === "idle" || pipelineState === "processing") {
+  // ---- No AI mode: show upgrade card ----
+  if (!hasAI && pipelineState !== "ai_processing") {
     return (
-      <div className="flex flex-col h-full gap-5">
-        {showAPIInput && <APIKeyInput />}
-        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
-          <Sparkles className="w-12 h-12" strokeWidth={1} />
-          <p className="text-base text-center font-medium">AI 解读结果将在分析完成后显示</p>
-          <p className="text-sm text-muted-foreground/60 text-center">
-            通俗解读 · 学术解释 · 导师建议 · APA 格式
+      <div className="flex flex-col items-center justify-center h-full text-center gap-4 px-2">
+        <Sparkles className="w-12 h-12 text-muted-foreground/30" strokeWidth={1} />
+        <div>
+          <p className="text-sm font-medium text-foreground mb-1">升级到 AI 增强</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            解锁统计指标自动解读、低信度题项诊断、APA 论文结果生成
           </p>
-          <div className="px-3 py-2 rounded-lg bg-blue-50/30 border border-blue-100/30 text-[11px] text-blue-600/70 text-center mt-2">
-            AI 解读需要先启动后端代理：
-            <br />
-            <code className="text-[10px] bg-blue-100/30 px-1 py-0.5 rounded">cd backend && python main.py</code>
-          </div>
         </div>
+        <Link
+          href="/settings/ai"
+          className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+        >
+          启用 AI 解读
+          <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
+        </Link>
       </div>
     );
   }
 
-  // ---- AI processing ----
-  if (pipelineState === "ai_processing" || aiStatus === "loading") {
+  // ---- AI mode: stats processing or idle ----
+  if (pipelineState === "idle" || pipelineState === "processing") {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" strokeWidth={1.5} />
-        <p className="text-sm text-muted-foreground">AI 正在解读结果...</p>
-        <p className="text-xs text-muted-foreground/60">
-          请稍候，通常需要 3-5 秒
+      <div className="flex flex-col items-center justify-center h-full text-center gap-3">
+        <Sparkles className="w-10 h-10 text-muted-foreground/40" strokeWidth={1} />
+        <p className="text-sm text-foreground font-medium">AI 已就绪</p>
+        <p className="text-xs text-muted-foreground">
+          {pipelineState === "processing"
+            ? "分析完成后将自动生成解读"
+            : "上传数据并开始分析后，AI 将自动解读结果"}
         </p>
       </div>
     );
   }
 
-  // ---- Has AI results ----
+  // ---- AI loading / streaming ----
+  if (pipelineState === "ai_processing") {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Loader2 className="w-4 h-4 text-primary animate-spin" strokeWidth={1.5} />
+          <span className="text-sm font-medium text-foreground">AI 解读中</span>
+        </div>
+
+        <StreamingProgress stage={aiStreamingStage} />
+      </div>
+    );
+  }
+
+  // ---- AI results ----
   if (aiResults) {
     return (
       <div className="space-y-3.5 overflow-y-auto h-full">
-        <h3 className="text-base font-semibold text-foreground flex items-center gap-1.5">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
           <Sparkles className="w-4 h-4 text-primary" strokeWidth={1.5} />
-          AI 解读结果
+          AI 解读
         </h3>
 
         {/* Simple explanation */}
-        <ResultCard
-          title="通俗解读"
-          icon={<Zap className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.5} />}
-        >
-          <p className="text-sm text-foreground leading-relaxed">
-            {aiResults.explanation.simple}
-          </p>
+        <ResultCard title="结果解读" icon={<Zap className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.5} />}>
+          <p className="text-sm text-foreground leading-relaxed">{aiResults.explanation.simple}</p>
         </ResultCard>
 
-        {/* Academic explanation */}
-        <ResultCard
-          title="学术解读"
-          icon={<Info className="w-3.5 h-3.5 text-blue-400" strokeWidth={1.5} />}
-        >
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            {aiResults.explanation.academic}
-          </p>
+        {/* Academic version */}
+        <ResultCard title="学术解释" icon={<Info className="w-3.5 h-3.5 text-blue-400" strokeWidth={1.5} />}>
+          <p className="text-sm text-muted-foreground leading-relaxed">{aiResults.explanation.academic}</p>
         </ResultCard>
 
-        {/* Advisor suggestions */}
+        {/* Suggestions */}
         {aiResults.suggestions.length > 0 && (
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
               <AlertTriangle className="w-4 h-4 text-violet-400" strokeWidth={1.5} />
-              导师建议
+              诊断与建议
             </p>
             {aiResults.suggestions.map((s, i) => (
-              <div
-                key={i}
-                className="px-3 py-2.5 rounded-lg bg-secondary/30 border border-border/60"
-              >
+              <div key={i} className="px-3 py-2.5 rounded-lg bg-secondary/30 border border-border/60">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                      s.severity === "warning"
-                        ? "bg-amber-400"
-                        : s.severity === "suggestion"
-                          ? "bg-blue-400"
-                          : "bg-emerald-400"
-                    }`}
-                  />
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                    s.severity === "warning" ? "bg-amber-400" :
+                    s.severity === "suggestion" ? "bg-blue-400" : "bg-emerald-400"
+                  }`} />
                   <p className="text-xs font-medium text-foreground">{s.title}</p>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed ml-3">
-                  {s.detail}
-                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed ml-3">{s.detail}</p>
               </div>
             ))}
           </div>
         )}
 
-        {/* Problem diagnosis */}
+        {/* Diagnosis */}
         {(aiResults.diagnosis.lowReliabilityItems.length > 0 ||
-          aiResults.diagnosis.crossLoadingItems.length > 0 ||
-          aiResults.diagnosis.reverseItemRisks.length > 0) && (
+          aiResults.diagnosis.crossLoadingItems.length > 0) && (
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">问题诊断</p>
             {aiResults.diagnosis.lowReliabilityItems.length > 0 && (
               <div className="px-3 py-2 rounded-lg bg-amber-50/50 border border-amber-100/50">
                 <p className="text-xs font-medium text-amber-700">低信度题项</p>
-                <p className="text-xs text-amber-600/80">
-                  {aiResults.diagnosis.lowReliabilityItems.join(", ")}
-                </p>
+                <p className="text-xs text-amber-600/80">{aiResults.diagnosis.lowReliabilityItems.join(", ")}</p>
               </div>
             )}
             {aiResults.diagnosis.crossLoadingItems.length > 0 && (
               <div className="px-3 py-2 rounded-lg bg-blue-50/50 border border-blue-100/50">
                 <p className="text-xs font-medium text-blue-700">交叉载荷题项</p>
-                <p className="text-xs text-blue-600/80">
-                  {aiResults.diagnosis.crossLoadingItems.join(", ")}
-                </p>
+                <p className="text-xs text-blue-600/80">{aiResults.diagnosis.crossLoadingItems.join(", ")}</p>
               </div>
             )}
           </div>
@@ -202,70 +161,31 @@ export function RightSidebar() {
 
         {/* APA Result */}
         {aiResults.apaResult && (
-          <ResultCard
-            title="APA 格式结果"
-            icon={<CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" strokeWidth={1.5} />}
-            action={<CopyButton text={aiResults.apaResult} />}
-          >
-            <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
-              {aiResults.apaResult}
-            </pre>
+          <ResultCard title="APA 格式结果" icon={<CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" strokeWidth={1.5} />} action={<CopyButton text={aiResults.apaResult} />}>
+            <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">{aiResults.apaResult}</pre>
           </ResultCard>
         )}
-
-        {showAPIInput && (
-          <>
-            <hr className="border-border" />
-            <APIKeyInput />
-          </>
-        )}
       </div>
     );
   }
 
-  // ---- Completed but no AI results ----
-  if (pipelineState === "completed") {
+  // ---- Stats done, AI should auto-trigger but not yet started ----
+  if (pipelineState === "completed" && hasAI && !aiResults) {
     return (
-      <div className="flex flex-col h-full gap-5">
-        <APIKeyInput />
-
-        <div className="flex-1 flex flex-col items-center justify-center gap-4">
-          <Sparkles className="w-12 h-12 text-muted-foreground" strokeWidth={1} />
-          <p className="text-base text-foreground font-medium text-center">
-            统计分析完成
-          </p>
-          <p className="text-sm text-muted-foreground text-center">
-            {apiKey
-              ? "点击下方按钮获取 AI 解读与建议"
-              : "请先配置 Claude API Key"}
-          </p>
-          <button
-            onClick={runAI}
-            disabled={!apiKey || !apiKey.startsWith("sk-ant")}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium
-              hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-          >
-            <Sparkles className="w-3.5 h-3.5" strokeWidth={1.5} />
-            AI 解读结果
-          </button>
-          {aiError && (
-            <p className="text-[10px] text-red-500 text-center">{aiError}</p>
-          )}
-        </div>
+      <div className="flex flex-col items-center justify-center h-full text-center gap-3">
+        <Sparkles className="w-10 h-10 text-primary/40" strokeWidth={1} />
+        <p className="text-sm text-muted-foreground">AI 正在准备解读...</p>
       </div>
     );
   }
 
-  // ---- Error state ----
-  if (pipelineState === "error") {
+  // ---- Error ----
+  if (pipelineState === "error" || aiError) {
     return (
-      <div className="flex flex-col h-full gap-5">
-        {showAPIInput && <APIKeyInput />}
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-sm text-muted-foreground text-center">
-            分析出错，请重试后获取 AI 解读
-          </p>
-        </div>
+      <div className="flex flex-col items-center justify-center h-full text-center gap-3">
+        <AlertTriangle className="w-10 h-10 text-amber-400" strokeWidth={1} />
+        <p className="text-sm text-foreground font-medium">AI 解读暂不可用</p>
+        <p className="text-xs text-muted-foreground">{aiError ?? "分析过程中出现错误"}</p>
       </div>
     );
   }
@@ -273,25 +193,48 @@ export function RightSidebar() {
   return null;
 }
 
-/** Small reusable card wrapper */
-function ResultCard({
-  title,
-  icon,
-  children,
-  action,
-}: {
-  title: string;
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-  action?: React.ReactNode;
+function StreamingProgress({ stage }: { stage: string }) {
+  const steps = [
+    { key: "interpreting_reliability", label: "分析信度结果" },
+    { key: "interpreting_validity", label: "解读效度指标" },
+    { key: "diagnosing", label: "生成诊断建议" },
+    { key: "generating_apa", label: "生成 APA 结果" },
+  ];
+
+  const stageIdx = steps.findIndex((s) => s.key === stage);
+
+  return (
+    <div className="space-y-1.5">
+      {steps.map((step, i) => {
+        const done = i < stageIdx || stage === "done";
+        const active = i === stageIdx && stage !== "done";
+
+        return (
+          <div key={step.key} className="flex items-center gap-2 text-xs">
+            {done ? (
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" strokeWidth={2} />
+            ) : active ? (
+              <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" strokeWidth={1.5} />
+            ) : (
+              <div className="w-3.5 h-3.5 rounded-full border border-border" />
+            )}
+            <span className={done ? "text-emerald-600" : active ? "text-foreground font-medium" : "text-muted-foreground/40"}>
+              {step.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ResultCard({ title, icon, children, action }: {
+  title: string; icon?: React.ReactNode; children: React.ReactNode; action?: React.ReactNode;
 }) {
   return (
     <div className="rounded-xl bg-secondary/30 border border-border/60 p-3.5">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
-          {icon}
-          {title}
-        </p>
+        <p className="text-sm font-medium text-foreground flex items-center gap-1.5">{icon}{title}</p>
         {action}
       </div>
       {children}
