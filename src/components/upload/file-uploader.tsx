@@ -5,6 +5,7 @@ import { Upload, FileText, AlertCircle, Loader2 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { ParsedData } from "@/types";
 import * as XLSX from "xlsx";
+import Papa from "papaparse";
 
 type SupportedFormat = "csv" | "xlsx" | "qualtrics";
 
@@ -21,7 +22,6 @@ function detectFormat(fileName: string): SupportedFormat {
 }
 
 async function parseCSV(file: File): Promise<ParseResult> {
-  const Papa = (await import("papaparse")).default;
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
       header: true,
@@ -76,8 +76,6 @@ async function parseXLSXFile(file: File): Promise<ParseResult> {
 }
 
 async function parseQualtrics(file: File): Promise<ParseResult> {
-  // Qualtrics exports are CSV with extra metadata rows; strip rows 1-2
-  const Papa = (await import("papaparse")).default;
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
       header: true,
