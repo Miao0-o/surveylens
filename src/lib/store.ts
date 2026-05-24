@@ -172,12 +172,18 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
 
   // ---- Data ----
   setRawData: (data) => {
-    try { localStorage.setItem(RAW_DATA_KEY, JSON.stringify(data)); } catch {}
+    try {
+      const json = JSON.stringify(data);
+      localStorage.setItem(RAW_DATA_KEY, json);
+      console.log("[persist] rawData saved, size:", json.length, "bytes");
+    } catch (e) {
+      console.error("[persist] rawData save failed:", e);
+    }
     return set({ rawData: data, pipelineStep: "upload", analysisStage: "uploading", error: null });
   },
 
   setLikertColumns: (cols) => {
-    try { localStorage.setItem(LIKERT_KEY, JSON.stringify(cols)); } catch {}
+    try { localStorage.setItem(LIKERT_KEY, JSON.stringify(cols)); } catch (e) { console.error("[persist] likert save failed:", e); }
     return set({ likertColumns: cols });
   },
 
@@ -262,14 +268,14 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
     if (typeof window === "undefined") return;
     try {
       const raw = localStorage.getItem(RAW_DATA_KEY);
-      if (raw) {
-        set({ rawData: JSON.parse(raw) });
-      }
       const likert = localStorage.getItem(LIKERT_KEY);
-      if (likert) {
-        set({ likertColumns: JSON.parse(likert) });
-      }
-    } catch {}
+      console.log("[persist] hydrate — rawData:", raw ? `found (${raw.length} chars)` : "not found",
+        "| likert:", likert ? `found` : "not found");
+      if (raw) set({ rawData: JSON.parse(raw) });
+      if (likert) set({ likertColumns: JSON.parse(likert) });
+    } catch (e) {
+      console.error("[persist] hydrate failed:", e);
+    }
   },
 
   // ---- Reset ----
