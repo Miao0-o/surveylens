@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { FileUploader } from "@/components/upload/file-uploader";
 import { GuidedResearchSetup } from "@/components/upload/guided-research-setup";
+import { ResearchDesignReview } from "@/components/upload/research-design-review";
 import { MissingHandler } from "@/components/preprocessing/missing-handler";
 import { ReverseDetector } from "@/components/preprocessing/reverse-detector";
 import { DimensionManager } from "@/components/preprocessing/dimension-manager";
@@ -27,6 +28,7 @@ const STEPS: { id: LeftStep; label: string; icon: typeof Upload }[] = [
 export function LeftSidebar() {
   const pipelineState = useAppStore((s) => s.pipelineState);
   const hasData = useAppStore((s) => s.rawData !== null);
+  const design = useAppStore((s) => s.researchDesign);
   const classification = useAppStore((s) => s.classification);
   const [activeStep, setActiveStep] = useState<LeftStep>("upload");
 
@@ -69,6 +71,12 @@ export function LeftSidebar() {
           <div className="space-y-4">
             <FileUploader />
             {hasData && <GuidedResearchSetup />}
+            {hasData && design?.analysisIntent && design.outcomeVariables.length > 0 && (
+              <>
+                <hr className="border-border" />
+                <ResearchDesignReview />
+              </>
+            )}
           </div>
         )}
 
