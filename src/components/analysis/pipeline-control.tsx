@@ -4,7 +4,6 @@ import { useCallback, useRef, useState } from "react";
 import { Play, RefreshCw, Loader2, AlertTriangle } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { usePyodide } from "@/hooks/use-pyodide";
-import { useAI } from "@/hooks/use-ai";
 import type { AnalysisStage } from "@/types";
 
 /** UI labels we cycle through during analysis to give user feedback */
@@ -27,7 +26,6 @@ export function PipelineControl() {
   const setAnalysisStage = useAppStore((s) => s.setAnalysisStage);
 
   const { status: workerStatus, loadingMessage, runAnalysis } = usePyodide();
-  const { status: aiStatus, runAI } = useAI();
   const [localError, setLocalError] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const runningRef = useRef(false);
@@ -60,13 +58,6 @@ export function PipelineControl() {
       const { results } = await runAnalysis();
       clearStageTimers();
       completeProcessing();
-
-      // Auto-trigger AI if connected
-      if (useAppStore.getState().aiMode === "connected") {
-        runAI().catch((err) => {
-          console.error("Auto AI failed:", err);
-        });
-      }
     } catch (err) {
       clearStageTimers();
       const msg = err instanceof Error ? err.message : "分析执行失败";
@@ -75,7 +66,7 @@ export function PipelineControl() {
     } finally {
       runningRef.current = false;
     }
-  }, [canRun, startProcessing, runAnalysis, completeProcessing, failProcessing, setAnalysisStage, runAI]);
+  }, [canRun, startProcessing, runAnalysis, completeProcessing, failProcessing, setAnalysisStage]);
 
   const handleReset = () => {
     if (!showResetConfirm) {

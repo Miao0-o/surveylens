@@ -69,33 +69,24 @@ export default function Home() {
           </span>
         </div>
 
-        {/* CTA buttons */}
-        <div className="flex items-center gap-3">
-          <Link
-            href="/analyze"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-foreground text-background text-sm font-medium
-              hover:opacity-90 transition-opacity"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 3v12" /><path d="m17 8-5-5-5 5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            </svg>
-            开始本地分析
-          </Link>
-          <Link
-            href="/settings/ai"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground font-medium
-              hover:bg-secondary/50 transition-colors"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
-            </svg>
-            启用 AI 解读
-          </Link>
-        </div>
+        {/* CTA */}
+        <Link
+          href="/analyze"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-foreground text-background text-sm font-medium
+            hover:opacity-90 transition-opacity"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3v12" /><path d="m17 8-5-5-5 5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          </svg>
+          开始分析
+        </Link>
 
         <p className="text-xs text-muted-foreground/50 mt-4">
-          无需注册 · 免费使用 · MIT 开源
+          无需注册 · 免费使用 · 数据分析全程本地运行
         </p>
+        <Link href="/settings/ai" className="text-xs text-muted-foreground/40 hover:text-muted-foreground mt-1 transition-colors">
+          配置 AI 解读功能 →
+        </Link>
       </main>
     </div>
   );
