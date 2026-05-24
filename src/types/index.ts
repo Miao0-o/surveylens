@@ -300,4 +300,5 @@ export interface AppState {
   // Config
   apiKey: string;
   missingStrategy: MissingStrategy;
+  reportLanguage: "zh" | "en";
 }

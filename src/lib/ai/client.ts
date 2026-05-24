@@ -175,7 +175,9 @@ Output JSON schema:
 }
 
 The "apaResult" field MUST be in English following APA 7th edition journal standards.
-All other text fields MUST be in Chinese.
+
+# LANGUAGE RULE
+{lang_rule}
 `;
 
 // Combined system prompt (Layers 0-3)
@@ -330,17 +332,26 @@ function extractJson(content: string): string {
 // Main interpretation with hallucination check + auto-retry
 // ============================================================
 
+function buildLangRule(lang: "zh" | "en"): string {
+  if (lang === "en") {
+    return "ALL text fields MUST be in English. Use academic English throughout.";
+  }
+  return "The 'simple', 'academic', 'suggestions', and 'diagnosis' fields MUST be in Chinese. The 'apaResult' field MUST be in English.";
+}
+
 export async function runAIInterpretation(
   apiKey: string,
   input: AICompressedInput,
-  validation?: ValidationReport | null
+  validation?: ValidationReport | null,
+  lang: "zh" | "en" = "zh"
 ): Promise<AIResults> {
+  const prompt = SYSTEM_PROMPT.replace("{lang_rule}", buildLangRule(lang));
   const userMessage = buildUserMessage(input, validation);
   const MAX_RETRIES = 2;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     // Step 1: Run Layers 0-3 (primary interpretation)
-    const response = await callClaude(apiKey, SYSTEM_PROMPT, userMessage, 3000);
+    const response = await callClaude(apiKey, prompt, userMessage, 3000);
 
     // Step 2: Layer 4 — Hallucination Check
     const checkResult = await runHallucinationCheck(

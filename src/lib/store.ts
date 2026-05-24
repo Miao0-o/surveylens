@@ -107,6 +107,7 @@ interface AppActions {
   setApiKey: (key: string) => void;
   setMissingStrategy: (strategy: MissingStrategy) => void;
   setDesignConfirmed: (confirmed: boolean) => void;
+  setReportLanguage: (lang: "zh" | "en") => void;
 
   // Reset + Hydrate
   reset: () => void;
@@ -148,8 +149,9 @@ const initialState: AppState = {
   analysisMode: "quick",
   designConfirmed: false,
 
-  apiKey: "", // loaded from sessionStorage on client
+  apiKey: "",
   missingStrategy: initialMissingStrategy,
+  reportLanguage: "zh",
 };
 
 export const useAppStore = create<AppState & AppActions>()((set) => ({
@@ -237,6 +239,7 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
   // ---- Config ----
   setAnalysisMode: (analysisMode) => set({ analysisMode }),
   setDesignConfirmed: (designConfirmed) => set({ designConfirmed }),
+  setReportLanguage: (reportLanguage) => set({ reportLanguage }),
   setApiKey: (key) => {
     saveApiKey(key);
     set({ apiKey: key });

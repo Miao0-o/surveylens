@@ -61,7 +61,8 @@ export function useAI() {
 
       const state = useAppStore.getState();
       const validation = state.validationReport;
-      const rawAIResults = await runAIInterpretation(apiKey, compressed, validation);
+      const lang = useAppStore.getState().reportLanguage;
+      const rawAIResults = await runAIInterpretation(apiKey, compressed, validation, lang);
 
       // Run output guard (Layer 5 — non-AI final check)
       const postState = useAppStore.getState();

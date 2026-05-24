@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { useAI } from "@/hooks/use-ai";
+import { LanguageToggle } from "./language-toggle";
 import {
   Sparkles,
   AlertTriangle,
@@ -54,9 +55,12 @@ export function RightSidebar() {
   if (pipelineState === "idle" || pipelineState === "processing") {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-          <p className="text-sm font-medium text-foreground">AI 解读</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+            <p className="text-sm font-medium text-foreground">AI 解读</p>
+          </div>
+          <LanguageToggle />
         </div>
         <p className="text-xs text-muted-foreground">
           分析完成后，AI 可自动生成以下内容：
@@ -178,9 +182,12 @@ export function RightSidebar() {
       // AI is connected → show generation options
       return (
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="text-xs text-emerald-600 font-medium">AI 已就绪</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="text-xs text-emerald-600 font-medium">AI 已就绪</span>
+            </div>
+            <LanguageToggle />
           </div>
 
           <p className="text-sm font-medium text-foreground">AI 学术解读</p>
@@ -220,9 +227,12 @@ export function RightSidebar() {
     // AI not connected → prompt to enable
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-          <p className="text-sm font-medium text-foreground">AI 解读</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+            <p className="text-sm font-medium text-foreground">AI 解读</p>
+          </div>
+          <LanguageToggle />
         </div>
         <p className="text-xs text-muted-foreground">
           配置 AI 后可生成以下内容：
