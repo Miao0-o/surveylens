@@ -29,6 +29,7 @@ export function LeftSidebar() {
   const pipelineState = useAppStore((s) => s.pipelineState);
   const hasData = useAppStore((s) => s.rawData !== null);
   const design = useAppStore((s) => s.researchDesign);
+  const designConfirmed = useAppStore((s) => s.designConfirmed);
   const classification = useAppStore((s) => s.classification);
   const [activeStep, setActiveStep] = useState<LeftStep>("upload");
 
@@ -105,9 +106,13 @@ export function LeftSidebar() {
               ? "分析完成"
               : pipelineState === "error"
                 ? "分析出错，请重试"
-                : activeStep === "upload"
-                  ? "继续配置数据清洗与维度"
-                  : "就绪，点击开始分析"}
+              : !design?.outcomeVariables?.length
+                ? "请完成研究设计设置"
+                : !designConfirmed
+                  ? "请在「研究设计确认」中点击确认"
+                  : activeStep === "upload"
+                    ? "继续配置数据清洗与维度"
+                    : "就绪，点击开始分析"}
         </p>
       </div>
     </div>

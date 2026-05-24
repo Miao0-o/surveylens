@@ -100,6 +100,7 @@ interface AppActions {
   // Config
   setApiKey: (key: string) => void;
   setMissingStrategy: (strategy: MissingStrategy) => void;
+  setDesignConfirmed: (confirmed: boolean) => void;
 
   // Reset
   reset: () => void;
@@ -135,6 +136,8 @@ const initialState: AppState = {
   results: null,
   validationReport: null,
   aiResults: null,
+
+  designConfirmed: false,
 
   apiKey: "", // loaded from sessionStorage on client
   missingStrategy: initialMissingStrategy,
@@ -216,6 +219,7 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
   },
 
   // ---- Config ----
+  setDesignConfirmed: (designConfirmed) => set({ designConfirmed }),
   setApiKey: (key) => {
     saveApiKey(key);
     set({ apiKey: key });

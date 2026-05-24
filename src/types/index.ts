@@ -275,6 +275,9 @@ export interface AppState {
   validationReport: ValidationReport | null;
   aiResults: AIResults | null;
 
+  // Design lock
+  designConfirmed: boolean;
+
   // Config
   apiKey: string;
   missingStrategy: MissingStrategy;

@@ -2,20 +2,9 @@
 
 import { useAppStore } from "@/lib/store";
 import type { ResearchDesign } from "@/types";
-import { Check, Edit3, X } from "lucide-react";
-import { useState } from "react";
-
-function defaultDesign(): ResearchDesign {
-  return {
-    researchGoal: "",
-    analysisIntent: "validation",
-    outcomeVariables: [],
-    predictorVariables: [],
-    theoreticalFramework: "",
-    hypotheses: "",
-    freeNotes: "",
-  };
-}
+import { normalizeDesign } from "@/lib/ai/design-normalizer";
+import { Check, Edit3, X, Sparkles, AlertTriangle, Lock, LockOpen, Play } from "lucide-react";
+import { useState, useMemo } from "react";
 
 /**
  * Shows the AI-normalized research design with inline editing.
@@ -27,7 +16,23 @@ export function ResearchDesignReview() {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  if (!design) return null;
+  // Run normalizer on mount and when design changes
+  const normalized = useMemo(() => {
+    if (!design) return null;
+    return normalizeDesign(design);
+  }, [design]);
+
+  const handleApplyNormalized = () => {
+    if (!normalized || !design) return;
+    setDesign({
+      ...design,
+      analysisIntent: normalized.analysisIntent,
+      theoreticalFramework: normalized.theoreticalFramework,
+      hypotheses: normalized.hypotheses.join("；"),
+    });
+  };
+
+  if (!design || !normalized) return null;
 
   const intentLabels: Record<string, string> = {
     prediction: "预测建模",
@@ -65,14 +70,39 @@ export function ResearchDesignReview() {
     <div className="space-y-2.5">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-foreground">研究设计确认</span>
-        <span className="text-[10px] text-emerald-600 flex items-center gap-1">
-          <Check className="w-3 h-3" strokeWidth={2} />
-          已结构化
-        </span>
+        {normalized.inferredFields.length > 0 ? (
+          <span className="text-[10px] text-amber-600 flex items-center gap-1">
+            <Sparkles className="w-3 h-3" strokeWidth={1.5} />
+            部分字段已推断
+          </span>
+        ) : (
+          <span className="text-[10px] text-emerald-600 flex items-center gap-1">
+            <Check className="w-3 h-3" strokeWidth={2} />
+            已结构化
+          </span>
+        )}
       </div>
 
+      {/* Normalizer confidence warning */}
+      {normalized.confidence !== "high" && (
+        <div className="flex items-start gap-1.5 px-2.5 py-1.5 rounded bg-amber-50 border border-amber-100">
+          <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" strokeWidth={1.5} />
+          <div>
+            <p className="text-[10px] font-medium text-amber-600">
+              置信度：{normalized.confidence === "medium" ? "中等" : "较低"}
+            </p>
+            <p className="text-[9px] text-amber-500/80">
+              以下字段由系统推断，请确认准确性
+              {normalized.inferredFields.length > 0 && (
+                <>：{normalized.inferredFields.join(", ")}</>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
+
       <p className="text-[10px] text-muted-foreground">
-        以下是将用于指导分析的参数。点击任意字段可修改。
+        以下是将用于指导分析的参数。点击 <Edit3 className="w-2.5 h-2.5 inline" strokeWidth={1.5} /> 可修改。
       </p>
 
       {fields.map(({ key, label, value }) => (
@@ -118,6 +148,53 @@ export function ResearchDesignReview() {
           <p className="text-xs text-blue-600/80">{design.freeNotes}</p>
         </div>
       )}
+
+      {/* Schema Lock — must confirm before analysis */}
+      <SchemaLockControl />
+    </div>
+  );
+}
+
+function SchemaLockControl() {
+  const confirmed = useAppStore((s) => s.designConfirmed);
+  const setConfirmed = useAppStore((s) => s.setDesignConfirmed);
+  const design = useAppStore((s) => s.researchDesign);
+
+  if (confirmed) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-100">
+        <Lock className="w-3.5 h-3.5 text-emerald-500" strokeWidth={1.5} />
+        <div className="flex-1">
+          <p className="text-xs font-medium text-emerald-700">研究设计已确认</p>
+          <p className="text-[10px] text-emerald-600/80">分析将基于以上参数执行</p>
+        </div>
+        <button
+          onClick={() => setConfirmed(false)}
+          className="text-[10px] text-emerald-600 hover:underline shrink-0"
+        >
+          修改
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-100">
+      <div className="flex items-center gap-2">
+        <LockOpen className="w-3.5 h-3.5 text-amber-500" strokeWidth={1.5} />
+        <p className="text-xs font-medium text-amber-700">设计尚未确认</p>
+      </div>
+      <p className="text-[10px] text-amber-600/80">
+        请检查以上研究参数是否正确。确认后将锁定设计，点击下方按钮开始分析。
+      </p>
+      <button
+        onClick={() => setConfirmed(true)}
+        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-amber-100 border border-amber-200 text-xs font-medium text-amber-800
+          hover:bg-amber-200 transition-colors"
+      >
+        <Check className="w-3.5 h-3.5" strokeWidth={2} />
+        确认设计
+      </button>
     </div>
   );
 }
