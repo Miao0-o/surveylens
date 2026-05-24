@@ -1,6 +1,7 @@
 "use client";
 
 import type { EFAResult } from "@/types";
+import { InfoTip } from "./stat-tooltip";
 import {
   ResponsiveContainer,
   LineChart,
@@ -32,6 +33,7 @@ export function EFACard({ data }: Props) {
         <span className="text-2xl font-semibold text-foreground">
           {data.suggestedFactors} 个因子
         </span>
+        <InfoTip text="Kaiser 准则：保留特征值 > 1 的因子。碎石图中拐点之前的因子数也可作为参考。" />
         <div className="text-[11px] text-muted-foreground">
           累计解释方差:{" "}
           {data.varianceExplained.length > 0
@@ -86,7 +88,10 @@ export function EFACard({ data }: Props) {
       {/* Factor loadings matrix */}
       {data.loadings.length > 0 && (
         <div>
-          <p className="text-[11px] font-medium text-foreground mb-1.5">因子载荷矩阵</p>
+          <p className="text-[11px] font-medium text-foreground mb-1.5 flex items-center gap-1">
+            因子载荷矩阵
+            <InfoTip text="载荷 ≥ 0.40 视为显著归属该因子。0.30−0.40 为边缘。交叉载荷差值 < 0.20 表示因子归属模糊。" />
+          </p>
           <div className="overflow-x-auto rounded-lg border border-border max-h-[300px] overflow-y-auto">
             <table className="w-full text-[10px]">
               <thead>

@@ -2,6 +2,7 @@
 
 import type { ValidityResult } from "@/types";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { InfoTip } from "./stat-tooltip";
 
 interface Props {
   data: ValidityResult;
@@ -28,7 +29,10 @@ export function ValidityCard({ data }: Props) {
           {data.kmo.toFixed(3)}
         </span>
         <div>
-          <p className="text-xs font-medium text-foreground">KMO 检验</p>
+          <p className="text-xs font-medium text-foreground flex items-center gap-1">
+            KMO 检验
+            <InfoTip text="≥ 0.90 极佳 · ≥ 0.80 良好 · ≥ 0.70 中等 · ≥ 0.60 勉强 · ≥ 0.50 不足 · < 0.50 不适合因子分析" />
+          </p>
           <p className={`text-xs ${kmoInterp.color}`}>{kmoInterp.label}的抽样适合度</p>
         </div>
       </div>
@@ -41,7 +45,10 @@ export function ValidityCard({ data }: Props) {
           <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" strokeWidth={1.5} />
         )}
         <div>
-          <p className="text-xs font-medium text-foreground">Bartlett 球形检验</p>
+          <p className="text-xs font-medium text-foreground flex items-center gap-1">
+            Bartlett 球形检验
+            <InfoTip text="检验相关矩阵是否为单位矩阵。p < 0.05 表示适合因子分析。p ≥ 0.05 表示变量间相关性不足。" />
+          </p>
           <p className="text-[11px] text-muted-foreground">
             χ² = {data.bartlettChiSquare.toFixed(2)}, df = {data.bartlettDf}, p{" "}
             {bartlettSignificant ? "< .001" : `= ${data.bartlettPValue.toFixed(3)}`}

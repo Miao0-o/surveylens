@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReliabilityResult } from "@/types";
+import { InfoTip } from "./stat-tooltip";
 import {
   ResponsiveContainer,
   BarChart,
@@ -42,18 +43,27 @@ export function ReliabilityCard({ data }: Props) {
           {data.cronbachsAlpha.toFixed(3)}
         </span>
         <div>
-          <p className="text-xs font-medium text-foreground">Cronbach&apos;s α</p>
+          <p className="text-xs font-medium text-foreground flex items-center gap-1">
+            Cronbach&apos;s α
+            <InfoTip text="≥ 0.90 优秀 · ≥ 0.80 良好 · ≥ 0.70 可接受 · ≥ 0.60 偏低 · < 0.60 不可接受。> 0.95 需警惕题项冗余。" />
+          </p>
           <p className={`text-xs ${interp.color}`}>{interp.label}</p>
         </div>
         <div className="ml-auto flex items-center gap-4">
           <div className="text-right">
-            <p className="text-[10px] text-muted-foreground">标准化 α</p>
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+              标准化 α
+              <InfoTip text="基于标准化题项的 α。与原始 α 一致说明题项方差均匀。" />
+            </p>
             <p className="text-xs text-foreground font-medium">
               {data.standardizedAlpha.toFixed(3)}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] text-muted-foreground">McDonald&apos;s ω</p>
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+              McDonald&apos;s ω
+              <InfoTip text="基于因子载荷的信度估计。≥ 0.80 良好。比 α 更少受题项数影响，假设更宽松。" />
+            </p>
             <p className="text-xs text-foreground font-medium">
               {data.mcdonaldsOmega?.toFixed(3) ?? "-"}
             </p>

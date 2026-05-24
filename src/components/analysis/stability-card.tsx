@@ -1,6 +1,7 @@
 "use client";
 
 import type { StabilityResult } from "@/types";
+import { InfoTip } from "./stat-tooltip";
 import {
   ResponsiveContainer,
   LineChart,
@@ -37,11 +38,12 @@ export function StabilityCard({ data }: Props) {
           </span>
         </div>
         <div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground flex items-center gap-1">
             推荐样本量:{" "}
             <span className="text-foreground font-semibold">
               {data.recommendedSampleSize}
             </span>
+            <InfoTip text="Bootstrap 稳定性拐点对应的样本量。低于此值时 α 估计可能不稳定。经验法则：≥ 100 为可接受，≥ 200 为良好。" />
           </p>
           {data.elbowPoint && (
             <p className="text-[10px] text-muted-foreground/70">
