@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { Upload, FileText, AlertCircle, Loader2 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { ParsedData } from "@/types";
+import * as XLSX from "xlsx";
 
 type SupportedFormat = "csv" | "xlsx" | "qualtrics";
 
@@ -48,8 +49,7 @@ async function parseCSV(file: File): Promise<ParseResult> {
   });
 }
 
-async function parseXLSX(file: File): Promise<ParseResult> {
-  const XLSX = await import("xlsx");
+async function parseXLSXFile(file: File): Promise<ParseResult> {
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: "array" });
   const sheetName = workbook.SheetNames[0];
@@ -139,7 +139,7 @@ export function FileUploader() {
             result = await parseCSV(file);
             break;
           case "xlsx":
-            result = await parseXLSX(file);
+            result = await parseXLSXFile(file);
             break;
           case "qualtrics":
             result = await parseQualtrics(file);

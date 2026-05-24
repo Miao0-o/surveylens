@@ -5,6 +5,8 @@
 // ============================================================
 
 import type { AnalysisResults, AIResults } from "@/types";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 function buildReportHTML(
   results: AnalysisResults,
@@ -179,14 +181,6 @@ export async function downloadPDF(
 ): Promise<void> {
   const element = document.getElementById(elementId);
   if (!element) throw new Error("Report element not found");
-
-  const [html2canvasMod, jsPDFMod] = await Promise.all([
-    import("html2canvas"),
-    import("jspdf"),
-  ]);
-
-  const html2canvas = html2canvasMod.default;
-  const jsPDF = jsPDFMod.default;
 
   const canvas = await html2canvas(element, {
     scale: 2,
