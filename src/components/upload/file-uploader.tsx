@@ -207,7 +207,7 @@ export function FileUploader() {
               拖拽文件到此处，或点击选择
             </span>
             <span className="text-xs text-muted-foreground/60">
-              CSV · Excel · Qualtrics
+              .csv · .xlsx · .xls · Qualtrics 导出
             </span>
           </div>
         )}

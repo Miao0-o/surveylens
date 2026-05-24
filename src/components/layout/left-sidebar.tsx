@@ -99,7 +99,7 @@ export function LeftSidebar() {
         <PipelineControl />
         <p className="text-xs text-muted-foreground text-center">
           {!hasData
-            ? "请上传数据文件（CSV / Excel / Qualtrics）"
+            ? "请上传 .csv / .xlsx / .xls / Qualtrics 文件"
             : pipelineState === "completed"
               ? "分析完成"
               : pipelineState === "error"

@@ -36,7 +36,7 @@ export function CenterPanel() {
         <FileSpreadsheet className="w-16 h-16" strokeWidth={1} />
         <p className="text-base font-medium">上传数据后将在此处显示数据预览与分析结果</p>
         <p className="text-sm text-muted-foreground/60">
-          支持 CSV · Excel · Qualtrics 导出文件
+          支持 .csv · .xlsx · .xls · Qualtrics 导出
         </p>
       </div>
     );
