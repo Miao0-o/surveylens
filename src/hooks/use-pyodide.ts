@@ -136,7 +136,12 @@ const PYTHON_STEPS = [
     communalities = [float(np.sum(np.array(row)**2)) for row in loadings]
     ss = np.sum(np.array(loadings)**2, axis=0)
     variance_explained = (ss / p).tolist()
-    return json.dumps({"eigenvalues": eigenvalues, "loadings": loadings, "communalities": communalities, "varianceExplained": variance_explained, "suggestedFactors": n_factors})`,
+    # McDonald's Omega from first factor loadings
+    first_loadings = np.array(loadings)[:, 0]
+    sum_load = float(np.sum(first_loadings))
+    sum_unique = float(np.sum(1.0 - first_loadings**2))
+    omega = (sum_load**2) / (sum_load**2 + sum_unique) if (sum_load**2 + sum_unique) > 0 else 0.0
+    return json.dumps({"eigenvalues": eigenvalues, "loadings": loadings, "communalities": communalities, "varianceExplained": variance_explained, "suggestedFactors": n_factors, "omega": max(0.0, min(1.0, omega))})`,
   },
   {
     id: "stability",
@@ -316,7 +321,7 @@ export function usePyodide() {
 function buildResults(raw: Record<string, Record<string, unknown>>, labels: string[]): AnalysisResults {
   const results: AnalysisResults = {
     meta: { schemaVersion: "1.0.0", sampleSize: 0, itemCount: labels.length, dimensionCount: 1, timestamp: Date.now(), analysisDurationMs: 0 },
-    reliability: { cronbachsAlpha: 0, standardizedAlpha: 0, itemTotalCorrelation: {}, alphaIfItemDeleted: {} },
+    reliability: { cronbachsAlpha: 0, standardizedAlpha: 0, mcdonaldsOmega: 0, itemTotalCorrelation: {}, alphaIfItemDeleted: {} },
     validity: { kmo: 0, kmoPerItem: {}, bartlettChiSquare: 0, bartlettDf: 0, bartlettPValue: 0, correlationMatrix: [], columnLabels: labels },
     efa: { eigenvalues: [], loadings: [], communalities: [], varianceExplained: [], rotation: "varimax", suggestedFactors: 0, itemLabels: labels },
     stability: { bootstrapSamples: 0, alphaCurve: [], stabilityLevel: "unstable", recommendedSampleSize: 0, elbowPoint: null },
@@ -328,6 +333,7 @@ function buildResults(raw: Record<string, Record<string, unknown>>, labels: stri
     results.reliability = {
       cronbachsAlpha: (r.cronbachsAlpha as number) ?? 0,
       standardizedAlpha: (r.standardizedAlpha as number) ?? 0,
+      mcdonaldsOmega: 0, // filled later from EFA omega
       itemTotalCorrelation: remapKeys(r.itemTotalCorrelation as Record<string, number> ?? {}, labels),
       alphaIfItemDeleted: remapKeys(filterNulls(r.alphaIfItemDeleted as Record<string, number | null> ?? {}), labels),
     };
@@ -359,6 +365,9 @@ function buildResults(raw: Record<string, Record<string, unknown>>, labels: stri
       suggestedFactors: (e.suggestedFactors as number) ?? 0,
       itemLabels: labels,
     };
+    if ((e as Record<string, unknown>).omega !== undefined) {
+      results.reliability.mcdonaldsOmega = (e as Record<string, unknown>).omega as number;
+    }
   }
 
   const s = raw.stability;

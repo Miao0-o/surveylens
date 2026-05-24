@@ -26,6 +26,7 @@ export function createEmptyResults(meta: {
     reliability: {
       cronbachsAlpha: 0,
       standardizedAlpha: 0,
+      mcdonaldsOmega: 0,
       itemTotalCorrelation: {},
       alphaIfItemDeleted: {},
     },

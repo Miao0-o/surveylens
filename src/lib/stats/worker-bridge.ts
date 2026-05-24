@@ -119,6 +119,7 @@ export class StatsWorkerBridge {
             results.reliability = {
               cronbachsAlpha: (r.cronbachsAlpha as number) ?? 0,
               standardizedAlpha: (r.standardizedAlpha as number) ?? 0,
+              mcdonaldsOmega: 0,
               itemTotalCorrelation: remapKeys(r.itemTotalCorrelation as Record<string, number> ?? {}, params.itemLabels),
               alphaIfItemDeleted: remapKeys(filterNulls(r.alphaIfItemDeleted as Record<string, number | null> ?? {}), params.itemLabels),
             };
@@ -152,6 +153,9 @@ export class StatsWorkerBridge {
               suggestedFactors: (e.suggestedFactors as number) ?? 0,
               itemLabels: params.itemLabels,
             };
+            if ((e as Record<string, unknown>).omega !== undefined) {
+              results.reliability.mcdonaldsOmega = (e as Record<string, unknown>).omega as number;
+            }
           }
 
           // Merge stability

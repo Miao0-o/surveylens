@@ -45,11 +45,19 @@ export function ReliabilityCard({ data }: Props) {
           <p className="text-xs font-medium text-foreground">Cronbach&apos;s α</p>
           <p className={`text-xs ${interp.color}`}>{interp.label}</p>
         </div>
-        <div className="ml-auto text-right">
-          <p className="text-[10px] text-muted-foreground">标准化 α</p>
-          <p className="text-xs text-foreground font-medium">
-            {data.standardizedAlpha.toFixed(3)}
-          </p>
+        <div className="ml-auto flex items-center gap-4">
+          <div className="text-right">
+            <p className="text-[10px] text-muted-foreground">标准化 α</p>
+            <p className="text-xs text-foreground font-medium">
+              {data.standardizedAlpha.toFixed(3)}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] text-muted-foreground">McDonald&apos;s ω</p>
+            <p className="text-xs text-foreground font-medium">
+              {data.mcdonaldsOmega?.toFixed(3) ?? "-"}
+            </p>
+          </div>
         </div>
       </div>
 

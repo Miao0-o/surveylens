@@ -150,6 +150,7 @@ export interface AnalysisMeta {
 export interface ReliabilityResult {
   cronbachsAlpha: number;
   standardizedAlpha: number;
+  mcdonaldsOmega: number;
   itemTotalCorrelation: Record<string, number>;
   alphaIfItemDeleted: Record<string, number>;
 }
