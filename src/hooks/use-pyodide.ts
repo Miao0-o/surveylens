@@ -319,20 +319,19 @@ export function usePyodide() {
 
     const results = {} as Record<string, Record<string, unknown>>;
 
-    // Helper: sanitize JSON string — replace NaN/Infinity with null
+    // Patch json.dumps to sanitize NaN/Infinity
     await py.runPythonAsync(`
-import json, math
-def safe_json_dumps(obj):
-    return json.dumps(obj, default=lambda x: None if isinstance(x, float) and (math.isnan(x) or math.isinf(x)) else x)
-`);
-    // Patch json.dumps globally
-    await py.runPythonAsync(`
-import json, math, builtins
+import json, math, numpy as np
 _orig_dumps = json.dumps
-def _safe_dumps(*args, **kwargs):
-    kwargs.setdefault('default', lambda x: None if isinstance(x, float) and (math.isnan(x) or math.isinf(x)) else x)
-    return _orig_dumps(*args, **kwargs)
-json.dumps = _safe_dumps
+def _safe(obj):
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    if isinstance(obj, np.ndarray):
+        return [None if (isinstance(x, float) and (math.isnan(x) or math.isinf(x))) else x for x in obj.tolist()]
+    if isinstance(obj, list):
+        return [None if (isinstance(x, float) and (math.isnan(x) or math.isinf(x))) else x for x in obj]
+    raise TypeError(f"Unserializable: {type(obj)}")
+json.dumps = lambda *a, **kw: _orig_dumps(*a, default=_safe, **kw)
 `);
 
     // Run each step sequentially with progress
@@ -350,8 +349,11 @@ json.dumps = _safe_dumps
         ? `run_stability(__data_json__, 200)`
         : `run_${step.id}(__data_json__)`;
       resultJson = await py.runPythonAsync(callCode) as string;
-      // Sanitize NaN/Infinity → null before parsing
-      const safeJson = (resultJson as string).replace(/: NaN/g, ": null").replace(/: Infinity/g, ": null").replace(/: -Infinity/g, ": null");
+      // Sanitize NaN/Infinity → null before parsing (any position)
+      const safeJson = (resultJson as string)
+        .replace(/\bNaN\b/g, "null")
+        .replace(/\bInfinity\b/g, "null")
+        .replace(/\b-Infinity\b/g, "null");
 
       const parsed = JSON.parse(safeJson);
       if (parsed.error) {
