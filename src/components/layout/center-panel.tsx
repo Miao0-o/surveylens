@@ -1,7 +1,6 @@
 "use client";
 
 import { useAppStore } from "@/lib/store";
-import { STAGE_LABELS } from "@/types";
 import { DataPreview } from "@/components/preprocessing/data-preview";
 import { OverviewDashboard } from "@/components/analysis/overview-dashboard";
 import { ReliabilityCard } from "@/components/analysis/reliability-card";
@@ -27,7 +26,6 @@ const TABS: { id: ResultTab; label: string }[] = [
 export function CenterPanel() {
   const rawData = useAppStore((s) => s.rawData);
   const pipelineState = useAppStore((s) => s.pipelineState);
-  const analysisStage = useAppStore((s) => s.analysisStage);
   const results = useAppStore((s) => s.results);
   const [activeTab, setActiveTab] = useState<ResultTab>("overview");
 
@@ -51,23 +49,12 @@ export function CenterPanel() {
 
   // ---- Processing ----
   if (pipelineState === "processing" || pipelineState === "ai_processing") {
-    const stageLabel = STAGE_LABELS[analysisStage] ?? "处理中...";
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4">
         <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-        <div>
-          <p className="text-sm text-foreground font-medium text-center">
-            {pipelineState === "ai_processing" ? "AI 解读中" : "统计分析中"}
-          </p>
-          <p className="text-xs text-muted-foreground text-center mt-1">
-            {pipelineState === "ai_processing" ? "AI 正在生成解读..." : stageLabel}
-          </p>
-          {pipelineState === "processing" && (
-            <p className="text-[11px] text-muted-foreground/70 text-center mt-2">
-              首次约 15-30 秒（下载统计引擎），后续约 3-5 秒
-            </p>
-          )}
-        </div>
+        <p className="text-sm text-foreground font-medium text-center">
+          {pipelineState === "ai_processing" ? "AI 解读中" : "正在执行统计计算"}
+        </p>
       </div>
     );
   }

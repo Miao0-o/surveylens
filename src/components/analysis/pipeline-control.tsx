@@ -4,15 +4,6 @@ import { useCallback, useRef, useState } from "react";
 import { Play, RefreshCw, Loader2, AlertTriangle } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { usePyodide } from "@/hooks/use-pyodide";
-import type { AnalysisStage } from "@/types";
-
-/** UI labels we cycle through during analysis to give user feedback */
-const ANIMATED_STAGES: { stage: AnalysisStage; delay: number }[] = [
-  { stage: "reliability", delay: 600 },
-  { stage: "validity", delay: 800 },
-  { stage: "efa", delay: 600 },
-  { stage: "stability", delay: 600 },
-];
 
 export function PipelineControl() {
   const pipelineState = useAppStore((s) => s.pipelineState);
@@ -23,22 +14,14 @@ export function PipelineControl() {
   const startProcessing = useAppStore((s) => s.startProcessing);
   const completeProcessing = useAppStore((s) => s.completeProcessing);
   const failProcessing = useAppStore((s) => s.failProcessing);
-  const setAnalysisStage = useAppStore((s) => s.setAnalysisStage);
-
   const { status: workerStatus, loadingMessage, runAnalysis } = usePyodide();
   const [localError, setLocalError] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const runningRef = useRef(false);
-  const stageTimerRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const canRun = hasData && hasLikert && pipelineState === "idle" && !runningRef.current;
   const isRunning = pipelineState === "processing" || pipelineState === "ai_processing" || runningRef.current;
   const isWorkerLoading = workerStatus === "loading";
-
-  const clearStageTimers = () => {
-    stageTimerRef.current.forEach(clearTimeout);
-    stageTimerRef.current = [];
-  };
 
   const handleRun = useCallback(async () => {
     if (!canRun || runningRef.current) return;
@@ -46,27 +29,17 @@ export function PipelineControl() {
     setLocalError(null);
     startProcessing("analysis");
 
-    // Start cycling UI stages for user feedback
-    let delay = 0;
-    for (const { stage, delay: d } of ANIMATED_STAGES) {
-      delay += d;
-      const timer = setTimeout(() => setAnalysisStage(stage), delay);
-      stageTimerRef.current.push(timer);
-    }
-
     try {
-      const { results } = await runAnalysis();
-      clearStageTimers();
+      await runAnalysis();
       completeProcessing();
     } catch (err) {
-      clearStageTimers();
       const msg = err instanceof Error ? err.message : "分析执行失败";
       setLocalError(msg);
       failProcessing(msg);
     } finally {
       runningRef.current = false;
     }
-  }, [canRun, startProcessing, runAnalysis, completeProcessing, failProcessing, setAnalysisStage]);
+  }, [canRun, startProcessing, runAnalysis, completeProcessing, failProcessing]);
 
   const handleReset = () => {
     if (!showResetConfirm) {
