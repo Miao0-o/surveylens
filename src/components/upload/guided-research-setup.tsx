@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAppStore } from "@/lib/store";
 import type { AnalysisIntent, ResearchDesign } from "@/types";
-import { ChevronRight, ChevronLeft, Check, Target, Users, Lightbulb, FileText, MessageSquare } from "lucide-react";
+import { ChevronRight, ChevronLeft, Check, Target, Users, Lightbulb, FileText, MessageSquare, Calculator, Layers, Plus, X } from "lucide-react";
 
 const INTENT_OPTIONS: { value: AnalysisIntent; label: string; desc: string; icon: typeof Target }[] = [
   { value: "validation", label: "量表验证", desc: "检验问卷信度与效度，验证因子结构", icon: Check },
@@ -89,91 +89,24 @@ export function GuidedResearchSetup() {
         </div>
       )}
 
-      {/* Step 2: Outcome Variables */}
+      {/* Step 2: Construct Variables */}
       {step === 2 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-1.5">
-            <Target className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
-            <span className="text-sm font-medium text-foreground">结果变量</span>
-            <span className="text-[10px] text-red-400">必填</span>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            选择用于衡量研究结果的核心变量（如量表总分、特定题项）
-          </p>
-          <div className="max-h-[160px] overflow-y-auto space-y-1">
-            {(rawData?.headers ?? []).map((col) => {
-              const selected = design?.outcomeVariables.includes(col);
-              return (
-                <button
-                  key={col}
-                  onClick={() => {
-                    const current = design?.outcomeVariables ?? [];
-                    update({
-                      outcomeVariables: selected
-                        ? current.filter((c) => c !== col)
-                        : [...current, col],
-                    });
-                  }}
-                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs transition-colors ${
-                    selected ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-secondary/50"
-                  }`}
-                >
-                  <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${
-                    selected ? "bg-primary border-primary" : "border-muted-foreground/30"
-                  }`}>
-                    {selected && <Check className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />}
-                  </div>
-                  {col}
-                </button>
-              );
-            })}
-          </div>
-          {(!design?.outcomeVariables || design.outcomeVariables.length === 0) && (
-            <p className="text-[10px] text-amber-500">至少选择一个结果变量</p>
-          )}
-        </div>
+        <ConstructStep
+          design={design}
+          rawData={rawData}
+          update={update}
+          step={2}
+        />
       )}
 
       {/* Step 3: Predictors */}
       {step === 3 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
-            <span className="text-sm font-medium text-foreground">预测变量</span>
-            <span className="text-[10px] text-muted-foreground">选填</span>
-          </div>
-          <p className="text-xs text-muted-foreground">选择可能影响结果变量的预测因子</p>
-          <div className="max-h-[160px] overflow-y-auto space-y-1">
-            {(rawData?.headers ?? [])
-              .filter((c) => !(design?.outcomeVariables ?? []).includes(c))
-              .map((col) => {
-                const selected = design?.predictorVariables.includes(col);
-                return (
-                  <button
-                    key={col}
-                    onClick={() => {
-                      const current = design?.predictorVariables ?? [];
-                      update({
-                        predictorVariables: selected
-                          ? current.filter((c) => c !== col)
-                          : [...current, col],
-                      });
-                    }}
-                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs transition-colors ${
-                      selected ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-secondary/50"
-                    }`}
-                  >
-                    <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${
-                      selected ? "bg-primary border-primary" : "border-muted-foreground/30"
-                    }`}>
-                      {selected && <Check className="w-2.5 h-2.5 text-white" strokeWidth={2.5} />}
-                    </div>
-                    {col}
-                  </button>
-                );
-              })}
-          </div>
-        </div>
+        <ConstructStep
+          design={design}
+          rawData={rawData}
+          update={update}
+          step={3}
+        />
       )}
 
       {/* Step 4: Theoretical Framework */}
@@ -269,6 +202,194 @@ export function GuidedResearchSetup() {
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+type CompositeMode = "single" | "mean" | "sum";
+
+function ConstructStep({
+  design,
+  rawData,
+  update,
+  step,
+}: {
+  design: ResearchDesign | null;
+  rawData: { headers: string[] } | null;
+  update: (patch: Partial<ResearchDesign>) => void;
+  step: 2 | 3;
+}) {
+  const isOutcome = step === 2;
+  const label = isOutcome ? "结果变量" : "预测变量";
+  const desc = isOutcome
+    ? "结果变量通常是量表的维度分或总分，由多个题项计算得出"
+    : "预测变量是可能影响结果的自变量或协变量";
+  const selected = isOutcome ? (design?.outcomeVariables ?? []) : (design?.predictorVariables ?? []);
+  const setSelected = (vars: string[]) => {
+    if (isOutcome) update({ outcomeVariables: vars });
+    else update({ predictorVariables: vars });
+  };
+
+  const likertCols = useMemo(
+    () => (rawData?.headers ?? []).filter((c) => !isOutcome || !(design?.predictorVariables ?? []).includes(c)),
+    [rawData, design?.predictorVariables, isOutcome]
+  );
+
+  // Current composite group name
+  const [compositeName, setCompositeName] = useState("");
+  const [compositeMode, setCompositeMode] = useState<CompositeMode>("mean");
+  const [compositeItems, setCompositeItems] = useState<string[]>([]);
+
+  const addComposite = () => {
+    if (!compositeName.trim() || compositeItems.length < 2) return;
+    const compositeLabel = `${compositeName.trim()} (${compositeMode === "mean" ? "均值" : "总分"} of ${compositeItems.join(", ")})`;
+    setSelected([...selected, compositeLabel]);
+    setCompositeName("");
+    setCompositeItems([]);
+  };
+
+  const toggleItem = (col: string) => {
+    if (selected.includes(col)) {
+      setSelected(selected.filter((c) => c !== col));
+    } else {
+      setSelected([...selected, col]);
+    }
+  };
+
+  const toggleCompositeItem = (col: string) => {
+    setCompositeItems((prev) =>
+      prev.includes(col) ? prev.filter((c) => c !== col) : [...prev, col]
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-1.5">
+        {isOutcome ? (
+          <Target className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
+        ) : (
+          <Users className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
+        )}
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        <span className={`text-[10px] ${isOutcome ? "text-red-400" : "text-muted-foreground"}`}>
+          {isOutcome ? "必填" : "选填"}
+        </span>
+      </div>
+      <p className="text-xs text-muted-foreground">{desc}</p>
+
+      {/* Already selected items */}
+      {selected.length > 0 && (
+        <div className="space-y-1">
+          <span className="text-[10px] text-muted-foreground">已选择：</span>
+          {selected.map((v) => (
+            <div key={v} className="flex items-center gap-2 px-2.5 py-1.5 rounded bg-primary/5 border border-primary/10 text-xs text-primary font-medium">
+              <Check className="w-3 h-3 shrink-0" strokeWidth={2} />
+              <span className="flex-1 truncate">{v}</span>
+              <button onClick={() => setSelected(selected.filter((c) => c !== v))} className="text-muted-foreground hover:text-red-500">
+                <X className="w-3 h-3" strokeWidth={1.5} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Build composite score */}
+      <div className="space-y-2 px-3 py-2.5 rounded-lg bg-secondary/30 border border-border/50">
+        <div className="flex items-center gap-1.5">
+          <Calculator className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
+          <span className="text-xs font-medium text-foreground">构建分量表</span>
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          将多个题项合并为一个变量（如维度均值）
+        </p>
+
+        {/* Mode selector */}
+        <div className="flex gap-1">
+          {(["mean", "sum"] as CompositeMode[]).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setCompositeMode(mode)}
+              className={`px-2.5 py-1 rounded text-[10px] ${
+                compositeMode === mode ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground"
+              }`}
+            >
+              {mode === "mean" ? "均值" : "总分"}
+            </button>
+          ))}
+        </div>
+
+        {/* Name input */}
+        <input
+          type="text"
+          value={compositeName}
+          onChange={(e) => setCompositeName(e.target.value)}
+          placeholder="变量名，如：焦虑维度"
+          className="w-full rounded border border-border px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+
+        {/* Item selection for composite */}
+        <div className="max-h-[100px] overflow-y-auto space-y-0.5">
+          {likertCols.map((col) => {
+            const inComposite = compositeItems.includes(col);
+            return (
+              <button
+                key={col}
+                onClick={() => toggleCompositeItem(col)}
+                className={`w-full flex items-center gap-1.5 px-2 py-1 rounded text-[10px] ${
+                  inComposite ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary/50"
+                }`}
+              >
+                <div className={`w-3 h-3 rounded border flex items-center justify-center shrink-0 ${
+                  inComposite ? "bg-primary border-primary" : "border-muted-foreground/30"
+                }`}>
+                  {inComposite && <Check className="w-2 h-2 text-white" strokeWidth={2.5} />}
+                </div>
+                {col}
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={addComposite}
+          disabled={!compositeName.trim() || compositeItems.length < 2}
+          className="w-full flex items-center justify-center gap-1 px-3 py-1.5 rounded bg-primary/10 text-primary text-xs font-medium
+            hover:bg-primary/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <Plus className="w-3 h-3" strokeWidth={1.5} />
+          添加分量表
+        </button>
+      </div>
+
+      {/* Direct item selection */}
+      <div>
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <Layers className="w-3 h-3 text-muted-foreground" strokeWidth={1.5} />
+          <span className="text-[10px] text-muted-foreground">或直接选择题项</span>
+        </div>
+        <div className="max-h-[100px] overflow-y-auto space-y-0.5">
+          {likertCols.slice(0, 20).map((col) => (
+            <button
+              key={col}
+              onClick={() => toggleItem(col)}
+              className={`w-full flex items-center gap-1.5 px-2 py-1 rounded text-[10px] ${
+                selected.includes(col) ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-secondary/50"
+              }`}
+            >
+              <div className={`w-3 h-3 rounded border flex items-center justify-center shrink-0 ${
+                selected.includes(col) ? "bg-primary border-primary" : "border-muted-foreground/30"
+              }`}>
+                {selected.includes(col) && <Check className="w-2 h-2 text-white" strokeWidth={2.5} />}
+              </div>
+              {col}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isOutcome && selected.length === 0 && (
+        <p className="text-[10px] text-amber-500">至少选择一个结果变量</p>
+      )}
     </div>
   );
 }
