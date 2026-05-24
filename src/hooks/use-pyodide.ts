@@ -319,6 +319,22 @@ export function usePyodide() {
 
     const results = {} as Record<string, Record<string, unknown>>;
 
+    // Helper: sanitize JSON string — replace NaN/Infinity with null
+    await py.runPythonAsync(`
+import json, math
+def safe_json_dumps(obj):
+    return json.dumps(obj, default=lambda x: None if isinstance(x, float) and (math.isnan(x) or math.isinf(x)) else x)
+`);
+    // Patch json.dumps globally
+    await py.runPythonAsync(`
+import json, math, builtins
+_orig_dumps = json.dumps
+def _safe_dumps(*args, **kwargs):
+    kwargs.setdefault('default', lambda x: None if isinstance(x, float) and (math.isnan(x) or math.isinf(x)) else x)
+    return _orig_dumps(*args, **kwargs)
+json.dumps = _safe_dumps
+`);
+
     // Run each step sequentially with progress
     for (const step of PYTHON_STEPS) {
       const stageLabel = STAGE_LABELS[step.id] ?? step.id;
@@ -334,8 +350,10 @@ export function usePyodide() {
         ? `run_stability(__data_json__, 200)`
         : `run_${step.id}(__data_json__)`;
       resultJson = await py.runPythonAsync(callCode) as string;
+      // Sanitize NaN/Infinity → null before parsing
+      const safeJson = (resultJson as string).replace(/: NaN/g, ": null").replace(/: Infinity/g, ": null").replace(/: -Infinity/g, ": null");
 
-      const parsed = JSON.parse(resultJson);
+      const parsed = JSON.parse(safeJson);
       if (parsed.error) {
         throw new Error(`Step ${step.id}: ${parsed.error}`);
       }
