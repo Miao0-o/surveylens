@@ -133,7 +133,7 @@ const initialMissingStrategy: MissingStrategy = {
 };
 
 const initialState: AppState = {
-  rawData: loadRawData() as ParsedData | null,
+  rawData: null,
   columns: [],
   classification: null,
   likertColumns: [],
@@ -171,12 +171,12 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
 
   // ---- Data ----
   setRawData: (data) => {
-    saveRawData(data);
+    try { localStorage.setItem(RAW_DATA_KEY, JSON.stringify(data)); } catch {}
     return set({ rawData: data, pipelineStep: "upload", analysisStage: "uploading", error: null });
   },
 
   setLikertColumns: (cols) => {
-    saveLikertCols(cols);
+    try { localStorage.setItem(LIKERT_KEY, JSON.stringify(cols)); } catch {}
     return set({ likertColumns: cols });
   },
 
