@@ -63,15 +63,15 @@ export function RightSidebar() {
         </p>
         <div className="space-y-2">
           {[
-            { icon: "📊", label: "统计指标解释", desc: "α、KMO、Bartlett 等指标含义" },
-            { icon: "📝", label: "APA 论文格式", desc: "可直接复制到学术论文中" },
-            { icon: "💡", label: "诊断与建议", desc: "识别问题题项，给出优化方案" },
-          ].map((item) => (
-            <div key={item.label} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-secondary/20">
-              <span className="text-sm shrink-0 mt-0.5">{item.icon}</span>
+            { Icon: Zap, label: "统计指标解释", desc: "α、KMO、Bartlett 等指标含义" },
+            { Icon: FileText, label: "APA 论文格式", desc: "可直接复制到学术论文中" },
+            { Icon: Lightbulb, label: "诊断与建议", desc: "识别问题题项，给出优化方案" },
+          ].map(({ Icon, label, desc }) => (
+            <div key={label} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-secondary/20">
+              <Icon className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" strokeWidth={1.5} />
               <div>
-                <p className="text-xs font-medium text-foreground">{item.label}</p>
-                <p className="text-[11px] text-muted-foreground">{item.desc}</p>
+                <p className="text-xs font-medium text-foreground">{label}</p>
+                <p className="text-[11px] text-muted-foreground">{desc}</p>
               </div>
             </div>
           ))}
@@ -219,15 +219,15 @@ export function RightSidebar() {
         </p>
         <div className="space-y-2">
           {[
-            { icon: "📊", label: "统计指标解释", desc: "α、KMO、Bartlett 等指标含义" },
-            { icon: "📝", label: "APA 论文格式", desc: "可直接复制到学术论文中" },
-            { icon: "💡", label: "诊断与建议", desc: "识别问题题项，给出优化方案" },
-          ].map((item) => (
-            <div key={item.label} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-secondary/20">
-              <span className="text-sm shrink-0 mt-0.5">{item.icon}</span>
+            { Icon: Zap, label: "统计指标解释", desc: "α、KMO、Bartlett 等指标含义" },
+            { Icon: FileText, label: "APA 论文格式", desc: "可直接复制到学术论文中" },
+            { Icon: Lightbulb, label: "诊断与建议", desc: "识别问题题项，给出优化方案" },
+          ].map(({ Icon, label, desc }) => (
+            <div key={label} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-secondary/20">
+              <Icon className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" strokeWidth={1.5} />
               <div>
-                <p className="text-xs font-medium text-foreground">{item.label}</p>
-                <p className="text-[11px] text-muted-foreground">{item.desc}</p>
+                <p className="text-xs font-medium text-foreground">{label}</p>
+                <p className="text-[11px] text-muted-foreground">{desc}</p>
               </div>
             </div>
           ))}
