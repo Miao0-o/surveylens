@@ -264,6 +264,11 @@ export function usePyodide() {
     }
 
     const dataJson = JSON.stringify(data);
+
+    // Store data as a Python global to avoid string interpolation issues
+    await py.runPythonAsync("import json");
+    await py.runPythonAsync(`__data_json__ = '''${dataJson}'''`);
+
     const results = {} as Record<string, Record<string, unknown>>;
 
     // Run each step sequentially with progress
@@ -275,19 +280,18 @@ export function usePyodide() {
       // Register the function
       await py.runPythonAsync(step.fn);
 
-      // Execute
+      // Execute — data is already in __data_json__
       let resultJson: string;
-      if (step.id === "stability") {
-        resultJson = await py.runPythonAsync(
-          `run_stability('${dataJson}', 200)`
-        ) as string;
-      } else {
-        resultJson = await py.runPythonAsync(
-          `run_${step.id}('${dataJson}')`
-        ) as string;
-      }
+      const callCode = step.id === "stability"
+        ? `run_stability(__data_json__, 200)`
+        : `run_${step.id}(__data_json__)`;
+      resultJson = await py.runPythonAsync(callCode) as string;
 
-      results[step.id] = JSON.parse(resultJson);
+      const parsed = JSON.parse(resultJson);
+      if (parsed.error) {
+        throw new Error(`Step ${step.id}: ${parsed.error}`);
+      }
+      results[step.id] = parsed;
     }
 
     // Build AnalysisResults from step results
