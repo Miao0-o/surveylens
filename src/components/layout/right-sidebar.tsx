@@ -14,7 +14,7 @@ function APIKeyInput() {
     <div className="space-y-2">
       <div className="flex items-center gap-1.5">
         <Key className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
-        <label className="text-xs font-medium text-foreground">Claude API Key</label>
+        <label className="text-sm font-medium text-foreground">Claude API Key</label>
       </div>
       <div className="relative">
         <input
@@ -22,7 +22,7 @@ function APIKeyInput() {
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           placeholder="sk-ant-api-..."
-          className="w-full rounded-lg border border-border bg-background px-3 py-2 pr-8 text-xs text-foreground placeholder:text-muted-foreground/40
+          className="w-full rounded-lg border border-border bg-background px-3 py-2.5 pr-8 text-sm text-foreground placeholder:text-muted-foreground/40
             focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring transition-colors font-mono"
         />
         <button
@@ -32,7 +32,7 @@ function APIKeyInput() {
           <Eye className="w-3.5 h-3.5" strokeWidth={1.5} />
         </button>
       </div>
-      <p className="text-[10px] text-muted-foreground/70">
+      <p className="text-xs text-muted-foreground/70">
         Key 仅保存在浏览器本地，经后端代理转发。
       </p>
     </div>
@@ -86,9 +86,9 @@ export function RightSidebar() {
       <div className="flex flex-col h-full gap-5">
         {showAPIInput && <APIKeyInput />}
         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
-          <Sparkles className="w-10 h-10" strokeWidth={1} />
-          <p className="text-sm text-center">AI 解读结果将在分析完成后显示</p>
-          <p className="text-xs text-muted-foreground/60 text-center">
+          <Sparkles className="w-12 h-12" strokeWidth={1} />
+          <p className="text-base text-center font-medium">AI 解读结果将在分析完成后显示</p>
+          <p className="text-sm text-muted-foreground/60 text-center">
             通俗解读 · 学术解释 · 导师建议 · APA 格式
           </p>
         </div>
@@ -102,7 +102,7 @@ export function RightSidebar() {
       <div className="flex flex-col items-center justify-center h-full gap-4">
         <Loader2 className="w-8 h-8 text-primary animate-spin" strokeWidth={1.5} />
         <p className="text-sm text-muted-foreground">AI 正在解读结果...</p>
-        <p className="text-[10px] text-muted-foreground/60">
+        <p className="text-xs text-muted-foreground/60">
           请稍候，通常需要 3-5 秒
         </p>
       </div>
@@ -113,7 +113,7 @@ export function RightSidebar() {
   if (aiResults) {
     return (
       <div className="space-y-3.5 overflow-y-auto h-full">
-        <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+        <h3 className="text-base font-semibold text-foreground flex items-center gap-1.5">
           <Sparkles className="w-4 h-4 text-primary" strokeWidth={1.5} />
           AI 解读结果
         </h3>
@@ -123,7 +123,7 @@ export function RightSidebar() {
           title="通俗解读"
           icon={<Zap className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.5} />}
         >
-          <p className="text-xs text-foreground leading-relaxed">
+          <p className="text-sm text-foreground leading-relaxed">
             {aiResults.explanation.simple}
           </p>
         </ResultCard>
@@ -133,7 +133,7 @@ export function RightSidebar() {
           title="学术解读"
           icon={<Info className="w-3.5 h-3.5 text-blue-400" strokeWidth={1.5} />}
         >
-          <p className="text-xs text-muted-foreground leading-relaxed">
+          <p className="text-sm text-muted-foreground leading-relaxed">
             {aiResults.explanation.academic}
           </p>
         </ResultCard>
@@ -141,8 +141,8 @@ export function RightSidebar() {
         {/* Advisor suggestions */}
         {aiResults.suggestions.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-violet-400" strokeWidth={1.5} />
+            <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-violet-400" strokeWidth={1.5} />
               导师建议
             </p>
             {aiResults.suggestions.map((s, i) => (
@@ -160,9 +160,9 @@ export function RightSidebar() {
                           : "bg-emerald-400"
                     }`}
                   />
-                  <p className="text-[11px] font-medium text-foreground">{s.title}</p>
+                  <p className="text-xs font-medium text-foreground">{s.title}</p>
                 </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed ml-3">
+                <p className="text-xs text-muted-foreground leading-relaxed ml-3">
                   {s.detail}
                 </p>
               </div>
@@ -175,19 +175,19 @@ export function RightSidebar() {
           aiResults.diagnosis.crossLoadingItems.length > 0 ||
           aiResults.diagnosis.reverseItemRisks.length > 0) && (
           <div className="space-y-2">
-            <p className="text-xs font-medium text-foreground">问题诊断</p>
+            <p className="text-sm font-medium text-foreground">问题诊断</p>
             {aiResults.diagnosis.lowReliabilityItems.length > 0 && (
               <div className="px-3 py-2 rounded-lg bg-amber-50/50 border border-amber-100/50">
-                <p className="text-[10px] font-medium text-amber-700">低信度题项</p>
-                <p className="text-[11px] text-amber-600/80">
+                <p className="text-xs font-medium text-amber-700">低信度题项</p>
+                <p className="text-xs text-amber-600/80">
                   {aiResults.diagnosis.lowReliabilityItems.join(", ")}
                 </p>
               </div>
             )}
             {aiResults.diagnosis.crossLoadingItems.length > 0 && (
               <div className="px-3 py-2 rounded-lg bg-blue-50/50 border border-blue-100/50">
-                <p className="text-[10px] font-medium text-blue-700">交叉载荷题项</p>
-                <p className="text-[11px] text-blue-600/80">
+                <p className="text-xs font-medium text-blue-700">交叉载荷题项</p>
+                <p className="text-xs text-blue-600/80">
                   {aiResults.diagnosis.crossLoadingItems.join(", ")}
                 </p>
               </div>
@@ -202,7 +202,7 @@ export function RightSidebar() {
             icon={<CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" strokeWidth={1.5} />}
             action={<CopyButton text={aiResults.apaResult} />}
           >
-            <pre className="text-[11px] text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
+            <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
               {aiResults.apaResult}
             </pre>
           </ResultCard>
@@ -225,11 +225,11 @@ export function RightSidebar() {
         <APIKeyInput />
 
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
-          <Sparkles className="w-10 h-10 text-muted-foreground" strokeWidth={1} />
-          <p className="text-sm text-foreground font-medium text-center">
+          <Sparkles className="w-12 h-12 text-muted-foreground" strokeWidth={1} />
+          <p className="text-base text-foreground font-medium text-center">
             统计分析完成
           </p>
-          <p className="text-xs text-muted-foreground text-center">
+          <p className="text-sm text-muted-foreground text-center">
             {apiKey
               ? "点击下方按钮获取 AI 解读与建议"
               : "请先配置 Claude API Key"}
@@ -237,7 +237,7 @@ export function RightSidebar() {
           <button
             onClick={runAI}
             disabled={!apiKey || !apiKey.startsWith("sk-ant")}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium
               hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
             <Sparkles className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -283,7 +283,7 @@ function ResultCard({
   return (
     <div className="rounded-xl bg-secondary/30 border border-border/60 p-3.5">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
+        <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
           {icon}
           {title}
         </p>

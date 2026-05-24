@@ -33,9 +33,9 @@ export function CenterPanel() {
   if (!rawData) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3">
-        <FileSpreadsheet className="w-12 h-12" strokeWidth={1} />
-        <p className="text-sm">上传数据后将在此处显示数据预览与分析结果</p>
-        <p className="text-xs text-muted-foreground/60">
+        <FileSpreadsheet className="w-16 h-16" strokeWidth={1} />
+        <p className="text-base font-medium">上传数据后将在此处显示数据预览与分析结果</p>
+        <p className="text-sm text-muted-foreground/60">
           支持 CSV · Excel · Qualtrics 导出文件
         </p>
       </div>

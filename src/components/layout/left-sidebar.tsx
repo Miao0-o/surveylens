@@ -44,7 +44,7 @@ export function LeftSidebar() {
               key={id}
               onClick={() => setActiveStep(id)}
               disabled={id !== "upload" && !hasData}
-              className={`flex-1 flex flex-col items-center gap-0.5 px-2 py-2 rounded-md text-[10px] transition-colors
+              className={`flex-1 flex flex-col items-center gap-1 px-2.5 py-2.5 rounded-md text-xs transition-colors
                 ${
                   isActive
                     ? "bg-card text-foreground font-medium shadow-sm"
@@ -52,9 +52,9 @@ export function LeftSidebar() {
                 }`}
             >
               {isDone && !isActive ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" strokeWidth={1.5} />
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" strokeWidth={1.5} />
               ) : (
-                <Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+                <Icon className="w-4 h-4" strokeWidth={1.5} />
               )}
               {label}
             </button>
@@ -89,7 +89,7 @@ export function LeftSidebar() {
         <hr className="border-border" />
         {hasData && !hasLikert && (
           <div className="px-3 py-2 rounded-lg bg-amber-50 border border-amber-100">
-            <p className="text-[10px] text-amber-600 text-center">
+            <p className="text-xs text-amber-600 text-center">
               未检测到 Likert 题项（需 2-7 级数值列）。
               <br />
               请确认数据中包含量表题项。
@@ -97,7 +97,7 @@ export function LeftSidebar() {
           </div>
         )}
         <PipelineControl />
-        <p className="text-[10px] text-muted-foreground text-center">
+        <p className="text-xs text-muted-foreground text-center">
           {!hasData
             ? "请上传数据文件（CSV / Excel / Qualtrics）"
             : pipelineState === "completed"
