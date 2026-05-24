@@ -15,7 +15,6 @@ import {
   Layers,
   CheckCircle2,
   Zap,
-  ChevronDown,
 } from "lucide-react";
 import { PipelineControl } from "@/components/analysis/pipeline-control";
 
@@ -37,49 +36,32 @@ export function LeftSidebar() {
   const setAnalysisMode = useAppStore((s) => s.setAnalysisMode);
   const [activeStep, setActiveStep] = useState<LeftStep>("upload");
 
-  const modeLabels: Record<string, { label: string; desc: string }> = {
-    auto: { label: "快速", desc: "自动识别，一键分析" },
-    guided: { label: "引导", desc: "可选设置结果变量" },
-    expert: { label: "专家", desc: "完整研究设计" },
-  };
-
   return (
     <div className="flex flex-col h-full gap-5">
-      {/* Mode selector — subtle, top */}
-      <div className="relative group">
+      {/* Mode toggle — simple two-option switch */}
+      <div className="flex rounded-lg bg-secondary/50 p-0.5">
         <button
-          className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-secondary/30 border border-border/50 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          title="分析模式"
+          onClick={() => setAnalysisMode("quick")}
+          className={`flex-1 flex items-center justify-center gap-1 px-2.5 py-2 rounded-md text-xs transition-colors ${
+            analysisMode === "quick" ? "bg-card text-foreground font-medium shadow-sm" : "text-muted-foreground hover:text-foreground"
+          }`}
         >
-          <span className="flex items-center gap-1.5">
-            <Zap className="w-3 h-3" strokeWidth={1.5} />
-            {modeLabels[analysisMode]?.label ?? "快速"}
-          </span>
-          <ChevronDown className="w-3 h-3" strokeWidth={1.5} />
+          <Zap className="w-3.5 h-3.5" strokeWidth={1.5} />
+          快速
         </button>
-        {/* Dropdown */}
-        <div className="absolute top-full left-0 right-0 mt-1 z-10 hidden group-hover:block bg-card border border-border rounded-lg shadow-sm p-1">
-          {(["auto", "guided", "expert"] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => {
-                setAnalysisMode(mode);
-                if (mode === "auto") setActiveStep("upload");
-              }}
-              className={`w-full text-left px-2.5 py-1.5 rounded text-xs ${
-                analysisMode === mode ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-secondary/50"
-              }`}
-            >
-              <span className="font-medium">{modeLabels[mode].label}</span>
-              <span className="text-[10px] text-muted-foreground ml-1.5">{modeLabels[mode].desc}</span>
-            </button>
-          ))}
-        </div>
+        <button
+          onClick={() => setAnalysisMode("custom")}
+          className={`flex-1 flex items-center justify-center gap-1 px-2.5 py-2 rounded-md text-xs transition-colors ${
+            analysisMode === "custom" ? "bg-card text-foreground font-medium shadow-sm" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Wrench className="w-3.5 h-3.5" strokeWidth={1.5} />
+          自定义
+        </button>
       </div>
 
-      {/* Step navigation (only in guided/expert) */}
-      {analysisMode !== "auto" && (
-        <nav className="flex gap-1 p-0.5 rounded-lg bg-secondary/50">
+      {/* Step navigation */}
+      <nav className="flex gap-1 p-0.5 rounded-lg bg-secondary/50">
         {STEPS.map(({ id, label, icon: Icon }) => {
           const isActive = activeStep === id;
           const isDone =
@@ -108,24 +90,23 @@ export function LeftSidebar() {
           );
         })}
       </nav>
-      )}
 
       {/* Step content */}
       <div className="flex-1 overflow-y-auto">
         {activeStep === "upload" && (
           <div className="space-y-4">
             <FileUploader />
-            {/* Research setup: only in guided/expert mode */}
-            {hasData && analysisMode !== "auto" && <GuidedResearchSetup />}
-            {hasData && analysisMode !== "auto" && design?.analysisIntent && design.outcomeVariables.length > 0 && (
+            {/* Research setup: only in custom mode */}
+            {hasData && analysisMode === "custom" && <GuidedResearchSetup />}
+            {hasData && analysisMode === "custom" && design?.analysisIntent && design.outcomeVariables.length > 0 && (
               <>
                 <hr className="border-border" />
                 <ResearchDesignReview />
               </>
             )}
-            {/* Auto mode: show simple auto-detect summary */}
-            {hasData && analysisMode === "auto" && (
-              <AutoModeSummary />
+            {/* Quick mode: simple auto-detect summary */}
+            {hasData && analysisMode === "quick" && (
+              <QuickModeSummary />
             )}
           </div>
         )}
@@ -155,8 +136,8 @@ export function LeftSidebar() {
               ? "分析完成"
               : pipelineState === "error"
                 ? "分析出错，请重试"
-              : analysisMode === "auto"
-                ? "快速模式 · 点击即可分析"
+              : analysisMode === "quick"
+                ? "上传 → 分析 → 出结果"
                 : !design?.outcomeVariables?.length
                   ? "请完成研究设计设置"
                   : !designConfirmed
@@ -202,7 +183,7 @@ function DataClassificationWarnings() {
   );
 }
 
-function AutoModeSummary() {
+function QuickModeSummary() {
   const likertColumns = useAppStore((s) => s.likertColumns);
   const classification = useAppStore((s) => s.classification);
 

@@ -113,7 +113,7 @@ export interface DimensionGroup {
 }
 
 // ---- Analysis Mode ----
-export type AnalysisMode = "auto" | "guided" | "expert";
+export type AnalysisMode = "quick" | "custom";
 
 // ---- Research Design (structured schema) ----
 export type AnalysisIntent = "prediction" | "explanation" | "validation" | "exploration";

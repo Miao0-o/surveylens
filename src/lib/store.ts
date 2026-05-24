@@ -138,7 +138,7 @@ const initialState: AppState = {
   validationReport: null,
   aiResults: null,
 
-  analysisMode: "auto",
+  analysisMode: "quick",
   designConfirmed: false,
 
   apiKey: "", // loaded from sessionStorage on client

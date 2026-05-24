@@ -22,8 +22,8 @@ export function PipelineControl() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const runningRef = useRef(false);
 
-  // Auto mode: no design needed. Guided/Expert: requires confirmed design.
-  const needsDesign = analysisMode === "guided" || analysisMode === "expert";
+  // Quick mode: no design needed. Custom: requires confirmed design.
+  const needsDesign = analysisMode === "custom";
   const canRun = hasData && hasLikert && pipelineState === "idle" && !runningRef.current
     && (!needsDesign || (hasDesign && designConfirmed));
   const isRunning = pipelineState === "processing" || pipelineState === "ai_processing" || runningRef.current;

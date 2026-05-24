@@ -43,7 +43,7 @@ export function useSession() {
     const state = useAppStore.getState();
     if (p.rawData) state.setRawData(p.rawData as Parameters<typeof state.setRawData>[0]);
     if (p.likertColumns?.length) state.setLikertColumns(p.likertColumns as string[]);
-    if (p.analysisMode) useAppStore.getState().setAnalysisMode(p.analysisMode as "auto" | "guided" | "expert");
+    if (p.analysisMode) useAppStore.getState().setAnalysisMode(p.analysisMode as "quick" | "custom");
     if (p.researchDesign) useAppStore.getState().setResearchDesign(p.researchDesign as Parameters<typeof state.setResearchDesign>[0]);
     // Note: columns, dimensions, results, aiResults are not restored
     // to keep things simple — they would need recomputation
