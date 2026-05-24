@@ -59,6 +59,11 @@ export function LeftSidebar() {
           自定义
         </button>
       </div>
+      <p className="text-[10px] text-muted-foreground/60 -mt-4 px-1">
+        {analysisMode === "quick"
+          ? "上传即分析，AI 自动识别变量与模型"
+          : "可选填研究设计，获得理论对齐解读"}
+      </p>
 
       {/* Step navigation */}
       <nav className="flex gap-1 p-0.5 rounded-lg bg-secondary/50">
