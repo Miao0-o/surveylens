@@ -6,8 +6,9 @@ import { useAppStore } from "@/lib/store";
 import type { ParsedData } from "@/types";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
+import { parseSavFile } from "@/lib/parsers/sav-parser";
 
-type SupportedFormat = "csv" | "xlsx" | "qualtrics";
+type SupportedFormat = "csv" | "xlsx" | "qualtrics" | "sav" | "dta";
 
 interface ParseResult {
   data: ParsedData;
@@ -18,6 +19,8 @@ function detectFormat(fileName: string): SupportedFormat {
   const lower = fileName.toLowerCase();
   if (lower.includes("qualtrics")) return "qualtrics";
   if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) return "xlsx";
+  if (lower.endsWith(".sav")) return "sav";
+  if (lower.endsWith(".dta")) return "dta";
   return "csv";
 }
 
@@ -143,6 +146,12 @@ export function FileUploader() {
           case "qualtrics":
             result = await parseQualtrics(file);
             break;
+          case "sav":
+            result = await parseSavFormat(file);
+            break;
+          case "dta":
+            result = await parseDtaFormat(file);
+            break;
         }
 
         console.log("[upload] parsed:", result.data.rowCount, "rows ×", result.data.colCount, "cols, calling setRawData...");
@@ -210,14 +219,14 @@ export function FileUploader() {
               拖拽文件到此处，或点击选择
             </span>
             <span className="text-xs text-muted-foreground/60">
-              .csv · .xlsx · .xls · Qualtrics 导出
+              .csv · .xlsx · .sav · Qualtrics
             </span>
           </div>
         )}
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv,.xlsx,.xls"
+          accept=".csv,.xlsx,.xls,.sav,.dta"
           onChange={onFileSelect}
           className="hidden"
         />
@@ -257,4 +266,27 @@ export function FileUploader() {
       )}
     </div>
   );
+}
+
+async function parseSavFormat(file: File): Promise<ParseResult> {
+  try {
+    const result = await parseSavFile(file, file.name);
+    return {
+      data: {
+        headers: result.headers,
+        rows: result.rows as Record<string, unknown>[],
+        rowCount: result.rowCount,
+        colCount: result.colCount,
+        fileName: file.name,
+        fileType: "sav" as const,
+      },
+      warnings: result.rowCount > 10000 ? ["文件超过 10000 行，仅加载前 10000 行"] : [],
+    };
+  } catch (e) {
+    throw new Error(`SPSS 文件解析失败: ${e instanceof Error ? e.message : "未知错误"}。建议从 SPSS 导出为 CSV 后重新上传。`);
+  }
+}
+
+async function parseDtaFormat(_file: File): Promise<ParseResult> {
+  throw new Error("Stata .dta 文件暂不支持直接解析。请在 Stata 中使用 export delimited 命令导出为 CSV 后上传。");
 }

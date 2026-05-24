@@ -81,7 +81,7 @@ export interface ParsedData {
   rowCount: number;
   colCount: number;
   fileName: string;
-  fileType: "csv" | "xlsx" | "qualtrics";
+  fileType: "csv" | "xlsx" | "qualtrics" | "sav" | "dta";
 }
 
 export interface ColumnInfo {
