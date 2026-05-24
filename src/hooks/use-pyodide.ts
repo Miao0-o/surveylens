@@ -4,6 +4,7 @@ import { useRef, useState, useCallback } from "react";
 import { useAppStore } from "@/lib/store";
 import { compressResults } from "@/lib/ai/compressor";
 import { validateResults } from "@/lib/stats/validation-engine";
+import { sanitizeForStorage } from "@/lib/stats/sanitize";
 import type { AnalysisResults, AnalysisStage } from "@/types";
 
 type EngineStatus = "unloaded" | "loading" | "ready" | "error";
@@ -355,11 +356,11 @@ json.dumps = lambda *a, **kw: _orig_dumps(*a, default=_safe, **kw)
         .replace(/\bInfinity\b/g, "null")
         .replace(/\b-Infinity\b/g, "null");
 
-      const parsed = JSON.parse(safeJson);
+      const parsed = sanitizeForStorage(JSON.parse(safeJson));
       if (parsed.error) {
         throw new Error(`Step ${step.id}: ${parsed.error}`);
       }
-      results[step.id] = parsed;
+      results[step.id] = parsed as Record<string, unknown>;
     }
 
     // Store descriptive results
@@ -368,7 +369,7 @@ json.dumps = lambda *a, **kw: _orig_dumps(*a, default=_safe, **kw)
     }
 
     // Build AnalysisResults from step results
-    const finalResults = buildResults(results, likertColumns);
+    const finalResults = sanitizeForStorage(buildResults(results, likertColumns));
     useAppStore.getState().setResults(finalResults);
 
     const validation = validateResults(finalResults);

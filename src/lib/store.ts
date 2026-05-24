@@ -8,6 +8,7 @@
 
 import { create } from "zustand";
 import { idbGet, idbSet, idbRemove } from "./storage/idb-storage";
+import { sanitizeForStorage } from "./stats/sanitize";
 import type {
   AppState,
   PipelineState,
@@ -160,12 +161,13 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
 
   // ---- Data ----
   setRawData: (data) => {
-    idbSet(RAW_DATA_KEY, data).catch(() => {});
-    return set({ rawData: data, pipelineStep: "upload", analysisStage: "uploading", error: null });
+    const clean = sanitizeForStorage(data);
+    idbSet(RAW_DATA_KEY, clean).catch(() => {});
+    return set({ rawData: clean, pipelineStep: "upload", analysisStage: "uploading", error: null });
   },
 
   setLikertColumns: (cols) => {
-    idbSet(LIKERT_KEY, cols).catch(() => {});
+    idbSet(LIKERT_KEY, sanitizeForStorage(cols)).catch(() => {});
     return set({ likertColumns: cols });
   },
 
