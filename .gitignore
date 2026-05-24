@@ -51,3 +51,6 @@ venv/
 *.csv
 *.xlsx
 !sample-data.*
+
+# Gh CLI local config
+.gh/
