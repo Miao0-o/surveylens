@@ -96,6 +96,7 @@ interface AppActions {
 
   // Results
   setResults: (results: AnalysisResults) => void;
+  setDescriptiveResults: (data: Record<string, unknown>[] | null) => void;
   setValidationReport: (report: ValidationReport) => void;
   setAIResults: (aiResults: AIResults | null) => void;
   checkAICache: () => AIResults | null;
@@ -140,6 +141,7 @@ const initialState: AppState = {
   aiError: null,
 
   results: null,
+  descriptiveResults: null,
   validationReport: null,
   aiResults: null,
 
@@ -212,6 +214,7 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
 
   // ---- Results ----
   setResults: (results) => set({ results }),
+  setDescriptiveResults: (descriptiveResults) => set({ descriptiveResults }),
   setValidationReport: (validationReport) => set({ validationReport }),
   setAIResults: (aiResults) => {
     saveCachedAIResults(aiResults);
