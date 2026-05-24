@@ -53,12 +53,29 @@ export function RightSidebar() {
   // ---- Stats not done yet ----
   if (pipelineState === "idle" || pipelineState === "processing") {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center gap-3 px-2">
-        <Sparkles className="w-10 h-10 text-muted-foreground/40" strokeWidth={1} />
-        <p className="text-sm text-foreground font-medium">AI 解读</p>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+          <p className="text-sm font-medium text-foreground">AI 解读</p>
+        </div>
         <p className="text-xs text-muted-foreground">
-          分析完成后可生成 AI 学术解读
+          分析完成后，AI 可自动生成以下内容：
         </p>
+        <div className="space-y-2">
+          {[
+            { icon: "📊", label: "统计指标解释", desc: "α、KMO、Bartlett 等指标含义" },
+            { icon: "📝", label: "APA 论文格式", desc: "可直接复制到学术论文中" },
+            { icon: "💡", label: "诊断与建议", desc: "识别问题题项，给出优化方案" },
+          ].map((item) => (
+            <div key={item.label} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-secondary/20">
+              <span className="text-sm shrink-0 mt-0.5">{item.icon}</span>
+              <div>
+                <p className="text-xs font-medium text-foreground">{item.label}</p>
+                <p className="text-[11px] text-muted-foreground">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -192,13 +209,28 @@ export function RightSidebar() {
 
     // AI not connected → prompt to enable
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center gap-4 px-2">
-        <Sparkles className="w-12 h-12 text-muted-foreground/30" strokeWidth={1} />
-        <div>
-          <p className="text-sm font-medium text-foreground mb-1">AI 学术解读</p>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            AI 可生成通俗解释、学术 APA 格式、诊断建议
-          </p>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+          <p className="text-sm font-medium text-foreground">AI 解读</p>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          配置 AI 后可生成以下内容：
+        </p>
+        <div className="space-y-2">
+          {[
+            { icon: "📊", label: "统计指标解释", desc: "α、KMO、Bartlett 等指标含义" },
+            { icon: "📝", label: "APA 论文格式", desc: "可直接复制到学术论文中" },
+            { icon: "💡", label: "诊断与建议", desc: "识别问题题项，给出优化方案" },
+          ].map((item) => (
+            <div key={item.label} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-secondary/20">
+              <span className="text-sm shrink-0 mt-0.5">{item.icon}</span>
+              <div>
+                <p className="text-xs font-medium text-foreground">{item.label}</p>
+                <p className="text-[11px] text-muted-foreground">{item.desc}</p>
+              </div>
+            </div>
+          ))}
         </div>
         <Link
           href="/settings/ai"
