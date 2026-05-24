@@ -24,6 +24,7 @@ import type {
   MissingStrategy,
 } from "@/types";
 import type { ClassificationResult } from "@/lib/stats/data-classifier";
+import type { ResearchDesign } from "@/types";
 
 const AI_KEY_STORAGE = "ai-reliability-key";
 const AI_RESULTS_CACHE = "ai-reliability-cache";
@@ -70,6 +71,7 @@ interface AppActions {
   setDimensions: (dims: DimensionGroup[]) => void;
 
   // Research info
+  setResearchDesign: (design: ResearchDesign) => void;
   setResearchGoal: (goal: string) => void;
   setTheoreticalDimensions: (dims: string) => void;
 
@@ -116,6 +118,7 @@ const initialState: AppState = {
   reverseItemWarnings: [],
   dimensions: [],
 
+  researchDesign: null,
   researchGoal: "",
   theoreticalDimensions: "",
 
@@ -152,6 +155,7 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
   setDimensions: (dims) => set({ dimensions: dims }),
 
   // ---- Research info ----
+  setResearchDesign: (researchDesign) => set({ researchDesign }),
   setResearchGoal: (goal) => set({ researchGoal: goal }),
   setTheoreticalDimensions: (dims) => set({ theoreticalDimensions: dims }),
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { FileUploader } from "@/components/upload/file-uploader";
-import { ResearchInfo } from "@/components/upload/research-info";
+import { GuidedResearchSetup } from "@/components/upload/guided-research-setup";
 import { MissingHandler } from "@/components/preprocessing/missing-handler";
 import { ReverseDetector } from "@/components/preprocessing/reverse-detector";
 import { DimensionManager } from "@/components/preprocessing/dimension-manager";
@@ -68,7 +68,7 @@ export function LeftSidebar() {
         {activeStep === "upload" && (
           <div className="space-y-4">
             <FileUploader />
-            {hasData && <ResearchInfo />}
+            {hasData && <GuidedResearchSetup />}
           </div>
         )}
 

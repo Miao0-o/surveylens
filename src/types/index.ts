@@ -112,6 +112,19 @@ export interface DimensionGroup {
   items: string[];
 }
 
+// ---- Research Design (structured schema) ----
+export type AnalysisIntent = "prediction" | "explanation" | "validation" | "exploration";
+
+export interface ResearchDesign {
+  researchGoal: string;
+  analysisIntent: AnalysisIntent;
+  outcomeVariables: string[];
+  predictorVariables: string[];
+  theoreticalFramework: string;
+  hypotheses: string;
+  freeNotes: string;
+}
+
 // ---- Statistical Results (Standardized Schema v1.0.0) ----
 export interface AnalysisMeta {
   schemaVersion: "1.0.0";
@@ -241,6 +254,7 @@ export interface AppState {
   dimensions: DimensionGroup[];
 
   // Research info
+  researchDesign: ResearchDesign | null;
   researchGoal: string;
   theoreticalDimensions: string;
 
