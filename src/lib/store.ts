@@ -177,7 +177,31 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
       localStorage.setItem(RAW_DATA_KEY, json);
       console.log("[persist] rawData saved, size:", json.length, "bytes");
     } catch (e) {
-      console.error("[persist] rawData save failed:", e);
+      if (e instanceof DOMException && e.name === "QuotaExceededError") {
+        // Quota full — try clearing other projects' keys to make room
+        console.warn("[persist] Quota exceeded, cleaning old keys...");
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k !== RAW_DATA_KEY && k !== LIKERT_KEY && !k.startsWith("ai-")) {
+            keysToRemove.push(k);
+          }
+        }
+        for (const k of keysToRemove) {
+          localStorage.removeItem(k);
+          console.log("[persist] removed:", k);
+        }
+        // Retry
+        try {
+          const json = JSON.stringify(data);
+          localStorage.setItem(RAW_DATA_KEY, json);
+          console.log("[persist] rawData saved after cleanup, size:", json.length, "bytes");
+        } catch (e2) {
+          console.error("[persist] Still failed after cleanup:", e2);
+        }
+      } else {
+        console.error("[persist] rawData save failed:", e);
+      }
     }
     return set({ rawData: data, pipelineStep: "upload", analysisStage: "uploading", error: null });
   },
