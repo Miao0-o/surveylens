@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { BarChart3, HelpCircle, Sparkles } from "lucide-react";
 import { useAppStore } from "@/lib/store";
+import { SessionIndicator } from "./session-indicator";
 
 export function AIStatusLabel() {
   const aiMode = useAppStore((s) => s.aiMode);
@@ -44,6 +45,7 @@ export function TopNav() {
           </span>
         </Link>
         <AIStatusLabel />
+        <SessionIndicator />
       </div>
       <nav className="flex items-center gap-1">
         <Link
