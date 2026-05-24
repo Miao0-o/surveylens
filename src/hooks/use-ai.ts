@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useAppStore } from "@/lib/store";
 import { runAIInterpretation } from "@/lib/ai/client";
 import { compressResults } from "@/lib/ai/compressor";
+import { guardAIOutput } from "@/lib/ai/output-guard";
 import type { AIStreamingStage } from "@/types";
 
 export function useAI() {
@@ -58,8 +59,20 @@ export function useAI() {
         await new Promise((r) => setTimeout(r, 600));
       }
 
-      const aiResults = await runAIInterpretation(apiKey, compressed);
-      useAppStore.getState().setAIResults(aiResults);
+      const rawAIResults = await runAIInterpretation(apiKey, compressed);
+
+      // Run output guard (Layer 5)
+      const state = useAppStore.getState();
+      const validation = state.validationReport;
+      if (validation && state.results) {
+        const guardResult = guardAIOutput(rawAIResults, state.results, validation);
+        if (!guardResult.passed) {
+          console.warn("[OutputGuard] AI output flagged:", guardResult.violations);
+        }
+        useAppStore.getState().setAIResults(guardResult.sanitized);
+      } else {
+        useAppStore.getState().setAIResults(rawAIResults);
+      }
       setStatus("done");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "AI 解读失败";

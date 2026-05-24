@@ -1,7 +1,8 @@
 "use client";
 
+import { useAppStore } from "@/lib/store";
 import type { AnalysisResults } from "@/types";
-import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Shield } from "lucide-react";
 
 interface Props {
   results: AnalysisResults;
@@ -65,6 +66,7 @@ const gradeConfig = {
 
 export function OverviewDashboard({ results }: Props) {
   const { reliability, validity, stability, meta, efa } = results;
+  const validationReport = useAppStore((s) => s.validationReport);
 
   const qualityScore = computeQualityScore(
     reliability.cronbachsAlpha,
@@ -161,6 +163,60 @@ export function OverviewDashboard({ results }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Confidence Score (Layer 2 — Validation Engine) */}
+      {validationReport && (
+        <div className="px-4 py-3 rounded-xl bg-card border border-border space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
+              <span className="text-xs font-medium text-foreground">数据可信度评估</span>
+            </div>
+            <span className={`text-xs font-semibold ${
+              validationReport.confidence.level === "HIGH" ? "text-emerald-600" :
+              validationReport.confidence.level === "MEDIUM" ? "text-blue-600" :
+              validationReport.confidence.level === "LOW" ? "text-amber-600" : "text-red-500"
+            }`}>
+              {validationReport.confidence.level === "HIGH" ? "高" :
+               validationReport.confidence.level === "MEDIUM" ? "中" :
+               validationReport.confidence.level === "LOW" ? "低" : "不可靠"} · {validationReport.confidence.overall.toFixed(2)}
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-1.5">
+            {([
+              { label: "数据质量", value: validationReport.confidence.dataQuality },
+              { label: "信度", value: validationReport.confidence.reliability },
+              { label: "效度", value: validationReport.confidence.validity },
+              { label: "因子稳定性", value: validationReport.confidence.factorStability },
+            ] as const).map(({ label, value }) => (
+              <div key={label} className="text-center">
+                <div className="h-1.5 rounded-full bg-secondary mb-1 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${
+                      value >= 0.80 ? "bg-emerald-400" :
+                      value >= 0.60 ? "bg-blue-400" :
+                      value >= 0.40 ? "bg-amber-400" : "bg-red-400"
+                    }`}
+                    style={{ width: `${value * 100}%` }}
+                  />
+                </div>
+                <span className="text-[9px] text-muted-foreground">{label}</span>
+                <span className="text-[10px] text-foreground font-medium ml-1">{value.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+          {/* Validation flags summary */}
+          {validationReport.flags.length > 0 && (
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <span className="text-amber-500">{validationReport.flags.filter(f => f.type === "error").length} 个错误</span>
+              <span>·</span>
+              <span className="text-amber-400">{validationReport.flags.filter(f => f.type === "warning").length} 个警告</span>
+              <span>·</span>
+              <span>{validationReport.flags.filter(f => f.type === "info").length} 个提示</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Metric gauges */}
       <div className="grid grid-cols-3 gap-3">

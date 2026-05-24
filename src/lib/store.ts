@@ -20,6 +20,7 @@ import type {
   DimensionGroup,
   AnalysisResults,
   AIResults,
+  ValidationReport,
   MissingStrategy,
 } from "@/types";
 
@@ -87,6 +88,7 @@ interface AppActions {
 
   // Results
   setResults: (results: AnalysisResults) => void;
+  setValidationReport: (report: ValidationReport) => void;
   setAIResults: (aiResults: AIResults | null) => void;
   checkAICache: () => AIResults | null;
   clearAICache: () => void;
@@ -125,6 +127,7 @@ const initialState: AppState = {
   aiError: null,
 
   results: null,
+  validationReport: null,
   aiResults: null,
 
   apiKey: "", // loaded from sessionStorage on client
@@ -185,6 +188,7 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
 
   // ---- Results ----
   setResults: (results) => set({ results }),
+  setValidationReport: (validationReport) => set({ validationReport }),
   setAIResults: (aiResults) => {
     saveCachedAIResults(aiResults);
     set({

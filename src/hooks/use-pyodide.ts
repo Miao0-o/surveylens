@@ -8,6 +8,7 @@ import { useRef, useState, useCallback } from "react";
 import { StatsWorkerBridge } from "@/lib/stats/worker-bridge";
 import { useAppStore } from "@/lib/store";
 import { compressResults } from "@/lib/ai/compressor";
+import { validateResults } from "@/lib/stats/validation-engine";
 import { createEmptyResults } from "@/lib/schema";
 import type { AnalysisResults } from "@/types";
 
@@ -74,6 +75,10 @@ export function usePyodide() {
 
     // Store results
     useAppStore.getState().setResults(results);
+
+    // Run validation engine (Layer 2)
+    const validation = validateResults(results);
+    useAppStore.getState().setValidationReport(validation);
 
     // Generate AI compressed input
     const compressed = compressResults(results, state.researchGoal);

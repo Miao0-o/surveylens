@@ -164,6 +164,31 @@ export interface AnalysisResults {
   recommendedMethod: string;
 }
 
+// ---- Validation Report (Layer 2) ----
+export interface ValidationFlag {
+  type: "error" | "warning" | "info";
+  source: "reliability" | "validity" | "efa" | "stability";
+  code: string;
+  message: string;
+}
+
+export interface ConfidenceScore {
+  dataQuality: number;
+  reliability: number;
+  validity: number;
+  factorStability: number;
+  overall: number;
+  level: "HIGH" | "MEDIUM" | "LOW" | "UNRELIABLE";
+}
+
+export interface ValidationReport {
+  flags: ValidationFlag[];
+  confidence: ConfidenceScore;
+  passed: boolean;
+  timestamp: number;
+  version: string;
+}
+
 // ---- AI Compressed Input (Result Reducer output) ----
 export interface AICompressedInput {
   alpha: number;
@@ -230,6 +255,7 @@ export interface AppState {
 
   // Results
   results: AnalysisResults | null;
+  validationReport: ValidationReport | null;
   aiResults: AIResults | null;
 
   // Config
