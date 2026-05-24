@@ -7,6 +7,7 @@
 // ============================================================
 
 import { create } from "zustand";
+import { idbGet, idbSet, idbRemove } from "./storage/idb-storage";
 import type {
   AppState,
   PipelineState,
@@ -52,23 +53,6 @@ function loadCachedAIResults(): AIResults | null {
   } catch {
     return null;
   }
-}
-
-function saveRawData(data: unknown): void {
-  if (typeof window === "undefined") return;
-  try { localStorage.setItem(RAW_DATA_KEY, JSON.stringify(data)); } catch {}
-}
-function loadRawData(): unknown {
-  if (typeof window === "undefined") return null;
-  try { const r = localStorage.getItem(RAW_DATA_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
-}
-function saveLikertCols(cols: string[]): void {
-  if (typeof window === "undefined") return;
-  try { localStorage.setItem(LIKERT_KEY, JSON.stringify(cols)); } catch {}
-}
-function loadLikertCols(): string[] {
-  if (typeof window === "undefined") return [];
-  try { const r = localStorage.getItem(LIKERT_KEY); return r ? JSON.parse(r) : []; } catch { return []; }
 }
 
 function saveCachedAIResults(results: AIResults | null): void {
@@ -172,42 +156,12 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
 
   // ---- Data ----
   setRawData: (data) => {
-    try {
-      const json = JSON.stringify(data);
-      localStorage.setItem(RAW_DATA_KEY, json);
-      console.log("[persist] rawData saved, size:", json.length, "bytes");
-    } catch (e) {
-      if (e instanceof DOMException && e.name === "QuotaExceededError") {
-        // Quota full — try clearing other projects' keys to make room
-        console.warn("[persist] Quota exceeded, cleaning old keys...");
-        const keysToRemove: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && k !== RAW_DATA_KEY && k !== LIKERT_KEY && !k.startsWith("ai-")) {
-            keysToRemove.push(k);
-          }
-        }
-        for (const k of keysToRemove) {
-          localStorage.removeItem(k);
-          console.log("[persist] removed:", k);
-        }
-        // Retry
-        try {
-          const json = JSON.stringify(data);
-          localStorage.setItem(RAW_DATA_KEY, json);
-          console.log("[persist] rawData saved after cleanup, size:", json.length, "bytes");
-        } catch (e2) {
-          console.error("[persist] Still failed after cleanup:", e2);
-        }
-      } else {
-        console.error("[persist] rawData save failed:", e);
-      }
-    }
+    idbSet(RAW_DATA_KEY, data).catch(() => {});
     return set({ rawData: data, pipelineStep: "upload", analysisStage: "uploading", error: null });
   },
 
   setLikertColumns: (cols) => {
-    try { localStorage.setItem(LIKERT_KEY, JSON.stringify(cols)); } catch (e) { console.error("[persist] likert save failed:", e); }
+    idbSet(LIKERT_KEY, cols).catch(() => {});
     return set({ likertColumns: cols });
   },
 
@@ -290,21 +244,18 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
   // ---- Hydrate ----
   hydrate: () => {
     if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem(RAW_DATA_KEY);
-      const likert = localStorage.getItem(LIKERT_KEY);
-      console.log("[persist] hydrate — rawData:", raw ? `found (${raw.length} chars)` : "not found",
-        "| likert:", likert ? `found` : "not found");
-      if (raw) set({ rawData: JSON.parse(raw) });
-      if (likert) set({ likertColumns: JSON.parse(likert) });
-    } catch (e) {
-      console.error("[persist] hydrate failed:", e);
-    }
+    idbGet(RAW_DATA_KEY).then((raw) => {
+      if (raw) set({ rawData: raw as ParsedData });
+    }).catch(() => {});
+    idbGet(LIKERT_KEY).then((likert) => {
+      if (likert) set({ likertColumns: likert as string[] });
+    }).catch(() => {});
   },
 
   // ---- Reset ----
   reset: () => {
-    try { localStorage.removeItem(RAW_DATA_KEY); localStorage.removeItem(LIKERT_KEY); } catch {}
+    idbRemove(RAW_DATA_KEY);
+    idbRemove(LIKERT_KEY);
     set({
       ...initialState,
       apiKey: loadApiKey(),
