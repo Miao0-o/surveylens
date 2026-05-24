@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { StoreHydrator } from "@/components/layout/store-hydrator";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,7 +29,9 @@ export default function RootLayout({
       lang="zh-Hans"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <StoreHydrator>{children}</StoreHydrator>
+      </body>
     </html>
   );
 }

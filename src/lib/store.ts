@@ -123,8 +123,9 @@ interface AppActions {
   setMissingStrategy: (strategy: MissingStrategy) => void;
   setDesignConfirmed: (confirmed: boolean) => void;
 
-  // Reset
+  // Reset + Hydrate
   reset: () => void;
+  hydrate: () => void;
 }
 
 const initialMissingStrategy: MissingStrategy = {
@@ -255,6 +256,21 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
   },
 
   setMissingStrategy: (strategy) => set({ missingStrategy: strategy }),
+
+  // ---- Hydrate ----
+  hydrate: () => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(RAW_DATA_KEY);
+      if (raw) {
+        set({ rawData: JSON.parse(raw) });
+      }
+      const likert = localStorage.getItem(LIKERT_KEY);
+      if (likert) {
+        set({ likertColumns: JSON.parse(likert) });
+      }
+    } catch {}
+  },
 
   // ---- Reset ----
   reset: () => {
