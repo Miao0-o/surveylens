@@ -1,40 +1,52 @@
 "use client";
 
-// ============================================================
-// React Hook for Pyodide Worker lifecycle management
-// ============================================================
-
 import { useRef, useState, useCallback } from "react";
-import { StatsWorkerBridge } from "@/lib/stats/worker-bridge";
+import { StatsWorkerBridge, type StepProgress } from "@/lib/stats/worker-bridge";
 import { useAppStore } from "@/lib/store";
 import { compressResults } from "@/lib/ai/compressor";
 import { validateResults } from "@/lib/stats/validation-engine";
-import { createEmptyResults } from "@/lib/schema";
-import type { AnalysisResults } from "@/types";
+import type { AnalysisStage } from "@/types";
 
 type WorkerStatus = "unloaded" | "loading" | "ready" | "error";
+
+const STAGE_MAP: Record<string, AnalysisStage> = {
+  loading_packages: "idle",
+  packages_loaded: "idle",
+  reliability: "reliability",
+  validity: "validity",
+  efa: "efa",
+  stability: "stability",
+};
 
 export function usePyodide() {
   const bridgeRef = useRef<StatsWorkerBridge | null>(null);
   const [status, setStatus] = useState<WorkerStatus>("unloaded");
   const [loadingMessage, setLoadingMessage] = useState("");
-
-  const store = useAppStore;
+  const [currentStage, setCurrentStage] = useState<string>("");
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [estimatedRemainingMs, setEstimatedRemainingMs] = useState<number | null>(null);
 
   const initWorker = useCallback(async () => {
     if (bridgeRef.current) return bridgeRef.current;
 
     setStatus("loading");
-    setLoadingMessage("正在加载统计引擎...");
+    setLoadingMessage("加载统计引擎...");
 
-    const bridge = new StatsWorkerBridge((stage, message) => {
-      setLoadingMessage(message);
+    const bridge = new StatsWorkerBridge((progress: StepProgress) => {
+      setCurrentStage(progress.message);
+      setElapsedMs(progress.elapsedMs);
+      setEstimatedRemainingMs(progress.estimatedRemainingMs);
+
+      // Sync to global store for center panel display
+      const mappedStage = STAGE_MAP[progress.stage] ?? "idle";
+      useAppStore.getState().setAnalysisStage(mappedStage);
     });
 
     try {
       await bridge.initialize();
       bridgeRef.current = bridge;
       setStatus("ready");
+      setCurrentStage("");
       return bridge;
     } catch (err) {
       setStatus("error");
@@ -45,16 +57,14 @@ export function usePyodide() {
   const runAnalysis = useCallback(async () => {
     const state = useAppStore.getState();
     const { rawData, likertColumns } = state;
-
     if (!rawData) throw new Error("No data to analyze");
 
-    // Initialize worker if needed
     let bridge = bridgeRef.current;
     if (!bridge) {
       bridge = await initWorker();
     }
 
-    // Prepare data matrix (Likert columns only, rows as samples)
+    // Prepare data matrix
     const data: number[][] = [];
     for (const row of rawData.rows) {
       const vec: number[] = [];
@@ -65,7 +75,7 @@ export function usePyodide() {
       data.push(vec);
     }
 
-    // Run analysis via Pyodide worker
+    // Run analysis with per-step progress
     const results = await bridge.runAnalysis({
       data,
       itemLabels: likertColumns,
@@ -73,16 +83,13 @@ export function usePyodide() {
       nBootstrap: 200,
     });
 
-    // Store results
     useAppStore.getState().setResults(results);
 
-    // Run validation engine (Layer 2)
+    // Validation engine
     const validation = validateResults(results);
     useAppStore.getState().setValidationReport(validation);
 
-    // Generate AI compressed input
     const compressed = compressResults(results, state.researchGoal);
-
     return { results, compressed };
   }, [initWorker]);
 
@@ -95,6 +102,9 @@ export function usePyodide() {
   return {
     status,
     loadingMessage,
+    currentStage,
+    elapsedMs,
+    estimatedRemainingMs,
     initWorker,
     runAnalysis,
     terminate,

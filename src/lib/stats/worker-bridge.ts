@@ -1,19 +1,19 @@
 // ============================================================
 // Main Thread ↔ Pyodide Worker Bridge
-// Manages worker lifecycle, sends analysis commands, receives results
+// Per-step execution with progress: elapsed + estimated remaining
 // ============================================================
 
 import type { AnalysisResults } from "@/types";
-import {
-  RELIABILITY_PY,
-  VALIDITY_PY,
-  EFA_PY,
-  STABILITY_PY,
-  MAIN_PY,
-} from "./python-code";
-import { CURRENT_SCHEMA_VERSION, createEmptyResults } from "../schema";
+import { createEmptyResults } from "../schema";
 
-type ProgressCallback = (stage: string, message: string) => void;
+export interface StepProgress {
+  stage: string;
+  message: string;
+  elapsedMs: number;
+  estimatedRemainingMs: number | null;
+}
+
+export type StepProgressCallback = (progress: StepProgress) => void;
 
 interface WorkerRequest {
   id?: string;
@@ -27,20 +27,15 @@ interface WorkerResponse {
   payload?: unknown;
 }
 
-// Build complete Python script
-function buildPythonCode(): string {
-  return [RELIABILITY_PY, VALIDITY_PY, EFA_PY, STABILITY_PY, MAIN_PY].join("\n\n");
-}
-
 export class StatsWorkerBridge {
   private worker: Worker | null = null;
   private ready = false;
   private pendingRequests = new Map<string, (res: WorkerResponse) => void>();
   private loadPromise: Promise<void> | null = null;
-  private onProgress: ProgressCallback | null = null;
+  private onStepProgress: StepProgressCallback | null = null;
 
-  constructor(onProgress?: ProgressCallback) {
-    this.onProgress = onProgress ?? null;
+  constructor(onStepProgress?: StepProgressCallback) {
+    this.onStepProgress = onStepProgress ?? null;
   }
 
   async initialize(): Promise<void> {
@@ -54,9 +49,15 @@ export class StatsWorkerBridge {
         this.worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
           const msg = e.data;
 
-          if (msg.type === "progress" && this.onProgress) {
-            const p = msg.payload as { stage: string; message: string };
-            this.onProgress(p.stage, p.message);
+          // Forward step progress to callback
+          if (msg.type === "progress" && this.onStepProgress) {
+            const p = msg.payload as { stage: string; message: string; elapsedMs: number; estimatedTotalMs: number | null };
+            this.onStepProgress({
+              stage: p.stage,
+              message: p.message,
+              elapsedMs: p.elapsedMs,
+              estimatedRemainingMs: p.estimatedTotalMs,
+            });
           }
 
           if (msg.type === "init_done") {
@@ -68,7 +69,6 @@ export class StatsWorkerBridge {
             reject(new Error(msg.payload as string));
           }
 
-          // Handle pending request responses
           if (msg.id && this.pendingRequests.has(msg.id)) {
             const cb = this.pendingRequests.get(msg.id)!;
             cb(msg);
@@ -99,101 +99,90 @@ export class StatsWorkerBridge {
       throw new Error("Worker not initialized. Call initialize() first.");
     }
 
+    const worker = this.worker;
     const id = crypto.randomUUID();
-    const promise = new Promise<AnalysisResults>((resolve, reject) => {
+
+    return new Promise((resolve, reject) => {
       this.pendingRequests.set(id, (res: WorkerResponse) => {
         if (res.type === "analysis_done") {
-          const raw = res.payload as Record<string, unknown>;
-
-          if (raw.error) {
-            reject(new Error(raw.error as string));
-            return;
-          }
-
-          // Merge raw results into our standardized schema
+          const raw = res.payload as Record<string, Record<string, unknown>>;
           const results = createEmptyResults({
-            sampleSize: (raw.meta as Record<string, number>)?.sampleSize ?? 0,
-            itemCount: (raw.meta as Record<string, number>)?.itemCount ?? 0,
+            sampleSize: 0,
+            itemCount: params.itemLabels.length,
             dimensionCount: 1,
-            analysisDurationMs: (raw.meta as Record<string, number>)?.analysisDurationMs ?? 0,
+            analysisDurationMs: 0,
           });
 
-          if (raw.reliability && typeof raw.reliability === "object") {
-            const r = raw.reliability as Record<string, unknown>;
-            if (!r.error) {
-              results.reliability = {
-                cronbachsAlpha: (r.cronbachsAlpha as number) ?? 0,
-                standardizedAlpha: (r.standardizedAlpha as number) ?? 0,
-                itemTotalCorrelation: (r.itemTotalCorrelation as Record<string, number>) ?? {},
-                alphaIfItemDeleted: (r.alphaIfItemDeleted as Record<string, number>) ?? {},
-              };
-            }
+          // Merge reliability
+          if (raw.reliability && !raw.reliability.error) {
+            const r = raw.reliability;
+            results.reliability = {
+              cronbachsAlpha: (r.cronbachsAlpha as number) ?? 0,
+              standardizedAlpha: (r.standardizedAlpha as number) ?? 0,
+              itemTotalCorrelation: remapKeys(r.itemTotalCorrelation as Record<string, number> ?? {}, params.itemLabels),
+              alphaIfItemDeleted: remapKeys(filterNulls(r.alphaIfItemDeleted as Record<string, number | null> ?? {}), params.itemLabels),
+            };
+            results.meta.sampleSize = (r.nSamples as number) ?? 0;
+            results.meta.itemCount = (r.nItems as number) ?? 0;
           }
 
-          if (raw.validity && typeof raw.validity === "object") {
-            const v = raw.validity as Record<string, unknown>;
-            if (!v.error) {
-              results.validity = {
-                kmo: (v.kmo as number) ?? 0,
-                kmoPerItem: (v.kmoPerItem as Record<string, number>) ?? {},
-                bartlettChiSquare: (v.bartlettChiSquare as number) ?? 0,
-                bartlettDf: (v.bartlettDf as number) ?? 0,
-                bartlettPValue: (v.bartlettPValue as number) ?? 0,
-                correlationMatrix: (v.correlationMatrix as number[][]) ?? [],
-                columnLabels: (v.columnLabels as string[]) ?? [],
-              };
-            }
+          // Merge validity
+          if (raw.validity && !raw.validity.error) {
+            const v = raw.validity;
+            results.validity = {
+              kmo: (v.kmo as number) ?? 0,
+              kmoPerItem: remapKeys(v.kmoPerItem as Record<string, number> ?? {}, params.itemLabels),
+              bartlettChiSquare: (v.bartlettChiSquare as number) ?? 0,
+              bartlettDf: (v.bartlettDf as number) ?? 0,
+              bartlettPValue: (v.bartlettPValue as number) ?? 0,
+              correlationMatrix: (v.correlationMatrix as number[][]) ?? [],
+              columnLabels: params.itemLabels,
+            };
           }
 
-          if (raw.efa && typeof raw.efa === "object") {
-            const e = raw.efa as Record<string, unknown>;
-            if (!e.error) {
-              results.efa = {
-                eigenvalues: (e.eigenvalues as number[]) ?? [],
-                loadings: (e.loadings as number[][]) ?? [],
-                communalities: (e.communalities as number[]) ?? [],
-                varianceExplained: (e.varianceExplained as number[]) ?? [],
-                rotation: (e.rotation as "varimax" | "oblimin") ?? "varimax",
-                suggestedFactors: (e.suggestedFactors as number) ?? 0,
-                itemLabels: (e.itemLabels as string[]) ?? [],
-              };
-            }
+          // Merge EFA
+          if (raw.efa && !raw.efa.error) {
+            const e = raw.efa;
+            results.efa = {
+              eigenvalues: (e.eigenvalues as number[]) ?? [],
+              loadings: (e.loadings as number[][]) ?? [],
+              communalities: (e.communalities as number[]) ?? [],
+              varianceExplained: (e.varianceExplained as number[]) ?? [],
+              rotation: (params.rotation as "varimax" | "oblimin") ?? "varimax",
+              suggestedFactors: (e.suggestedFactors as number) ?? 0,
+              itemLabels: params.itemLabels,
+            };
           }
 
-          if (raw.stability && typeof raw.stability === "object") {
-            const s = raw.stability as Record<string, unknown>;
-            if (!s.error) {
-              results.stability = {
-                bootstrapSamples: (s.bootstrapSamples as number) ?? 0,
-                alphaCurve: (s.alphaCurve as { sampleSize: number; alpha: number }[]) ?? [],
-                stabilityLevel: (s.stabilityLevel as "stable" | "moderate" | "unstable") ?? "unstable",
-                recommendedSampleSize: (s.recommendedSampleSize as number) ?? 0,
-                elbowPoint: (s.elbowPoint as number) ?? null,
-              };
-            }
+          // Merge stability
+          if (raw.stability && !raw.stability.error) {
+            const s = raw.stability;
+            results.stability = {
+              bootstrapSamples: (s.bootstrapSamples as number) ?? 0,
+              alphaCurve: (s.alphaCurve as { sampleSize: number; alpha: number }[]) ?? [],
+              stabilityLevel: (s.stabilityLevel as "stable" | "moderate" | "unstable") ?? "unstable",
+              recommendedSampleSize: (s.recommendedSampleSize as number) ?? 0,
+              elbowPoint: (s.elbowPoint as number) ?? null,
+            };
           }
 
-          results.recommendedMethod = (raw.recommendedMethod as string) ?? "";
           resolve(results);
         } else if (res.type === "analysis_error") {
           reject(new Error(res.payload as string));
         }
       });
-    });
 
-    this.worker.postMessage({
-      id,
-      type: "run_analysis",
-      payload: {
-        pythonCode: buildPythonCode(),
-        data: params.data,
-        itemLabels: params.itemLabels,
-        rotation: params.rotation ?? "varimax",
-        nBootstrap: params.nBootstrap ?? 200,
-      },
+      worker!.postMessage({
+        id,
+        type: "run_analysis",
+        payload: {
+          data: params.data,
+          itemLabels: params.itemLabels,
+          rotation: params.rotation ?? "varimax",
+          nBootstrap: params.nBootstrap ?? 200,
+        },
+      });
     });
-
-    return promise;
   }
 
   terminate(): void {
@@ -202,4 +191,22 @@ export class StatsWorkerBridge {
     this.ready = false;
     this.loadPromise = null;
   }
+}
+
+function filterNulls(map: Record<string, number | null>): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const [k, v] of Object.entries(map)) {
+    if (v !== null) result[k] = v;
+  }
+  return result;
+}
+
+function remapKeys<T>(numericMap: Record<string, T>, labels: string[]): Record<string, T> {
+  const result: Record<string, T> = {} as Record<string, T>;
+  for (const [key, value] of Object.entries(numericMap)) {
+    const idx = parseInt(key);
+    const label = labels[idx] ?? key;
+    result[label] = value;
+  }
+  return result;
 }
