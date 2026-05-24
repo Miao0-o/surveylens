@@ -76,6 +76,16 @@ export function RightSidebar() {
             </div>
           ))}
         </div>
+        {!hasAI && (
+          <Link
+            href="/settings/ai"
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium
+              hover:opacity-90 transition-opacity mt-2"
+          >
+            <Sparkles className="w-4 h-4" strokeWidth={1.5} />
+            配置 API Key 启用 AI 解读
+          </Link>
+        )}
       </div>
     );
   }
@@ -234,10 +244,11 @@ export function RightSidebar() {
         </div>
         <Link
           href="/settings/ai"
-          className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium
+            hover:opacity-90 transition-opacity"
         >
-          配置 AI 功能
-          <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
+          <Sparkles className="w-4 h-4" strokeWidth={1.5} />
+          配置 API Key 启用 AI 解读
         </Link>
       </div>
     );
