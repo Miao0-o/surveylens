@@ -28,6 +28,9 @@ import type { ResearchDesign, AnalysisMode } from "@/types";
 
 const AI_KEY_STORAGE = "ai-reliability-key";
 const AI_RESULTS_CACHE = "ai-reliability-cache";
+const RAW_DATA_KEY = "ai-analysis-rawdata";
+const LIKERT_KEY = "ai-analysis-likert";
+const MODE_KEY = "ai-analysis-mode";
 
 // sessionStorage: persists within tab session, cleared on browser close
 function loadApiKey(): string {
@@ -49,6 +52,23 @@ function loadCachedAIResults(): AIResults | null {
   } catch {
     return null;
   }
+}
+
+function saveRawData(data: unknown): void {
+  if (typeof window === "undefined") return;
+  try { localStorage.setItem(RAW_DATA_KEY, JSON.stringify(data)); } catch {}
+}
+function loadRawData(): unknown {
+  if (typeof window === "undefined") return null;
+  try { const r = localStorage.getItem(RAW_DATA_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
+}
+function saveLikertCols(cols: string[]): void {
+  if (typeof window === "undefined") return;
+  try { localStorage.setItem(LIKERT_KEY, JSON.stringify(cols)); } catch {}
+}
+function loadLikertCols(): string[] {
+  if (typeof window === "undefined") return [];
+  try { const r = localStorage.getItem(LIKERT_KEY); return r ? JSON.parse(r) : []; } catch { return []; }
 }
 
 function saveCachedAIResults(results: AIResults | null): void {
@@ -113,7 +133,7 @@ const initialMissingStrategy: MissingStrategy = {
 };
 
 const initialState: AppState = {
-  rawData: null,
+  rawData: loadRawData() as ParsedData | null,
   columns: [],
   classification: null,
   likertColumns: [],
@@ -150,12 +170,18 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
   apiKey: loadApiKey(),
 
   // ---- Data ----
-  setRawData: (data) =>
-    set({ rawData: data, pipelineStep: "upload", analysisStage: "uploading", error: null }),
+  setRawData: (data) => {
+    saveRawData(data);
+    return set({ rawData: data, pipelineStep: "upload", analysisStage: "uploading", error: null });
+  },
+
+  setLikertColumns: (cols) => {
+    saveLikertCols(cols);
+    return set({ likertColumns: cols });
+  },
 
   setColumns: (columns) => set({ columns }),
   setClassification: (classification) => set({ classification }),
-  setLikertColumns: (cols) => set({ likertColumns: cols }),
   setReverseItemWarnings: (warnings) => set({ reverseItemWarnings: warnings }),
   setDimensions: (dims) => set({ dimensions: dims }),
 
@@ -231,10 +257,12 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
   setMissingStrategy: (strategy) => set({ missingStrategy: strategy }),
 
   // ---- Reset ----
-  reset: () =>
+  reset: () => {
+    try { localStorage.removeItem(RAW_DATA_KEY); localStorage.removeItem(LIKERT_KEY); } catch {}
     set({
       ...initialState,
-      apiKey: loadApiKey(), // preserve API key across resets
-      aiMode: useAppStore.getState().aiMode, // preserve AI mode
-    }),
+      apiKey: loadApiKey(),
+      aiMode: useAppStore.getState().aiMode,
+    });
+  },
 }));
