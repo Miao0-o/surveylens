@@ -130,22 +130,30 @@ export function normalizeDesign(design: ResearchDesign): NormalizedDesign {
 export const DESIGN_NORMALIZER_PROMPT = `
 # Research Design Normalization
 
-Before any data analysis, extract and normalize the research design into a structured schema.
+Extract and normalize the research design into a structured schema.
+
+Important: Outcome variables may be either:
+1. RAW variables (direct columns in dataset)
+2. COMPUTED variables (constructed from multiple items)
+
+If computed, explicitly define:
+- transformation method (mean / sum / weighted_mean / factor_score)
+- source variables used in the computation
 
 Return a JSON object with:
 - research_goal: string | null
-- outcome_variables: string[]
-- predictor_variables: string[]
+- outcomes: [{ name: string, method: "mean"|"sum"|"weighted_mean"|"factor_score", sourceItems: string[] }]
+- predictors: string[]
 - theoretical_framework: string | null
 - hypotheses: string[] | null
 - analysis_intent: "prediction" | "explanation" | "exploration" | "validation"
 
 Rules:
-1. Convert unstructured text into schema format where possible.
-2. If information is missing, set the field to null (do not guess).
-3. This schema will be editable by the user — treat it as a draft.
-4. Do not invent variables not present in the input.
-5. Do not change user-selected fields unless clearly contradicted.
+1. If a variable name looks like a construct (e.g. "anxiety", "fatigue"), infer it as a computed outcome using mean of related items.
+2. If information is missing, set to null. Do not guess values.
+3. This schema is a draft — user can override all fields.
+4. For computed outcomes, explicitly show the transformation logic.
+5. Do not invent variables not present in input.
 
 Output ONLY valid JSON, no explanation.
 `;

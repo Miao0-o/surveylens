@@ -115,10 +115,19 @@ export interface DimensionGroup {
 // ---- Research Design (structured schema) ----
 export type AnalysisIntent = "prediction" | "explanation" | "validation" | "exploration";
 
+export type ComputeMethod = "mean" | "sum" | "weighted_mean" | "factor_score";
+
+export interface ComputedVariable {
+  name: string;
+  method: ComputeMethod;
+  sourceItems: string[];
+}
+
 export interface ResearchDesign {
   researchGoal: string;
   analysisIntent: AnalysisIntent;
-  outcomeVariables: string[];
+  outcomes: ComputedVariable[];
+  outcomeVariables: string[];  // legacy: flattened for backward compat
   predictorVariables: string[];
   theoreticalFramework: string;
   hypotheses: string;

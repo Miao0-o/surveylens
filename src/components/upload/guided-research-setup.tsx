@@ -398,6 +398,7 @@ function defaultDesign(): ResearchDesign {
   return {
     researchGoal: "",
     analysisIntent: "validation",
+    outcomes: [],
     outcomeVariables: [],
     predictorVariables: [],
     theoreticalFramework: "",
