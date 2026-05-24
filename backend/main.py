@@ -2,10 +2,13 @@
 AI信效度分析系统 — FastAPI 后端代理
 唯一职责：安全转发 Claude API 请求，用户自带 API Key
 不做：数据存储、用户认证、统计分析
+
+promptVersion: scientific_reviewer_v1.0
 """
 
 import os
 import logging
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -26,11 +29,30 @@ app.add_middleware(
 
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
+PROMPT_VERSION = "scientific_reviewer_v1.0"
+
+# Load default system prompt from file
+_PROMPT_DIR = Path(__file__).parent / "ai" / "prompts"
+_PROMPT_FILE = _PROMPT_DIR / "scientific_reviewer.txt"
+
+def load_system_prompt() -> str:
+    if _PROMPT_FILE.exists():
+        return _PROMPT_FILE.read_text(encoding="utf-8")
+    logger.warning(f"Prompt file not found: {_PROMPT_FILE}, using embedded fallback")
+    return embedded_system_prompt()
+
+def embedded_system_prompt() -> str:
+    return """You are a scientific-grade psychometric analysis engine.
+You interpret statistical results without modifying data.
+Follow conservative academic standards. Never fabricate results."""
+    # Full prompt in ai/prompts/scientific_reviewer.txt
+
+DEFAULT_SYSTEM_PROMPT = load_system_prompt()
 
 
 class ChatRequest(BaseModel):
     api_key: str
-    system_prompt: str
+    system_prompt: str = ""
     user_message: str
     model: str = "claude-sonnet-4-6"
     max_tokens: int = 3000
@@ -45,7 +67,11 @@ class ChatResponse(BaseModel):
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "ok", "version": "0.1.0"}
+    return {
+        "status": "ok",
+        "version": "0.1.0",
+        "promptVersion": PROMPT_VERSION,
+    }
 
 
 @app.post("/api/chat", response_model=ChatResponse)
@@ -53,6 +79,8 @@ async def chat(req: ChatRequest):
     """Proxy a single-turn structured prompt to Claude API."""
     if not req.api_key or not req.api_key.startswith("sk-ant"):
         raise HTTPException(status_code=400, detail="Invalid API key format")
+
+    system_text = req.system_prompt if req.system_prompt else DEFAULT_SYSTEM_PROMPT
 
     headers = {
         "x-api-key": req.api_key,
@@ -65,7 +93,7 @@ async def chat(req: ChatRequest):
         "max_tokens": req.max_tokens,
         "temperature": req.temperature,
         "system": [
-            {"type": "text", "text": req.system_prompt}
+            {"type": "text", "text": system_text}
         ],
         "messages": [
             {"role": "user", "content": req.user_message}
