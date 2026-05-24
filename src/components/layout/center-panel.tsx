@@ -53,12 +53,19 @@ export function CenterPanel() {
       <div className="flex flex-col items-center justify-center h-full gap-4">
         <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
         <div>
-          <p className="text-sm text-foreground font-medium text-center">统计分析中</p>
+          <p className="text-sm text-foreground font-medium text-center">
+            {pipelineState === "ai_processing" ? "AI 解读中" : "统计分析中"}
+          </p>
           <p className="text-xs text-muted-foreground text-center mt-1">
             {pipelineState === "ai_processing"
-              ? "AI 正在解读分析结果..."
-              : "正在执行本地统计计算..."}
+              ? "正在调用 Claude API 生成解读..."
+              : "本地 Pyodide 引擎计算中"}
           </p>
+          {pipelineState === "processing" && (
+            <p className="text-[11px] text-muted-foreground/70 text-center mt-2">
+              首次约 15-30 秒（下载统计引擎），后续约 3-5 秒
+            </p>
+          )}
         </div>
       </div>
     );

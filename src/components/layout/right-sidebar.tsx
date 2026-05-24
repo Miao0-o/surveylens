@@ -91,6 +91,11 @@ export function RightSidebar() {
           <p className="text-sm text-muted-foreground/60 text-center">
             通俗解读 · 学术解释 · 导师建议 · APA 格式
           </p>
+          <div className="px-3 py-2 rounded-lg bg-blue-50/30 border border-blue-100/30 text-[11px] text-blue-600/70 text-center mt-2">
+            AI 解读需要先启动后端代理：
+            <br />
+            <code className="text-[10px] bg-blue-100/30 px-1 py-0.5 rounded">cd backend && python main.py</code>
+          </div>
         </div>
       </div>
     );
