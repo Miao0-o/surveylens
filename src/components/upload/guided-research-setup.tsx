@@ -230,10 +230,18 @@ function ConstructStep({
     else update({ predictorVariables: vars });
   };
 
-  const likertCols = useMemo(
-    () => (rawData?.headers ?? []).filter((c) => !isOutcome || !(design?.predictorVariables ?? []).includes(c)),
-    [rawData, design?.predictorVariables, isOutcome]
-  );
+  const storeHeaders = useAppStore((s) => s.likertColumns);
+  const likertCols = useMemo(() => {
+    const headers = rawData?.headers ?? [];
+    // Only show Likert/scale items, not metadata columns
+    const scaleItems = headers.filter((c) => storeHeaders.includes(c));
+    // For outcome step, exclude already-selected predictors
+    if (isOutcome) {
+      return scaleItems.filter((c) => !(design?.predictorVariables ?? []).includes(c));
+    }
+    // For predictor step, exclude already-selected outcomes
+    return scaleItems.filter((c) => !(design?.outcomeVariables ?? []).some((v) => v === c || v.startsWith(c + " ")));
+  }, [rawData, design?.predictorVariables, design?.outcomeVariables, isOutcome, storeHeaders]);
 
   // Current composite group name
   const [compositeName, setCompositeName] = useState("");
