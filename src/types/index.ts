@@ -112,6 +112,9 @@ export interface DimensionGroup {
   items: string[];
 }
 
+// ---- Analysis Mode ----
+export type AnalysisMode = "auto" | "guided" | "expert";
+
 // ---- Research Design (structured schema) ----
 export type AnalysisIntent = "prediction" | "explanation" | "validation" | "exploration";
 
@@ -284,7 +287,8 @@ export interface AppState {
   validationReport: ValidationReport | null;
   aiResults: AIResults | null;
 
-  // Design lock
+  // Analysis mode + design lock
+  analysisMode: AnalysisMode;
   designConfirmed: boolean;
 
   // Config

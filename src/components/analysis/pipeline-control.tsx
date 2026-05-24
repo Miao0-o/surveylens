@@ -9,6 +9,7 @@ export function PipelineControl() {
   const pipelineState = useAppStore((s) => s.pipelineState);
   const hasData = useAppStore((s) => s.rawData !== null);
   const hasLikert = useAppStore((s) => s.likertColumns.length > 0);
+  const analysisMode = useAppStore((s) => s.analysisMode);
   const designConfirmed = useAppStore((s) => s.designConfirmed);
   const hasDesign = useAppStore((s) => s.researchDesign !== null && (s.researchDesign?.outcomeVariables?.length ?? 0) > 0);
   const aiMode = useAppStore((s) => s.aiMode);
@@ -21,7 +22,10 @@ export function PipelineControl() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const runningRef = useRef(false);
 
-  const canRun = hasData && hasLikert && hasDesign && designConfirmed && pipelineState === "idle" && !runningRef.current;
+  // Auto mode: no design needed. Guided/Expert: requires confirmed design.
+  const needsDesign = analysisMode === "guided" || analysisMode === "expert";
+  const canRun = hasData && hasLikert && pipelineState === "idle" && !runningRef.current
+    && (!needsDesign || (hasDesign && designConfirmed));
   const isRunning = pipelineState === "processing" || pipelineState === "ai_processing" || runningRef.current;
   const isWorkerLoading = workerStatus === "loading";
 

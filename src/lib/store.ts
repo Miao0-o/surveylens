@@ -24,7 +24,7 @@ import type {
   MissingStrategy,
 } from "@/types";
 import type { ClassificationResult } from "@/lib/stats/data-classifier";
-import type { ResearchDesign } from "@/types";
+import type { ResearchDesign, AnalysisMode } from "@/types";
 
 const AI_KEY_STORAGE = "ai-reliability-key";
 const AI_RESULTS_CACHE = "ai-reliability-cache";
@@ -98,6 +98,7 @@ interface AppActions {
   clearAICache: () => void;
 
   // Config
+  setAnalysisMode: (mode: AnalysisMode) => void;
   setApiKey: (key: string) => void;
   setMissingStrategy: (strategy: MissingStrategy) => void;
   setDesignConfirmed: (confirmed: boolean) => void;
@@ -137,6 +138,7 @@ const initialState: AppState = {
   validationReport: null,
   aiResults: null,
 
+  analysisMode: "auto",
   designConfirmed: false,
 
   apiKey: "", // loaded from sessionStorage on client
@@ -219,6 +221,7 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
   },
 
   // ---- Config ----
+  setAnalysisMode: (analysisMode) => set({ analysisMode }),
   setDesignConfirmed: (designConfirmed) => set({ designConfirmed }),
   setApiKey: (key) => {
     saveApiKey(key);
