@@ -59,13 +59,15 @@ export function useAI() {
         await new Promise((r) => setTimeout(r, 600));
       }
 
-      const rawAIResults = await runAIInterpretation(apiKey, compressed);
-
-      // Run output guard (Layer 5)
       const state = useAppStore.getState();
       const validation = state.validationReport;
-      if (validation && state.results) {
-        const guardResult = guardAIOutput(rawAIResults, state.results, validation);
+      const rawAIResults = await runAIInterpretation(apiKey, compressed, validation);
+
+      // Run output guard (Layer 5 — non-AI final check)
+      const postState = useAppStore.getState();
+      const postValidation = postState.validationReport;
+      if (postValidation && postState.results) {
+        const guardResult = guardAIOutput(rawAIResults, postState.results, postValidation);
         if (!guardResult.passed) {
           console.warn("[OutputGuard] AI output flagged:", guardResult.violations);
         }

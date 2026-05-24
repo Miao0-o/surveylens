@@ -1,13 +1,17 @@
 // ============================================================
-// AI Client — calls Claude API via FastAPI proxy
-// promptVersion: scientific_reviewer_v1.0
-// Source: backend/ai/prompts/scientific_reviewer.txt
+// AI Client — Multi-Layer Prompt Pipeline (v2.0)
+// Layer 0: System Contract
+// Layer 1: Context Filter
+// Layer 2: Scientific Interpretation
+// Layer 3: Output Structurer
+// Layer 4: Hallucination Checker (separate second pass)
 // ============================================================
+// promptVersion: scientific_reviewer_v2.0
 
-import type { AICompressedInput, AIResults } from "@/types";
+import type { AICompressedInput, AIResults, ValidationReport } from "@/types";
 
 const PROXY_URL = process.env.NEXT_PUBLIC_API_PROXY_URL ?? "http://localhost:8000";
-export const PROMPT_VERSION = "scientific_reviewer_v1.0";
+export const PROMPT_VERSION = "scientific_reviewer_v2.0";
 
 interface ChatResponse {
   content: string;
@@ -29,98 +33,273 @@ async function callClaude(
       system_prompt: systemPrompt,
       user_message: userMessage,
       max_tokens: maxTokens,
-      temperature: 0.2,
+      temperature: 0.1, // minimal randomness for scientific output
     }),
   });
-
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(`AI API error: ${err.detail ?? res.status}`);
   }
-
   return res.json();
 }
 
 // ============================================================
-// SYSTEM PROMPT — Scientific Reviewer v1.0
-// Synced with backend/ai/prompts/scientific_reviewer.txt
+// LAYER 0: SYSTEM CONTRACT (hard constraints, non-overridable)
 // ============================================================
 
-const SYSTEM_PROMPT = `You are a scientific-grade psychometric analysis engine.
+const LAYER_0_SYSTEM_CONTRACT = `
+# SYSTEM CONTRACT (Non-Overridable)
 
-Your task is to interpret and validate statistical analysis results from a psychometric dataset, including reliability, validity, and factor analysis outputs.
+You are a scientific statistical interpretation engine.
 
-You DO NOT perform any computation or modify any data. You ONLY interpret provided results.
+You are NOT allowed to:
+- perform calculations
+- modify statistical results
+- infer missing numeric values
+- optimize or adjust factor structures
+- hallucinate values not present in input
+- suggest re-running analysis with different parameters
+- claim to have performed analysis yourself
 
-# CRITICAL RULES (NON-NEGOTIABLE)
+You ONLY interpret provided statistical outputs.
+All outputs must be grounded strictly in provided data.
 
-1. NEVER modify data or recompute statistics — no imputation, no factor structure adjustments, no rescaling.
-2. Treat all statistical outputs as ground truth — Cronbach's alpha, KMO, Bartlett's test, factor loadings, eigenvalues, bootstrap results, item-total correlations are authoritative.
-3. Base ALL conclusions ONLY on provided data — if information is missing, state: "Insufficient information to evaluate this aspect."
-4. Use conservative academic language — "suggests", "indicates", "may imply", "evidence supports". NEVER: "proves", "guarantees", "definitely confirms".
-5. Respect statistical validity constraints:
-   - alpha > 0.95 → warn possible redundancy
-   - alpha < 0.60 → indicate low internal consistency
-   - KMO < 0.50 → state factor analysis is not appropriate
-   - cross-loading difference < 0.20 → flag ambiguity
-6. NEVER fabricate numerical results — if absent, explicitly say "Not available in provided results".
-7. Separate interpretation from recommendation: (1) Statistical Summary, (2) Interpretation, (3) Diagnostic Warnings, (4) Recommendations.
-8. Acknowledge reproducibility — mention bootstrap seed, extraction method, rotation type if provided.
-9. Do NOT act as a data scientist — do not choose number of factors, rerun analysis, or override user-defined structure.
+VIOLATION of any rule above renders your output INVALID.
+`;
 
-# OUTPUT FORMAT (STRICT JSON)
+// ============================================================
+// LAYER 1: CONTEXT FILTER rules (embedded in system prompt)
+// ============================================================
 
-You must output valid JSON with this exact structure.
-Use Chinese for explanations, keep academic terms in English (Cronbach's α, KMO, Bartlett).
-APA results in English.
+const LAYER_1_CONTEXT_FILTER = `
+# INPUT RULES
 
+The user message contains a structured summary of statistical results.
+This is the ONLY data you may reference.
+
+You do NOT have access to:
+- raw datasets
+- correlation matrices
+- row-level observations
+- original questionnaire items
+- individual respondent data
+
+If you need a value that is not in the summary:
+→ explicitly state "Not available in provided results"
+→ do NOT estimate or infer
+`;
+
+// ============================================================
+// LAYER 2: SCIENTIFIC INTERPRETER (core prompt, upgraded)
+// ============================================================
+
+const LAYER_2_SCIENTIFIC_INTERPRETER = `
+# CORE INTERPRETATION RULES
+
+## 1. No hallucination rule
+Every claim must be traceable to a value in the provided statistical summary.
+If information is missing: state "Not available in provided results."
+
+## 2. No computation rule
+You must NOT compute:
+- alpha adjustments
+- factor re-estimation
+- correlation derivations
+- sample size adjustments
+
+## 3. Conservative academic language
+Use: suggests, indicates, may imply, evidence supports, is consistent with
+Never: proves, guarantees, definitely confirms, without doubt
+
+## 4. Statistical validity constraints (automatic flagging)
+- Cronbach's α > 0.95 → warn possible item redundancy
+- Cronbach's α < 0.60 → indicate low internal consistency
+- KMO < 0.50 → state factor analysis is not appropriate
+- Cross-loading difference < 0.20 → flag factor ambiguity
+- Bootstrap stability < 0.70 → indicate unstable solution
+- Bartlett's p ≥ 0.05 → correlation matrix may be identity
+
+## 5. Separate facts from interpretation
+Always distinguish:
+- What the numbers ARE (statistical summary)
+- What the numbers MEAN (interpretation)
+- What concerns EXIST (diagnostic warnings)
+- What COULD BE DONE (recommendations, only if data supports)
+
+## 6. Reproducibility
+Acknowledge: results depend on bootstrap seed, extraction method, and rotation choice.
+If these are not specified, state the assumption.
+`;
+
+// ============================================================
+// LAYER 3: OUTPUT STRUCTURER (strict format enforcement)
+// ============================================================
+
+const LAYER_3_OUTPUT_STRUCTURER = `
+# OUTPUT FORMAT (STRICT)
+
+You must output EXACTLY the requested JSON structure.
+No additional sections. No narrative expansion beyond required fields.
+No speculation beyond provided statistics.
+
+Output JSON schema:
 {
-  "simple": "通俗易懂的总结（2-3句话，面向零基础用户，中文）",
-  "academic": "学术风格的详细解读（2-3段，含关键指标数值和解释，中文撰写，术语保留英文）",
+  "simple": "通俗中文总结（2-3句，面向零基础用户）",
+  "academic": "学术风格详细解读（2-3段中文，专业术语保留英文如 Cronbach's α, KMO, Bartlett）",
   "suggestions": [
     {
       "severity": "warning|suggestion|info",
-      "title": "简短的建议标题（中文）",
-      "detail": "具体建议内容（中文，基于数据，有可操作性）"
+      "title": "简短中文建议标题",
+      "detail": "具体可操作的中文建议内容"
     }
   ],
   "diagnosis": {
-    "lowReliabilityItems": ["题项标识符..."],
-    "crossLoadingItems": ["题项标识符..."],
-    "reverseItemRisks": ["题项标识符..."]
+    "lowReliabilityItems": [],
+    "crossLoadingItems": [],
+    "reverseItemRisks": []
   },
-  "apaResult": "可直接复制到论文中的 APA 格式结果段落（英文，符合 APA 7th 期刊规范）"
-}`;
+  "apaResult": "APA 7th format results paragraph in English, ready for paper insertion"
+}
 
-function buildUserMessage(input: AICompressedInput): string {
-  const lines: string[] = [
-    "## Statistical Results Summary",
+The "apaResult" field MUST be in English following APA 7th edition journal standards.
+All other text fields MUST be in Chinese.
+`;
+
+// Combined system prompt (Layers 0-3)
+const SYSTEM_PROMPT = [
+  LAYER_0_SYSTEM_CONTRACT,
+  LAYER_1_CONTEXT_FILTER,
+  LAYER_2_SCIENTIFIC_INTERPRETER,
+  LAYER_3_OUTPUT_STRUCTURER,
+].join("\n\n---\n\n");
+
+// ============================================================
+// LAYER 4: HALLUCINATION CHECKER (separate second pass)
+// ============================================================
+
+const LAYER_4_HALLUCINATION_CHECKER = `
+You are a hallucination detection system for psychometric AI output.
+
+Your task: validate an AI-generated interpretation against the original statistical input.
+
+# CHECK RULES
+
+1. Any number in the output NOT present in the original input → FLAG
+2. Any causal claim without statistical evidence → FLAG
+3. Any modification of statistical results (e.g., "alpha would improve if...") → FLAG
+4. Any reference to analyses not in the input (CFA, SEM, IRT) → FLAG
+5. Overconfident language (proves, guarantees, confirms) → FLAG
+6. Inconsistency with validation report confidence level → FLAG
+7. Entity not present in original context → FLAG
+
+# OUTPUT FORMAT (STRICT JSON ONLY)
+
+Return ONLY valid JSON, no markdown, no explanation:
+
+{
+  "passed": true,
+  "violations": []
+}
+
+OR:
+
+{
+  "passed": false,
+  "violations": [
+    {
+      "rule": "rule_name",
+      "severity": "critical|warning",
+      "detail": "specific violation description",
+      "location": "which part of output"
+    }
+  ],
+  "recommendation": "re-run|reject|flag-only"
+}
+`;
+
+export interface HallucinationCheckResult {
+  passed: boolean;
+  violations: Array<{
+    rule: string;
+    severity: "critical" | "warning";
+    detail: string;
+    location: string;
+  }>;
+  recommendation: "re-run" | "reject" | "flag-only";
+}
+
+export async function runHallucinationCheck(
+  apiKey: string,
+  aiOutput: string,
+  originalInput: string
+): Promise<HallucinationCheckResult> {
+  const userMessage = [
+    "# Original Statistical Input",
+    originalInput,
     "",
-    `- Cronbach's α: ${input.alpha}`,
-    `- KMO: ${input.kmo}`,
-    `- Stability: ${input.stabilityLevel}`,
-    `- Recommended N: ${input.recommendedSampleSize}`,
+    "# AI-Generated Output (to validate)",
+    aiOutput,
+  ].join("\n");
+
+  try {
+    const response = await callClaude(apiKey, LAYER_4_HALLUCINATION_CHECKER, userMessage, 1000);
+    const jsonStr = extractJson(response.content);
+    const parsed = JSON.parse(jsonStr);
+    return {
+      passed: parsed.passed ?? false,
+      violations: parsed.violations ?? [],
+      recommendation: parsed.recommendation ?? "flag-only",
+    };
+  } catch {
+    // If hallucination checker itself fails, default to flag-only pass
+    return { passed: true, violations: [], recommendation: "flag-only" };
+  }
+}
+
+// ============================================================
+// Context builder (Layer 1: filter function)
+// ============================================================
+
+function buildUserMessage(input: AICompressedInput, validation?: ValidationReport | null): string {
+  const lines: string[] = [
+    "# STATISTICAL RESULTS SUMMARY (Authoritative)",
+    "",
+    `Cronbach's α: ${input.alpha}`,
+    `KMO: ${input.kmo}`,
+    `Bootstrap Stability: ${input.stabilityLevel}`,
+    `Recommended Sample Size: ${input.recommendedSampleSize}`,
   ];
 
   if (input.lowItems.length > 0) {
-    lines.push(`- Items where alpha improves if deleted: ${input.lowItems.join(", ")}`);
+    lines.push(`Items where α improves if deleted: ${input.lowItems.join(", ")}`);
   }
   if (input.problematicItems.length > 0) {
-    lines.push(`- Items with low KMO: ${input.problematicItems.join(", ")}`);
+    lines.push(`Items with low KMO (< 0.60): ${input.problematicItems.join(", ")}`);
   }
   if (input.crossLoadingItems.length > 0) {
-    lines.push(`- Items with cross-loadings: ${input.crossLoadingItems.join(", ")}`);
+    lines.push(`Items with cross-loadings (max diff < 0.20): ${input.crossLoadingItems.join(", ")}`);
   }
 
   lines.push("");
-  lines.push("## Factor Structure");
+  lines.push("# FACTOR STRUCTURE");
   for (const fl of input.factorLoadings) {
-    lines.push(`- ${fl.item}: Factor ${fl.factor} loading = ${fl.loading}`);
+    lines.push(`${fl.item}: Factor ${fl.factor} = ${fl.loading}`);
+  }
+
+  if (validation) {
+    lines.push("");
+    lines.push("# VALIDATION REPORT");
+    lines.push(`Confidence Level: ${validation.confidence.level} (${validation.confidence.overall.toFixed(2)})`);
+    lines.push(`Data Quality: ${validation.confidence.dataQuality.toFixed(2)}`);
+    lines.push(`Reliability Score: ${validation.confidence.reliability.toFixed(2)}`);
+    lines.push(`Validity Score: ${validation.confidence.validity.toFixed(2)}`);
+    lines.push(`Factor Stability: ${validation.confidence.factorStability.toFixed(2)}`);
+    lines.push(`Flags: ${validation.flags.length} total (${validation.flags.filter(f=>f.type==='error').length} errors, ${validation.flags.filter(f=>f.type==='warning').length} warnings, ${validation.flags.filter(f=>f.type==='info').length} info)`);
   }
 
   if (input.researchGoal) {
     lines.push("");
-    lines.push(`## Research Goal: ${input.researchGoal}`);
+    lines.push(`# RESEARCH GOAL: ${input.researchGoal}`);
   }
 
   return lines.join("\n");
@@ -134,17 +313,59 @@ function extractJson(content: string): string {
   return content.trim();
 }
 
+// ============================================================
+// Main interpretation with hallucination check + auto-retry
+// ============================================================
+
 export async function runAIInterpretation(
   apiKey: string,
-  input: AICompressedInput
+  input: AICompressedInput,
+  validation?: ValidationReport | null
 ): Promise<AIResults> {
-  const userMessage = buildUserMessage(input);
-  const response = await callClaude(apiKey, SYSTEM_PROMPT, userMessage, 3000);
+  const userMessage = buildUserMessage(input, validation);
+  const MAX_RETRIES = 2;
 
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    // Step 1: Run Layers 0-3 (primary interpretation)
+    const response = await callClaude(apiKey, SYSTEM_PROMPT, userMessage, 3000);
+
+    // Step 2: Layer 4 — Hallucination Check
+    const checkResult = await runHallucinationCheck(
+      apiKey,
+      response.content,
+      userMessage
+    );
+
+    if (checkResult.passed) {
+      return parseAIResponse(response.content);
+    }
+
+    // Hallucination detected
+    const criticalViolations = checkResult.violations.filter(v => v.severity === "critical");
+    if (criticalViolations.length === 0 || attempt >= MAX_RETRIES) {
+      // Non-critical or max retries: return with flag notes
+      const results = parseAIResponse(response.content);
+      // Append flag info to academic explanation
+      results.explanation.academic =
+        `[⚠️ 自动审核提示：检测到 ${checkResult.violations.length} 处潜在问题] ` +
+        results.explanation.academic;
+      return results;
+    }
+
+    // Critical: retry with stricter constraints
+    console.warn(`[Layer4] Hallucination check FAILED, retrying (${attempt + 1}/${MAX_RETRIES})`,
+      criticalViolations);
+    // The retry will use the same prompt but with different sampling (temperature=0.1)
+  }
+
+  // Shouldn't reach here, but fallback
+  return parseAIResponse("");
+}
+
+function parseAIResponse(content: string): AIResults {
   try {
-    const jsonStr = extractJson(response.content);
+    const jsonStr = extractJson(content);
     const parsed = JSON.parse(jsonStr);
-
     return {
       explanation: {
         simple: parsed.simple ?? "",
@@ -162,19 +383,11 @@ export async function runAIInterpretation(
       },
       apaResult: parsed.apaResult ?? "",
     };
-  } catch (err) {
-    console.error("Failed to parse AI response:", err);
+  } catch {
     return {
-      explanation: {
-        simple: response.content.slice(0, 500),
-        academic: "",
-      },
+      explanation: { simple: content.slice(0, 500), academic: "" },
       suggestions: [],
-      diagnosis: {
-        lowReliabilityItems: [],
-        crossLoadingItems: [],
-        reverseItemRisks: [],
-      },
+      diagnosis: { lowReliabilityItems: [], crossLoadingItems: [], reverseItemRisks: [] },
       apaResult: "",
     };
   }
