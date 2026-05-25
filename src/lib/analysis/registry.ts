@@ -70,13 +70,34 @@ export function getActiveModules(results: AnalysisResults): AnalysisModule[] {
   return analysisModules.filter((m) => m.isAvailable(results));
 }
 
-/** Get all APA insights from active modules */
-export function getAllInsights(results: AnalysisResults): Record<string, string | null> {
-  const map: Record<string, string | null> = {};
+/** Get per-module one-line APA insights (Local Mode) */
+export function getOneLineAPA(results: AnalysisResults): Record<string, string> {
+  const map: Record<string, string> = {};
   for (const m of analysisModules) {
-    map[m.id] = m.isAvailable(results) ? m.apaInsight(results) : null;
+    if (m.isAvailable(results)) {
+      const insight = m.apaInsight(results);
+      if (insight) map[m.id] = insight;
+    }
   }
   return map;
+}
+
+/** Generate 2-5 sentence APA summary (PDF Mode only) */
+export function getSummaryAPA(results: AnalysisResults): string {
+  const insights = getOneLineAPA(results);
+  const lines = Object.values(insights).filter(Boolean);
+  if (lines.length === 0) return "No significant results to report.";
+
+  const sampleN = results.meta.sampleSize;
+  const itemN = results.meta.itemCount;
+  const prefix = `Analysis was conducted on N = ${sampleN} with ${itemN} items. `;
+
+  const body = lines.join(" ");
+
+  // Cap at ~5 sentences by splitting on period
+  const combined = prefix + body;
+  const sentences = combined.match(/[^.!?]+[.!?]+/g) ?? [combined];
+  return sentences.slice(0, 5).join(" ").trim();
 }
 
 /** Which Python steps should run for a given intent */

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useAppStore } from "@/lib/store";
 import { STAGE_LABELS } from "@/types";
-import { getActiveModules, getAllInsights } from "@/lib/analysis/registry";
+import { getActiveModules, getOneLineAPA } from "@/lib/analysis/registry";
 import { DataPreview } from "@/components/preprocessing/data-preview";
 import { OverviewDashboard } from "@/components/analysis/overview-dashboard";
 import { ResultCard } from "@/components/analysis/result-card";
@@ -24,7 +24,7 @@ export function CenterPanel() {
   const [activeTab, setActiveTab] = useState<string>("overview");
 
   const activeModules = useMemo(() => results ? getActiveModules(results) : [], [results]);
-  const insights = useMemo(() => results ? getAllInsights(results) : {}, [results]);
+  const insights = useMemo(() => results ? getOneLineAPA(results) : {}, [results]);
 
   // ---- States ----
   if (!rawData) {
