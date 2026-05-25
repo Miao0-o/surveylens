@@ -142,36 +142,59 @@ function buildSummaryEN(results: AnalysisResults, insights: string[], n: number,
   return sentences.slice(0, 5).join(" ").trim();
 }
 
-function buildSummaryZH(results: AnalysisResults, insights: string[], n: number, items: number): string {
-  if (insights.length === 0) return "未检测到显著结果。";
+/** Format integer with thousand separators: 3182 → "3,182" */
+function fmtInt(n: number): string {
+  return n.toLocaleString("en-US");
+}
 
+/** Format p-value per APA 7 Chinese: p < .001, never p = .000 */
+function fmtP(p: number): string {
+  if (p < 0.001) return "p＜0.001";
+  return `p＝${p.toFixed(3)}`;
+}
+
+function buildSummaryZH(results: AnalysisResults, _insights: string[], n: number, items: number): string {
   const { reliability, validity, efa, stability } = results;
   const parts: string[] = [];
-  parts.push(`基于 N = ${n}（${items} 个题项）的分析。`);
 
+  // Opening sentence
+  parts.push(`本次分析基于${fmtInt(n)}份有效样本、${items}个测量题项开展。`);
+
+  // Reliability
   const a = reliability.cronbachsAlpha;
   if (a > 0) {
-    const level = a >= 0.90 ? "优秀" : a >= 0.80 ? "良好" : a >= 0.70 ? "可接受" : "偏低";
-    parts.push(`量表内部一致性${level}（Cronbach's α = ${a.toFixed(2)}）。`);
+    const level = a >= 0.90 ? "表现优秀" : a >= 0.80 ? "表现良好" : a >= 0.70 ? "尚可" : "偏低";
+    parts.push(`量表内部一致性${level}，克朗巴哈α系数为${a.toFixed(2)}。`);
   }
 
+  // Validity
   const kmo = validity.kmo;
   if (kmo > 0) {
-    const kmoLabel = kmo >= 0.80 ? "良好" : kmo >= 0.60 ? "可接受" : "不足";
-    parts.push(`KMO = ${kmo.toFixed(2)}（${kmoLabel}），Bartlett 球形检验${validity.bartlettPValue < 0.05 ? "显著" : "不显著"}。`);
+    const kmoLabel = kmo >= 0.90 ? "极佳" : kmo >= 0.80 ? "良好" : kmo >= 0.70 ? "处于可接受范围" : kmo >= 0.60 ? "勉强达标" : "不足";
+    parts.push(`效度检验结果显示，KMO取样适切性量数为${kmo.toFixed(2)}，${kmoLabel}，适合开展因子分析。`);
   }
 
+  // Bartlett
+  if (validity.bartlettChiSquare > 0) {
+    const pStr = fmtP(validity.bartlettPValue);
+    const sig = validity.bartlettPValue < 0.05 ? "具有统计学显著性" : "未达显著水平";
+    parts.push(`巴特利特球形度检验结果${sig}（χ²＝${validity.bartlettChiSquare.toFixed(2)}，df＝${validity.bartlettDf}，${pStr}），变量间存在显著相关关系。`);
+  }
+
+  // EFA
   if (efa.suggestedFactors > 0) {
     const tv = (efa.varianceExplained.reduce((a, b) => a + b, 0) * 100).toFixed(1);
-    parts.push(`EFA 提取 ${efa.suggestedFactors} 个因子，累计解释 ${tv}% 方差。`);
+    const factorWord = efa.suggestedFactors <= 9 ? ["", "一", "两", "三", "四", "五", "六", "七", "八", "九"][efa.suggestedFactors] ?? efa.suggestedFactors : efa.suggestedFactors;
+    parts.push(`经探索性因子分析（EFA），共提取${factorWord}个公因子，累计方差解释率达${tv}%。`);
   }
 
-  if (stability.stabilityLevel) {
-    const sl = stability.stabilityLevel === "stable" ? "稳定" : stability.stabilityLevel === "moderate" ? "中等" : "不稳定";
-    parts.push(`Bootstrap 稳定性${sl}，推荐样本量 N ≥ ${stability.recommendedSampleSize}。`);
+  // Stability
+  if (stability.stabilityLevel && stability.recommendedSampleSize > 0) {
+    const sl = stability.stabilityLevel === "stable" ? "良好" : stability.stabilityLevel === "moderate" ? "一般" : "不够稳定";
+    parts.push(`Bootstrap稳健性检验显示因子结构稳定性${sl}，研究建议最低有效样本量为${fmtInt(stability.recommendedSampleSize)}份。`);
   }
 
-  return parts.slice(0, 5).join("");
+  return parts.join("");
 }
 
 /** Which Python steps should run for a given intent */
