@@ -7,33 +7,34 @@
 import type { AnalysisResults, ColumnInfo } from "@/types";
 
 export interface DiagnosticReport {
-  dataQuality: {
-    missingRate: number;
-    missingLabel: "low" | "moderate" | "high";
-    sampleSize: number;
-    sampleAdequacy: "adequate" | "marginal" | "insufficient";
+  data_quality: {
+    missing_rate: number;
+    imbalance: string;
     normality: string;
+    sample_size: number;
+    sample_adequacy: "adequate" | "marginal" | "insufficient";
   };
-  scaleHealth: {
-    reliabilityStatus: "good" | "acceptable" | "low" | "not_applicable";
-    cronbachsAlpha: number;
-    problemItems: string[];
+  scale_health: {
+    cronbach_alpha: number;
+    reliability_status: "good" | "acceptable" | "low" | "not_applicable";
+    problem_items: string[];
   };
   validity: {
     kmo: number;
-    kmoLabel: string;
     bartlett: string;
     factorability: "good" | "acceptable" | "poor" | "not_applicable";
   };
-  analysisPermissions: {
-    allowed: string[];
-    blocked: string[];
-    warnings: string[];
-  };
+  risk_flags: Array<{
+    type: "error" | "warning" | "info";
+    source: string;
+    message: string;
+  }>;
+  allowed_analysis: string[];
+  blocked_analysis: string[];
   recommendations: Array<{
     issue: string;
     severity: "warning" | "info";
-    suggestion: string;
+    fix: string;
   }>;
   confidence: number;
 }
@@ -42,114 +43,72 @@ export function runDiagnostics(
   columns: ColumnInfo[],
   results: AnalysisResults | null
 ): DiagnosticReport {
+  const dq = assessDataQuality(columns);
+  const sh = assessScaleHealth(results);
+  const v = assessValidity(results);
+
   const report: DiagnosticReport = {
-    dataQuality: assessDataQuality(columns),
-    scaleHealth: assessScaleHealth(results),
-    validity: assessValidity(results),
-    analysisPermissions: { allowed: [], blocked: [], warnings: [] },
+    data_quality: dq,
+    scale_health: sh,
+    validity: v,
+    risk_flags: [],
+    allowed_analysis: [],
+    blocked_analysis: [],
     recommendations: [],
     confidence: 0,
   };
 
-  // Compute permissions
   computePermissions(report, columns, results);
-
-  // Compute overall confidence
   report.confidence = computeConfidence(report);
 
   return report;
 }
 
-function assessDataQuality(columns: ColumnInfo[]): DiagnosticReport["dataQuality"] {
+function assessDataQuality(columns: ColumnInfo[]): DiagnosticReport["data_quality"] {
   if (columns.length === 0) {
-    return {
-      missingRate: 0,
-      missingLabel: "low",
-      sampleSize: 0,
-      sampleAdequacy: "insufficient",
-      normality: "No data available.",
-    };
+    return { missing_rate: 0, imbalance: "N/A", normality: "No data.", sample_size: 0, sample_adequacy: "insufficient" };
   }
-
-  let totalMissing = 0;
-  let totalCells = 0;
+  let totalMissing = 0, totalCells = 0;
   for (const col of columns) {
     totalMissing += col.missingCount;
     totalCells += col.uniqueValues + col.missingCount;
   }
-
-  const missingRate = totalCells > 0 ? totalMissing / totalCells : 0;
-  const missingLabel = missingRate < 0.05 ? "low" : missingRate < 0.15 ? "moderate" : "high";
-
-  const sampleSize = columns[0]?.uniqueValues > 0
-    ? Math.max(...columns.map((c) => c.uniqueValues + c.missingCount))
-    : 0;
-  const sampleAdequacy =
-    sampleSize >= 200 ? "adequate" : sampleSize >= 100 ? "marginal" : "insufficient";
-
+  const missing_rate = totalCells > 0 ? totalMissing / totalCells : 0;
+  const sample_size = Math.max(...columns.map((c) => c.uniqueValues + c.missingCount));
+  const sample_adequacy = sample_size >= 200 ? "adequate" : sample_size >= 100 ? "marginal" : "insufficient";
   const likertCols = columns.filter((c) => c.type === "likert");
-  const normality =
-    likertCols.length > 0
-      ? `${likertCols.length} Likert items detected. Normality test available after analysis.`
-      : "No scale items detected. Normality check not applicable.";
-
-  return { missingRate, missingLabel, sampleSize, sampleAdequacy, normality };
+  const normality = likertCols.length > 0 ? `${likertCols.length} Likert items.` : "No scale items.";
+  const imbalance = columns.some(c => c.type === "text" && c.uniqueValues <= 10) ? "Has categorical groups" : "Continuous only";
+  return { missing_rate, imbalance, normality, sample_size, sample_adequacy };
 }
 
-function assessScaleHealth(results: AnalysisResults | null): DiagnosticReport["scaleHealth"] {
+function assessScaleHealth(results: AnalysisResults | null): DiagnosticReport["scale_health"] {
   if (!results || results.reliability.cronbachsAlpha <= 0) {
-    return {
-      reliabilityStatus: "not_applicable",
-      cronbachsAlpha: 0,
-      problemItems: [],
-    };
+    return { cronbach_alpha: 0, reliability_status: "not_applicable", problem_items: [] };
   }
-
   const alpha = results.reliability.cronbachsAlpha;
   const status = alpha >= 0.80 ? "good" : alpha >= 0.70 ? "acceptable" : "low";
-
   const problemItems: string[] = [];
   for (const [item, corr] of Object.entries(results.reliability.itemTotalCorrelation)) {
     if (corr < 0.3) problemItems.push(item);
   }
-  for (const [item, alphaIfDel] of Object.entries(results.reliability.alphaIfItemDeleted)) {
-    if (alphaIfDel !== null && alphaIfDel - alpha > 0.05) {
-      if (!problemItems.includes(item)) problemItems.push(item);
-    }
+  for (const [item, aid] of Object.entries(results.reliability.alphaIfItemDeleted)) {
+    if (aid !== null && aid - alpha > 0.05 && !problemItems.includes(item)) problemItems.push(item);
   }
-
-  return {
-    reliabilityStatus: status,
-    cronbachsAlpha: alpha,
-    problemItems: problemItems.slice(0, 10),
-  };
+  return { cronbach_alpha: alpha, reliability_status: status, problem_items: problemItems.slice(0, 10) };
 }
 
 function assessValidity(results: AnalysisResults | null): DiagnosticReport["validity"] {
   if (!results || results.validity.kmo <= 0) {
-    return {
-      kmo: 0,
-      kmoLabel: "N/A",
-      bartlett: "Not available.",
-      factorability: "not_applicable",
-    };
+    return { kmo: 0, bartlett: "N/A", factorability: "not_applicable" };
   }
-
   const kmo = results.validity.kmo;
-  const kmoLabel =
-    kmo >= 0.90 ? "marvelous" : kmo >= 0.80 ? "meritorious" : kmo >= 0.70 ? "middling" : kmo >= 0.60 ? "mediocre" : "unacceptable";
-
-  const bartlett =
-    results.validity.bartlettPValue < 0.001
-      ? "Significant, p < .001"
-      : results.validity.bartlettPValue < 0.05
-        ? `Significant, p = ${results.validity.bartlettPValue.toFixed(3)}`
-        : `Not significant, p = ${results.validity.bartlettPValue.toFixed(3)}`;
-
-  const factorability =
-    kmo >= 0.80 ? "good" : kmo >= 0.60 ? "acceptable" : "poor";
-
-  return { kmo, kmoLabel, bartlett, factorability };
+  const bartlett = results.validity.bartlettPValue < 0.001
+    ? "Significant, p < .001" : results.validity.bartlettPValue < 0.05
+    ? `Significant, p = ${results.validity.bartlettPValue.toFixed(3)}`
+    : `Not significant, p = ${results.validity.bartlettPValue.toFixed(3)}`;
+  const factorability = kmo >= 0.80 ? "good" : kmo >= 0.60 ? "acceptable" : "poor";
+  return { kmo, bartlett, factorability };
 }
 
 function computePermissions(
@@ -157,118 +116,84 @@ function computePermissions(
   columns: ColumnInfo[],
   results: AnalysisResults | null
 ): void {
-  const allowed: string[] = [];
+  const allowed: string[] = ["descriptive"];
   const blocked: string[] = [];
-  const warnings: string[] = [];
 
   const likertCols = columns.filter((c) => c.type === "likert");
   const hasScaleData = likertCols.length >= 3;
-  const hasAdequateSample = report.dataQuality.sampleAdequacy !== "insufficient";
-
-  // Descriptive — always allowed
-  allowed.push("descriptive");
-
-  // Correlation — needs at least 2 numeric columns
+  const hasAdequateSample = report.data_quality.sample_adequacy !== "insufficient";
   const numericCols = columns.filter((c) => c.type === "likert" || c.type === "numeric");
-  if (numericCols.length >= 2) {
-    allowed.push("correlation");
-    if (numericCols.length > 15) {
-      warnings.push("Many numeric variables — consider grouping or dimension reduction.");
-    }
-  } else {
-    blocked.push("correlation");
-  }
 
-  // Reliability — needs scale data
+  if (numericCols.length >= 2) allowed.push("correlation");
+  else blocked.push("correlation");
+
+  if (hasScaleData) allowed.push("reliability");
+  else blocked.push("reliability");
+
   if (hasScaleData) {
-    allowed.push("reliability");
-  } else {
-    blocked.push("reliability");
-  }
-
-  // Validity — needs scale data + adequate sample
-  if (hasScaleData && hasAdequateSample) {
     allowed.push("validity");
-  } else if (hasScaleData && !hasAdequateSample) {
-    warnings.push(`Sample size (N=${report.dataQuality.sampleSize}) may be insufficient for KMO.`);
-    allowed.push("validity");
+    if (!hasAdequateSample) report.risk_flags.push({
+      type: "warning", source: "validity",
+      message: `Sample size may be insufficient for KMO (N=${report.data_quality.sample_size}).`
+    });
   } else {
     blocked.push("validity");
   }
 
-  // EFA — needs reliability + validity
-  if (results && results.reliability.cronbachsAlpha >= 0.70 && results.validity.kmo >= 0.60) {
-    allowed.push("efa");
-  } else if (results && results.validity.kmo > 0 && results.validity.kmo < 0.60) {
+  if (results && results.validity.kmo > 0 && results.validity.kmo < 0.60) {
     blocked.push("efa");
-    warnings.push("KMO below 0.60 — factor analysis may not be appropriate.");
+    report.risk_flags.push({
+      type: "error", source: "validity",
+      message: "KMO below 0.60 — factor analysis may not be appropriate."
+    });
   } else {
-    allowed.push("efa"); // Allow tentatively, will be validated after analysis
+    allowed.push("efa");
   }
 
-  // Stability — always allowed if analysis was run
-  if (results) {
-    allowed.push("stability");
-  }
+  if (results) allowed.push("stability");
+  if (numericCols.length >= 3) allowed.push("regression");
+  else blocked.push("regression");
 
-  // Regression — needs numeric outcome + at least 2 predictors
-  if (numericCols.length >= 3) {
-    allowed.push("regression");
-  } else {
-    blocked.push("regression");
-  }
-
-  // Group tests — needs categorical column (not yet detected, placeholder)
   const hasCategorical = columns.some((c) => c.type === "text" && c.uniqueValues <= 10);
-  if (hasCategorical) {
-    allowed.push("group_comparison");
-  }
+  if (hasCategorical) allowed.push("group_comparison");
 
-  // Missing rate warning
-  if (report.dataQuality.missingRate > 0.10) {
+  if (report.data_quality.missing_rate > 0.10) {
     report.recommendations.push({
-      issue: `Missing data rate: ${(report.dataQuality.missingRate * 100).toFixed(1)}%`,
+      issue: `Missing rate: ${(report.data_quality.missing_rate * 100).toFixed(1)}%`,
       severity: "warning",
-      suggestion: "Consider imputation methods or listwise deletion with caution.",
+      fix: "Consider imputation or listwise deletion with caution.",
     });
   }
 
-  // Sample size warning
   if (!hasAdequateSample) {
     report.recommendations.push({
-      issue: `Small sample size (N=${report.dataQuality.sampleSize})`,
+      issue: `Small sample (N=${report.data_quality.sample_size})`,
       severity: "warning",
-      suggestion: "Results should be interpreted cautiously. Bootstrap or non-parametric methods recommended.",
+      fix: "Use bootstrap or non-parametric methods. Interpret with caution.",
     });
   }
 
-  // Reliability warnings
-  if (report.scaleHealth.cronbachsAlpha > 0 && report.scaleHealth.cronbachsAlpha < 0.70) {
+  if (report.scale_health.cronbach_alpha > 0 && report.scale_health.cronbach_alpha < 0.70) {
     report.recommendations.push({
-      issue: `Low reliability (α = ${report.scaleHealth.cronbachsAlpha.toFixed(2)})`,
+      issue: `Low reliability (α = ${report.scale_health.cronbach_alpha.toFixed(2)})`,
       severity: "warning",
-      suggestion: "Review item quality. Consider removing items with low item-total correlations.",
+      fix: "Review and remove items with low item-total correlations.",
     });
   }
 
-  report.analysisPermissions = { allowed, blocked, warnings };
+  report.allowed_analysis = allowed;
+  report.blocked_analysis = blocked;
 }
 
 function computeConfidence(report: DiagnosticReport): number {
-  let score = 0;
-  const total = 4;
-
-  if (report.dataQuality.sampleAdequacy === "adequate") score++;
-  else if (report.dataQuality.sampleAdequacy === "marginal") score += 0.5;
-
-  if (report.dataQuality.missingRate < 0.05) score++;
-  else if (report.dataQuality.missingRate < 0.15) score += 0.5;
-
-  if (report.scaleHealth.reliabilityStatus === "good") score++;
-  else if (report.scaleHealth.reliabilityStatus === "acceptable") score += 0.5;
-
+  let score = 0; const total = 4;
+  if (report.data_quality.sample_adequacy === "adequate") score++;
+  else if (report.data_quality.sample_adequacy === "marginal") score += 0.5;
+  if (report.data_quality.missing_rate < 0.05) score++;
+  else if (report.data_quality.missing_rate < 0.15) score += 0.5;
+  if (report.scale_health.reliability_status === "good") score++;
+  else if (report.scale_health.reliability_status === "acceptable") score += 0.5;
   if (report.validity.factorability === "good") score++;
   else if (report.validity.factorability === "acceptable") score += 0.5;
-
   return Math.round((score / total) * 100);
 }

@@ -9,6 +9,7 @@ import { Shield, AlertTriangle, CheckCircle2, XCircle, BarChart3 } from "lucide-
 export function DiagnosticDashboard() {
   const columns = useAppStore((s) => s.columns);
   const results = useAppStore((s) => s.results);
+  const lang = useAppStore((s) => s.reportLanguage);
 
   const report = useMemo(
     () => runDiagnostics(columns, results),
@@ -25,7 +26,7 @@ export function DiagnosticDashboard() {
         <div>
           <p className="text-sm font-semibold text-foreground">数据诊断报告</p>
           <p className="text-xs text-muted-foreground">
-            数据可信度 {report.confidence}% · {report.dataQuality.sampleSize} 样本
+            数据可信度 {report.confidence}% · {report.data_quality.sample_size} 样本
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
@@ -33,7 +34,7 @@ export function DiagnosticDashboard() {
             report.confidence >= 75 ? "bg-emerald-50 text-emerald-600" :
             report.confidence >= 50 ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600"
           }`}>
-            {report.confidence >= 75 ? "良好" : report.confidence >= 50 ? "注意" : "需关注"}
+            {report.confidence >= 75 ? (lang === "en" ? "Good" : "良好") : report.confidence >= 50 ? (lang === "en" ? "Caution" : "注意") : (lang === "en" ? "Warning" : "需关注")}
           </span>
         </div>
       </div>
@@ -63,7 +64,7 @@ export function DiagnosticDashboard() {
               }`} />
               <div>
                 <span className="text-foreground font-medium">{r.issue}</span>
-                <span className="text-muted-foreground"> — {r.suggestion}</span>
+                <span className="text-muted-foreground"> — {r.fix}</span>
               </div>
             </div>
           ))}
@@ -74,7 +75,7 @@ export function DiagnosticDashboard() {
 }
 
 function QualityCard({ report }: { report: DiagnosticReport }) {
-  const dq = report.dataQuality;
+  const dq = report.data_quality;
   return (
     <div className="p-3 rounded-lg bg-card border border-border space-y-2">
       <div className="flex items-center gap-1.5">
@@ -82,18 +83,18 @@ function QualityCard({ report }: { report: DiagnosticReport }) {
         <span className="text-xs font-medium text-foreground">数据质量</span>
       </div>
       <div className="space-y-1 text-[10px]">
-        <Row label="缺失率" value={`${(dq.missingRate * 100).toFixed(1)}%`}
-          ok={dq.missingLabel === "low"} warn={dq.missingLabel === "moderate"} />
-        <Row label="样本量" value={`N = ${dq.sampleSize}`}
-          ok={dq.sampleAdequacy === "adequate"} warn={dq.sampleAdequacy === "marginal"} />
+        <Row label="缺失率" value={`${(dq.missing_rate * 100).toFixed(1)}%`}
+          ok={dq.missing_rate < 0.05} warn={dq.missing_rate >= 0.05 && dq.missing_rate < 0.15} />
+        <Row label="样本量" value={`N = ${dq.sample_size}`}
+          ok={dq.sample_adequacy === "adequate"} warn={dq.sample_adequacy === "marginal"} />
       </div>
     </div>
   );
 }
 
 function ScaleHealthCard({ report }: { report: DiagnosticReport }) {
-  const sh = report.scaleHealth;
-  if (sh.reliabilityStatus === "not_applicable") return null;
+  const sh = report.scale_health;
+  if (sh.reliability_status === "not_applicable") return null;
   return (
     <div className="p-3 rounded-lg bg-card border border-border space-y-2">
       <div className="flex items-center gap-1.5">
@@ -101,10 +102,10 @@ function ScaleHealthCard({ report }: { report: DiagnosticReport }) {
         <span className="text-xs font-medium text-foreground">量表健康度</span>
       </div>
       <div className="space-y-1 text-[10px]">
-        <Row label="Cronbach's α" value={sh.cronbachsAlpha.toFixed(3)}
-          ok={sh.reliabilityStatus === "good"} warn={sh.reliabilityStatus === "acceptable"} />
-        {sh.problemItems.length > 0 && (
-          <p className="text-amber-600">问题题项: {sh.problemItems.slice(0, 3).join(", ")}</p>
+        <Row label="Cronbach's α" value={sh.cronbach_alpha.toFixed(3)}
+          ok={sh.reliability_status === "good"} warn={sh.reliability_status === "acceptable"} />
+        {sh.problem_items.length > 0 && (
+          <p className="text-amber-600">问题题项: {sh.problem_items.slice(0, 3).join(", ")}</p>
         )}
       </div>
     </div>
@@ -130,7 +131,7 @@ function ValidityCard({ report }: { report: DiagnosticReport }) {
 }
 
 function PermissionsCard({ report }: { report: DiagnosticReport }) {
-  const p = report.analysisPermissions;
+  const p = report;
   return (
     <div className="p-3 rounded-lg bg-card border border-border space-y-2">
       <div className="flex items-center gap-1.5">
@@ -138,12 +139,12 @@ function PermissionsCard({ report }: { report: DiagnosticReport }) {
         <span className="text-xs font-medium text-foreground">推荐分析</span>
       </div>
       <div className="space-y-1 text-[10px]">
-        {p.allowed.slice(0, 4).map((a) => (
+        {report.allowed_analysis.slice(0, 4).map((a: string) => (
           <span key={a} className="inline-flex items-center gap-1 text-emerald-600 mr-2">
             <CheckCircle2 className="w-3 h-3" strokeWidth={1.5} /> {a}
           </span>
         ))}
-        {p.blocked.slice(0, 2).map((b) => (
+        {report.blocked_analysis.slice(0, 2).map((b: string) => (
           <span key={b} className="inline-flex items-center gap-1 text-red-400 mr-2">
             <XCircle className="w-3 h-3" strokeWidth={1.5} /> {b}
           </span>
