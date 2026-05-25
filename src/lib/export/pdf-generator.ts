@@ -122,10 +122,10 @@ ${researchGoal ? `<p class="meta">Research Goal: ${escapeHtml(researchGoal)}</p>
   <tr><td>Bootstrap Samples</td><td class="stat">${stability.bootstrapSamples}</td></tr>
 </table>
 
-${aiResults ? `
 <h2>6. APA Summary</h2>
 <pre>${escapeHtml(getSummaryAPA(results))}</pre>
 
+${aiResults ? `
 <h2>7. AI Interpretation</h2>
 <h3>Plain-Language Summary</h3>
 <p>${escapeHtml(aiResults.explanation.simple)}</p>
