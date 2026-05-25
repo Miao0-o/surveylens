@@ -16,6 +16,7 @@ import {
   ChevronRight,
   FileText,
   Lightbulb,
+  Shield,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -68,9 +69,9 @@ export function RightSidebar() {
         </p>
         <div className="space-y-2">
           {[
-            { Icon: Zap, label: "统计指标解释", desc: "α、KMO、Bartlett 等指标含义" },
-            { Icon: FileText, label: "APA 论文格式", desc: "可直接复制到学术论文中" },
-            { Icon: Lightbulb, label: "诊断与建议", desc: "识别问题题项，给出优化方案" },
+            { Icon: Shield, label: "数据质量诊断", desc: "缺失率、分布、反向题风险检测" },
+            { Icon: Lightbulb, label: "问题定位与修复", desc: "数据层 / 量表层 / 分析层三级建议" },
+            { Icon: FileText, label: "APA 学术报告", desc: "论文级结果段落，一键复制" },
           ].map(({ Icon, label, desc }) => (
             <div key={label} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-secondary/20">
               <Icon className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" strokeWidth={1.5} />
@@ -253,9 +254,9 @@ export function RightSidebar() {
         </p>
         <div className="space-y-2">
           {[
-            { Icon: Zap, label: "统计指标解释", desc: "α、KMO、Bartlett 等指标含义" },
-            { Icon: FileText, label: "APA 论文格式", desc: "可直接复制到学术论文中" },
-            { Icon: Lightbulb, label: "诊断与建议", desc: "识别问题题项，给出优化方案" },
+            { Icon: Shield, label: "数据质量诊断", desc: "缺失率、分布、反向题风险检测" },
+            { Icon: Lightbulb, label: "问题定位与修复", desc: "数据层 / 量表层 / 分析层三级建议" },
+            { Icon: FileText, label: "APA 学术报告", desc: "论文级结果段落，一键复制" },
           ].map(({ Icon, label, desc }) => (
             <div key={label} className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-secondary/20">
               <Icon className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" strokeWidth={1.5} />
