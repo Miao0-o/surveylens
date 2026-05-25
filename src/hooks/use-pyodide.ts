@@ -284,29 +284,18 @@ export function usePyodide() {
       setLoadingMessage(stageLabel);
 
       // Register the function
-      // Yield to browser between steps to prevent UI freeze
-      await new Promise((r) => setTimeout(r, 0));
       await py.runPythonAsync(step.fn);
 
-      // Execute — data is already in __data_json__
-      let resultJson: string;
+      // Execute
       const callCode = step.id === "stability"
         ? `run_stability(__data_json__, 200)`
         : `run_${step.id}(__data_json__)`;
-      resultJson = await py.runPythonAsync(callCode) as string;
-      // Sanitize NaN/Infinity → null before parsing (any position)
-      const safeJson = (resultJson as string)
-        .replace(/\bNaN\b/g, "null")
-        .replace(/\bInfinity\b/g, "null")
-        .replace(/\b-Infinity\b/g, "null");
-
-      const parsed = sanitizeForStorage(JSON.parse(safeJson));
-      if (parsed.error) {
-        throw new Error(`Step ${step.id}: ${parsed.error}`);
+      const resultJson = await py.runPythonAsync(callCode) as string;
+      const parsed = JSON.parse(resultJson as string);
+      if ((parsed as Record<string, unknown>).error) {
+        throw new Error(`Step ${step.id}: ${(parsed as Record<string, unknown>).error}`);
       }
       results[step.id] = parsed as Record<string, unknown>;
-      // Yield after each step
-      await new Promise((r) => setTimeout(r, 0));
     }
 
     // Build AnalysisResults from step results
