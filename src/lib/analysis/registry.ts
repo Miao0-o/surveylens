@@ -12,6 +12,18 @@ function alphaLabel(a: number) {
 
 export const analysisModules: AnalysisModule[] = [
   {
+    id: "descriptive",
+    label: "描述",
+    intents: ["explore", "validate"],
+    sourceStep: "descriptive",
+    isAvailable: (r) => r.meta.sampleSize > 0,
+    apaInsight: (r) => {
+      const a = r.reliability.cronbachsAlpha;
+      if (a <= 0) return `N = ${r.meta.sampleSize}, ${r.meta.itemCount} items analyzed.`;
+      return `N = ${r.meta.sampleSize}, ${r.meta.itemCount} items. Mean α = ${a.toFixed(2)}.`;
+    },
+  },
+  {
     id: "reliability",
     label: "信度",
     intents: ["validate"],
@@ -45,18 +57,6 @@ export const analysisModules: AnalysisModule[] = [
       const e = r.efa;
       const tv = (e.varianceExplained.reduce((a, b) => a + b, 0) * 100).toFixed(1);
       return `EFA (${e.rotation}) suggested ${e.suggestedFactors} factor(s), explaining ${tv}% of variance.`;
-    },
-  },
-  {
-    id: "descriptive",
-    label: "描述",
-    intents: ["explore", "validate"],
-    sourceStep: "descriptive",
-    isAvailable: (r) => r.meta.sampleSize > 0,
-    apaInsight: (r) => {
-      const a = r.reliability.cronbachsAlpha;
-      if (a <= 0) return `N = ${r.meta.sampleSize}, ${r.meta.itemCount} items analyzed.`;
-      return `N = ${r.meta.sampleSize}, ${r.meta.itemCount} items. Mean α = ${a.toFixed(2)}.`;
     },
   },
   {
