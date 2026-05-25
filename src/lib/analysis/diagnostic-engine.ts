@@ -64,8 +64,10 @@ export interface DiagnosticReport {
 
 export function runDiagnostics(
   columns: ColumnInfo[],
-  results: AnalysisResults | null
+  results: AnalysisResults | null,
+  lang: "zh" | "en" = "zh"
 ): DiagnosticReport {
+  const en = lang === "en";
   const likertCols = columns.filter((c) => c.type === "likert");
   const numericCols = columns.filter((c) => c.type === "likert" || c.type === "numeric");
   const totalMissing = columns.reduce((s, c) => s + c.missingCount, 0);
@@ -240,18 +242,24 @@ export function runDiagnostics(
       score: dataQualityScore,
       missing_data: {
         rate: Math.round(missingRate * 100),
-        interpretation: missingRate < 0.05 ? "Excellent — negligible missing data." : missingRate < 0.15 ? "Acceptable — minor missing data present." : "Problematic — missing data may bias results.",
+        interpretation: en
+          ? (missingRate < 0.05 ? "Excellent — negligible missing data." : missingRate < 0.15 ? "Acceptable — minor missing data present." : "Problematic — missing data may bias results.")
+          : (missingRate < 0.05 ? "优秀 — 缺失数据可忽略。" : missingRate < 0.15 ? "可接受 — 存在少量缺失数据。" : "需关注 — 缺失数据可能影响结果。"),
         risk_level: missingRate < 0.05 ? "low" : missingRate < 0.15 ? "medium" : "high",
       },
       response_distribution: {
         status: imbalanceLabel,
-        interpretation: imbalanceLabel === "Balanced" ? "Response distribution is balanced, indicating no strong response bias." : imbalanceLabel.includes("Moderate") ? "Mild imbalance detected — may slightly affect statistical stability." : "Severe imbalance — group comparisons may be unreliable.",
+        interpretation: en
+          ? (imbalanceLabel === "Balanced" ? "Response distribution is balanced, no strong response bias." : imbalanceLabel.includes("Moderate") ? "Mild imbalance — may slightly affect stability." : "Severe imbalance — group comparisons may be unreliable.")
+          : (imbalanceLabel === "Balanced" ? "响应分布均衡，无明显回答偏差。" : imbalanceLabel.includes("Moderate") ? "轻度不均衡 — 可能轻微影响统计稳定性。" : "严重不均衡 — 组间比较可能不可靠。"),
         risk_level: imbalanceLabel === "Balanced" ? "low" : imbalanceLabel.includes("Moderate") ? "medium" : "high",
       },
-      response_variability: computeVariability(columns),
+      response_variability: computeVariability(columns, en),
       overall: {
         risk_level: dataQualityScore >= 80 ? "low" : dataQualityScore >= 60 ? "medium" : "high",
-        summary: dataQualityScore >= 80 ? "Data is clean and ready for analysis." : dataQualityScore >= 60 ? "Data is usable but has minor quality concerns." : "Data has quality issues — interpret results with caution.",
+        summary: en
+          ? (dataQualityScore >= 80 ? "Data is clean and ready for analysis." : dataQualityScore >= 60 ? "Data is usable but has minor quality concerns." : "Data has quality issues — interpret with caution.")
+          : (dataQualityScore >= 80 ? "数据干净，可直接进行统计分析。" : dataQualityScore >= 60 ? "数据可用，但存在轻微质量问题。" : "数据存在质量问题 — 解读需谨慎。"),
       },
     },
     scale_quality: {
@@ -281,7 +289,7 @@ export function runDiagnostics(
   };
 }
 
-function computeVariability(columns: ColumnInfo[]): {
+function computeVariability(columns: ColumnInfo[], en: boolean): {
   status: string;
   interpretation: string;
   risk_level: "low" | "medium" | "high";
@@ -289,38 +297,42 @@ function computeVariability(columns: ColumnInfo[]): {
   const likertCols = columns.filter((c) => c.type === "likert");
   if (likertCols.length === 0) {
     return {
-      status: "Cannot assess",
-      interpretation: "No scale items available for variability check.",
+      status: en ? "Cannot assess" : "无法评估",
+      interpretation: en ? "No scale items available for variability check." : "无可用量表题项进行变异性检查。",
       risk_level: "medium",
     };
   }
 
-  // Check for low-variance items (possible straight-lining)
   const lowVarItems = likertCols.filter((c) => {
     if (c.min === undefined || c.max === undefined || c.mean === undefined) return false;
-    const range = c.max - c.min;
-    return range <= 1;
+    return (c.max - c.min) <= 1;
   });
 
   if (lowVarItems.length > likertCols.length * 0.3) {
     return {
-      status: "Low variability detected",
-      interpretation: `${lowVarItems.length} items show very low response variability — possible straight-lining or careless responding. Results may be attenuated.`,
+      status: en ? "Low variability" : "低变异性",
+      interpretation: en
+        ? `${lowVarItems.length} items show very low response variability — possible straight-lining.`
+        : `${lowVarItems.length} 个题项响应变异性极低 — 可能存在直线作答或随意填答。`,
       risk_level: "high",
     };
   }
 
   if (lowVarItems.length > 0) {
     return {
-      status: "Minor variability concern",
-      interpretation: `${lowVarItems.length} items show limited variability — may indicate response set bias. Interpret with caution.`,
+      status: en ? "Minor concern" : "轻微问题",
+      interpretation: en
+        ? `${lowVarItems.length} items show limited variability — may indicate response bias.`
+        : `${lowVarItems.length} 个题项变异性有限 — 可能存在回答定势偏差。`,
       risk_level: "medium",
     };
   }
 
   return {
-    status: "Adequate variability",
-    interpretation: "Response variability is adequate across all items, indicating engaged responding.",
+    status: en ? "Adequate" : "变异性充分",
+    interpretation: en
+      ? "Response variability is adequate across all items."
+      : "各题项响应变异性充分，表明填答质量良好。",
     risk_level: "low",
   };
 }

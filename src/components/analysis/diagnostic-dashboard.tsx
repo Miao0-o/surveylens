@@ -12,7 +12,7 @@ export function DiagnosticDashboard() {
   const lang = useAppStore((s) => s.reportLanguage);
   const en = lang === "en";
 
-  const report = useMemo(() => runDiagnostics(columns, results), [columns, results]);
+  const report = useMemo(() => runDiagnostics(columns, results, lang), [columns, results, lang]);
   if (columns.length === 0) return null;
 
   const levelConfig = {
