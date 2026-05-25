@@ -143,18 +143,19 @@ export function runDiagnostics(
   // ==========================================
   // 3. Factorability Assessment (20%)
   // ==========================================
-  const kmoInterpretation =
-    kmo >= 0.90 ? "Excellent" : kmo >= 0.80 ? "Good" : kmo >= 0.70 ? "Acceptable" : kmo >= 0.60 ? "Marginal" : kmo >= 0.50 ? "Weak" : "Unsuitable";
-  const bartlettInterpretation =
-    bartlettP < 0.05 ? "Significant inter-item correlations — suitable for factor analysis" : "Not significant — variables may not be suitable for factor analysis";
-  const factorReadiness =
-    kmo >= 0.80 ? "Good — factor analysis appropriate" : kmo >= 0.60 ? "Marginal — results may be unstable; interpret cautiously" : kmo > 0 ? "Poor — factor analysis not recommended" : "Not yet assessed";
-  const factorRisk =
-    kmo >= 0.80 ? "low" : kmo >= 0.60 ? "moderate" : kmo > 0 ? "high" : "unknown";
-  const factorSummary =
-    kmo > 0
-      ? `KMO = ${kmo.toFixed(3)} (${kmoInterpretation.toLowerCase()}). ${bartlettInterpretation}. ${factorReadiness}.`
-      : "Factorability not yet assessed — run validity analysis first.";
+  const kmoInterpretation = en
+    ? (kmo >= 0.90 ? "Excellent" : kmo >= 0.80 ? "Good" : kmo >= 0.70 ? "Acceptable" : kmo >= 0.60 ? "Marginal" : kmo >= 0.50 ? "Weak" : "Unsuitable")
+    : (kmo >= 0.90 ? "极佳" : kmo >= 0.80 ? "良好" : kmo >= 0.70 ? "可接受" : kmo >= 0.60 ? "勉强" : kmo >= 0.50 ? "较弱" : "不适合");
+  const bartlettInterpretation = en
+    ? (bartlettP < 0.05 ? "Significant inter-item correlations — suitable for factor analysis" : "Not significant — variables may not be suitable for factor analysis")
+    : (bartlettP < 0.05 ? "题项间相关显著 — 适合进行因子分析" : "不显著 — 变量可能不适合因子分析");
+  const factorReadiness = en
+    ? (kmo >= 0.80 ? "Good — factor analysis appropriate" : kmo >= 0.60 ? "Marginal — results may be unstable; interpret cautiously" : kmo > 0 ? "Poor — factor analysis not recommended" : "Not yet assessed")
+    : (kmo >= 0.80 ? "良好 — 适合因子分析" : kmo >= 0.60 ? "勉强 — 结果可能不稳定" : kmo > 0 ? "较差 — 不建议因子分析" : "尚未评估");
+  const factorRisk = kmo >= 0.80 ? "low" : kmo >= 0.60 ? "moderate" : kmo > 0 ? "high" : "unknown";
+  const factorSummary = kmo > 0
+    ? `KMO = ${kmo.toFixed(3)} (${kmoInterpretation.toLowerCase()}). ${bartlettInterpretation}. ${factorReadiness}.`
+    : (en ? "Factorability not yet assessed." : "尚未评估因子分析适配性。");
 
   let kmoScore = 25;
   if (kmo > 0) {
@@ -193,11 +194,16 @@ export function runDiagnostics(
   const readinessLevel =
     readinessScore >= 80 ? "ready" : readinessScore >= 60 ? "partial" : readinessScore >= 40 ? "low" : "not_ready";
 
-  const levelLabels: Record<string, string> = {
+  const levelLabels: Record<string, string> = en ? {
     ready: "Ready for full analysis",
-    partial: "Partially ready — descriptive + correlation OK, regression with caution",
+    partial: "Partially ready — descriptive + correlation OK",
     low: "Low readiness — descriptive only, results may be unstable",
     not_ready: "Not ready — do not run inferential statistics",
+  } : {
+    ready: "就绪 — 可进行全部分析",
+    partial: "部分就绪 — 描述+相关可用，回归需谨慎",
+    low: "准备度偏低 — 仅描述统计，结果可能不稳定",
+    not_ready: "未就绪 — 请勿运行推断性统计",
   };
 
   const hasScale = likertCols.length >= 3;
