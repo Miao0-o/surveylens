@@ -2,6 +2,7 @@
 
 import type { StabilityResult } from "@/types";
 import { InfoTip } from "./stat-tooltip";
+import { ChartWrapper } from "./chart-wrapper";
 import {
   ResponsiveContainer,
   LineChart,
@@ -55,10 +56,7 @@ export function StabilityCard({ data }: Props) {
 
       {/* Stability curve */}
       {data.alphaCurve.length > 0 && (
-        <div>
-          <p className="text-[11px] font-medium text-foreground mb-1">
-            样本稳定性曲线
-          </p>
+        <ChartWrapper title="样本稳定性曲线">
           <div className="h-[160px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
@@ -120,7 +118,7 @@ export function StabilityCard({ data }: Props) {
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </ChartWrapper>
       )}
 
       <p className="text-[10px] text-muted-foreground/70">

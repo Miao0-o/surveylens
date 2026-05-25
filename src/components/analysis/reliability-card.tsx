@@ -3,6 +3,7 @@
 import type { ReliabilityResult } from "@/types";
 import { InfoTip } from "./stat-tooltip";
 import { APASnippetBar } from "./apa-snippet-bar";
+import { ChartWrapper } from "./chart-wrapper";
 import {
   ResponsiveContainer,
   BarChart,
@@ -75,10 +76,7 @@ export function ReliabilityCard({ data, snippet }: Props) {
 
       {/* Alpha if item deleted */}
       {alphaIfDeleted.length > 0 && (
-        <div>
-          <p className="text-[11px] font-medium text-foreground mb-2">
-            删除题目后 α 变化
-          </p>
+        <ChartWrapper title="删除题目后 α 变化">
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -123,7 +121,7 @@ export function ReliabilityCard({ data, snippet }: Props) {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </ChartWrapper>
       )}
 
       {/* Item-total correlations summary */}

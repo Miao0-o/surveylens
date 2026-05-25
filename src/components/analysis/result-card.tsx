@@ -1,7 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
-import { CopyImageButton } from "./copy-action-bar";
+import type { ReactNode } from "react";
 
 interface Props {
   title: string;
@@ -12,17 +11,12 @@ interface Props {
 }
 
 export function ResultCard({ title, icon, insight, children, expanded }: Props) {
-  const cardRef = useRef<HTMLDivElement>(null);
-
   return (
-    <div ref={cardRef} className="p-5 rounded-xl bg-card border border-border space-y-4">
-      {/* Header + Copy Image */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {icon}
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-        </div>
-        <CopyImageButton targetRef={cardRef} label="复制图片" />
+    <div className="p-5 rounded-xl bg-card border border-border space-y-4">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        {icon}
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       </div>
 
       {/* Chart / Table / Stats */}

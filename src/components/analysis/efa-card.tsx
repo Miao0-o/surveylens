@@ -2,6 +2,7 @@
 
 import type { EFAResult } from "@/types";
 import { InfoTip } from "./stat-tooltip";
+import { ChartWrapper } from "./chart-wrapper";
 import {
   ResponsiveContainer,
   LineChart,
@@ -47,8 +48,7 @@ export function EFACard({ data }: Props) {
       </div>
 
       {/* Scree plot */}
-      <div>
-        <p className="text-[11px] font-medium text-foreground mb-1">碎石图</p>
+      <ChartWrapper title="碎石图">
         <div className="h-[160px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={screeData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
@@ -83,7 +83,7 @@ export function EFACard({ data }: Props) {
             </LineChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </ChartWrapper>
 
       {/* Factor loadings matrix */}
       {data.loadings.length > 0 && (
