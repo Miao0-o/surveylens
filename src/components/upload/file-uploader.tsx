@@ -290,3 +290,5 @@ async function parseSavFormat(file: File): Promise<ParseResult> {
 async function parseDtaFormat(_file: File): Promise<ParseResult> {
   throw new Error("Stata .dta 文件暂不支持直接解析。请在 Stata 中使用 export delimited 命令导出为 CSV 后上传。");
 }
+
+
