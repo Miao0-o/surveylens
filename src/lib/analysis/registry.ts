@@ -71,7 +71,7 @@ export function getActiveModules(results: AnalysisResults): AnalysisModule[] {
 }
 
 /** Get per-module one-line APA insights (Local Mode) */
-export function getOneLineAPA(results: AnalysisResults): Record<string, string> {
+export function getOneLineAPA(results: AnalysisResults, lang: "zh" | "en" = "en"): Record<string, string> {
   const map: Record<string, string> = {};
   for (const m of analysisModules) {
     if (m.isAvailable(results)) {
@@ -82,22 +82,61 @@ export function getOneLineAPA(results: AnalysisResults): Record<string, string> 
   return map;
 }
 
-/** Generate 2-5 sentence APA summary (PDF Mode only) */
-export function getSummaryAPA(results: AnalysisResults): string {
+/** Generate 2-5 sentence APA summary (PDF Mode) */
+export function getSummaryAPA(results: AnalysisResults, lang: "zh" | "en" = "en"): string {
   const insights = getOneLineAPA(results);
   const lines = Object.values(insights).filter(Boolean);
-  if (lines.length === 0) return "No significant results to report.";
-
   const sampleN = results.meta.sampleSize;
   const itemN = results.meta.itemCount;
-  const prefix = `Analysis was conducted on N = ${sampleN} with ${itemN} items. `;
 
-  const body = lines.join(" ");
+  if (lang === "zh") {
+    return buildSummaryZH(results, lines, sampleN, itemN);
+  }
+  return buildSummaryEN(results, lines, sampleN, itemN);
+}
 
-  // Cap at ~5 sentences by splitting on period
-  const combined = prefix + body;
-  const sentences = combined.match(/[^.!?]+[.!?]+/g) ?? [combined];
+function buildSummaryEN(results: AnalysisResults, insights: string[], n: number, items: number): string {
+  if (insights.length === 0) return "No significant results to report.";
+
+  const prefix = `Analysis was conducted on N = ${n} with ${items} items.`;
+  const body = insights.join(" ");
+  const combined = prefix + " " + body;
+
+  // Split by sentence-ending punctuation followed by space+capital letter
+  const sentences = combined.split(/(?<=[.!?])\s+(?=[A-Z])/);
   return sentences.slice(0, 5).join(" ").trim();
+}
+
+function buildSummaryZH(results: AnalysisResults, insights: string[], n: number, items: number): string {
+  if (insights.length === 0) return "未检测到显著结果。";
+
+  const { reliability, validity, efa, stability } = results;
+  const parts: string[] = [];
+  parts.push(`基于 N = ${n}（${items} 个题项）的分析。`);
+
+  const a = reliability.cronbachsAlpha;
+  if (a > 0) {
+    const level = a >= 0.90 ? "优秀" : a >= 0.80 ? "良好" : a >= 0.70 ? "可接受" : "偏低";
+    parts.push(`量表内部一致性${level}（Cronbach's α = ${a.toFixed(2)}）。`);
+  }
+
+  const kmo = validity.kmo;
+  if (kmo > 0) {
+    const kmoLabel = kmo >= 0.80 ? "良好" : kmo >= 0.60 ? "可接受" : "不足";
+    parts.push(`KMO = ${kmo.toFixed(2)}（${kmoLabel}），Bartlett 球形检验${validity.bartlettPValue < 0.05 ? "显著" : "不显著"}。`);
+  }
+
+  if (efa.suggestedFactors > 0) {
+    const tv = (efa.varianceExplained.reduce((a, b) => a + b, 0) * 100).toFixed(1);
+    parts.push(`EFA 提取 ${efa.suggestedFactors} 个因子，累计解释 ${tv}% 方差。`);
+  }
+
+  if (stability.stabilityLevel) {
+    const sl = stability.stabilityLevel === "stable" ? "稳定" : stability.stabilityLevel === "moderate" ? "中等" : "不稳定";
+    parts.push(`Bootstrap 稳定性${sl}，推荐样本量 N ≥ ${stability.recommendedSampleSize}。`);
+  }
+
+  return parts.slice(0, 5).join("");
 }
 
 /** Which Python steps should run for a given intent */

@@ -12,7 +12,8 @@ import jsPDF from "jspdf";
 function buildReportHTML(
   results: AnalysisResults,
   aiResults: AIResults | null,
-  researchGoal: string
+  researchGoal: string,
+  lang: "zh" | "en" = "zh"
 ): string {
   const { reliability, validity, efa, stability, meta } = results;
 
@@ -122,8 +123,9 @@ ${researchGoal ? `<p class="meta">Research Goal: ${escapeHtml(researchGoal)}</p>
   <tr><td>Bootstrap Samples</td><td class="stat">${stability.bootstrapSamples}</td></tr>
 </table>
 
-<h2>6. APA Summary</h2>
-<pre>${escapeHtml(getSummaryAPA(results))}</pre>
+<h2>6. APA Summary / 中文摘要</h2>
+<p>${escapeHtml(getSummaryAPA(results, "zh"))}</p>
+<p>${escapeHtml(getSummaryAPA(results, "en"))}</p>
 
 ${aiResults ? `
 <h2>7. AI Interpretation</h2>
@@ -157,7 +159,7 @@ export function printPDF(
   aiResults: AIResults | null,
   researchGoal: string
 ): void {
-  const html = buildReportHTML(results, aiResults, researchGoal);
+  const html = buildReportHTML(results, aiResults, researchGoal, "zh");
 
   const printWindow = window.open("", "_blank", "width=800,height=600");
   if (!printWindow) {
