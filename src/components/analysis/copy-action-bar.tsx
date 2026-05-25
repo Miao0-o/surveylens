@@ -23,7 +23,7 @@ export function CopyActionBar({ actions, captureRef }: Props) {
     try {
       if (action.icon === "image" && captureRef?.current) {
         const blob = await toPng(captureRef.current, {
-          backgroundColor: "#FAFAF9",
+          backgroundColor: "#ffffff",
           pixelRatio: 2,
           quality: 0.95,
         });

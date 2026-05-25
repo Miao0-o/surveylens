@@ -17,6 +17,7 @@ import { DescriptiveCard } from "@/components/analysis/descriptive-card";
 import { FileSpreadsheet, BarChart3 } from "lucide-react";
 import { ExportBar } from "@/components/export/export-bar";
 import { CopyActionBar } from "@/components/analysis/copy-action-bar";
+import { ChartWrapper } from "@/components/analysis/chart-wrapper";
 import { getSummaryAPA } from "@/lib/analysis/registry";
 
 export function CenterPanel() {
@@ -123,7 +124,9 @@ export function CenterPanel() {
 
       {activeTab === "correlation" && (
         <ResultCard title="相关性分析" insight={insights["correlation"]}>
-          <CorrelationHeatmap data={results.validity} />
+          <ChartWrapper title="相关矩阵热力图">
+            <CorrelationHeatmap data={results.validity} />
+          </ChartWrapper>
         </ResultCard>
       )}
 
