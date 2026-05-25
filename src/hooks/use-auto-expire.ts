@@ -6,43 +6,36 @@ import { idbRemove } from "@/lib/storage/idb-storage";
 
 const RAW_DATA_KEY = "ai-analysis-rawdata";
 const LIKERT_KEY = "ai-analysis-likert";
-const TTL_MS = 10 * 60 * 1000; // 10 minutes
+const TTL_MS = 10 * 60 * 1000;
 
-export function useAutoExpire() {
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasData = useAppStore((s) => s.rawData !== null);
+let _timer: ReturnType<typeof setTimeout> | null = null;
 
-  const clearExpired = () => {
+function resetGlobalTimer() {
+  if (_timer) clearTimeout(_timer);
+  const store = useAppStore.getState();
+  if (!store.rawData) return;
+  _timer = setTimeout(() => {
     idbRemove(RAW_DATA_KEY);
     idbRemove(LIKERT_KEY);
     useAppStore.getState().reset();
-  };
+  }, TTL_MS);
+}
 
-  const resetTimer = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (hasData) {
-      timerRef.current = setTimeout(clearExpired, TTL_MS);
-    }
-  };
+export function useAutoExpire() {
+  const rawData = useAppStore((s) => s.rawData);
+  const mounted = useRef(false);
 
   useEffect(() => {
-    resetTimer();
+    if (!mounted.current) { mounted.current = true; return; }
+    resetGlobalTimer();
+  }, [rawData]);
 
-    const events = ["click", "keydown", "scroll", "touchstart", "input", "change"];
-    const handler = () => resetTimer();
-    for (const ev of events) {
-      window.addEventListener(ev, handler, { passive: true });
-    }
+  useEffect(() => {
+    const handler = () => resetGlobalTimer();
+    const events = ["click", "keydown", "scroll", "touchstart"];
+    for (const ev of events) window.addEventListener(ev, handler, { passive: true });
     return () => {
-      for (const ev of events) {
-        window.removeEventListener(ev, handler);
-      }
-      if (timerRef.current) clearTimeout(timerRef.current);
+      for (const ev of events) window.removeEventListener(ev, handler);
     };
-  }, [hasData]);
-
-  // Restart timer when data changes
-  useEffect(() => {
-    resetTimer();
-  }, [hasData]);
+  }, []);
 }
