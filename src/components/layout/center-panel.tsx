@@ -31,6 +31,7 @@ export function CenterPanel() {
   const analysisStage = useAppStore((s) => s.analysisStage);
   const results = useAppStore((s) => s.results);
   const [activeTab, setActiveTab] = useState<ResultTab>("overview");
+  const snippets = useMemo(() => results ? generateAllSnippets(results) : [], [results]);
 
   // ---- Empty state ----
   if (!rawData) {
@@ -64,8 +65,6 @@ export function CenterPanel() {
   }
 
   // ---- Completed: show results ----
-  const snippets = useMemo(() => results ? generateAllSnippets(results) : [], [results]);
-
   if (pipelineState === "completed" && results) {
     return (
       <div id="report-content" className="space-y-5">
