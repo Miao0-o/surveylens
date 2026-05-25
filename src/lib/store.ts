@@ -32,7 +32,8 @@ const AI_KEY_STORAGE = "ai-reliability-key";
 const AI_RESULTS_CACHE = "ai-reliability-cache";
 const RAW_DATA_KEY = "ai-analysis-rawdata";
 const LIKERT_KEY = "ai-analysis-likert";
-const MODE_KEY = "ai-analysis-mode";
+const SCHEMA_KEY = "ai-analysis-schema";
+const CONFIG_KEY = "ai-analysis-config";
 
 // sessionStorage: persists within tab session, cleared on browser close
 function loadApiKey(): string {
@@ -54,6 +55,12 @@ function loadCachedAIResults(): AIResults | null {
   } catch {
     return null;
   }
+}
+
+function persistConfig(): void {
+  if (typeof window === "undefined") return;
+  const state = useAppStore.getState();
+  idbSet(CONFIG_KEY, { analysisMode: state.analysisMode, reportLanguage: state.reportLanguage }).catch(() => {});
 }
 
 function saveCachedAIResults(results: AIResults | null): void {
@@ -181,7 +188,10 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
   setDimensions: (dims) => set({ dimensions: dims }),
 
   // ---- Research info ----
-  setResearchDesign: (researchDesign) => set({ researchDesign }),
+  setResearchDesign: (researchDesign) => {
+    idbSet(SCHEMA_KEY, sanitizeForStorage(researchDesign)).catch(() => {});
+    return set({ researchDesign });
+  },
   setResearchGoal: (goal) => set({ researchGoal: goal }),
   setTheoreticalDimensions: (dims) => set({ theoreticalDimensions: dims }),
 
@@ -243,9 +253,17 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
   },
 
   // ---- Config ----
-  setAnalysisMode: (analysisMode) => set({ analysisMode }),
+  setAnalysisMode: (analysisMode) => {
+    persistConfig();
+    return set({ analysisMode });
+  },
   setDesignConfirmed: (designConfirmed) => set({ designConfirmed }),
-  setReportLanguage: (reportLanguage) => set({ reportLanguage }),
+  setReportLanguage: (reportLanguage) => {
+    persistConfig();
+    return set({ reportLanguage });
+  },
+
+  // ---- Reset + Hydrate ----
   setApiKey: (key) => {
     saveApiKey(key);
     set({ apiKey: key });
@@ -262,12 +280,23 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
     idbGet(LIKERT_KEY).then((likert) => {
       if (likert) set({ likertColumns: likert as string[] });
     }).catch(() => {});
+    idbGet(SCHEMA_KEY).then((schema) => {
+      if (schema) set({ researchDesign: schema as ResearchDesign });
+    }).catch(() => {});
+    idbGet(CONFIG_KEY).then((config) => {
+      if (config) {
+        const c = config as { analysisMode?: string; reportLanguage?: string };
+        if (c.analysisMode) set({ analysisMode: c.analysisMode as "quick" | "custom" });
+        if (c.reportLanguage) set({ reportLanguage: c.reportLanguage as "zh" | "en" });
+      }
+    }).catch(() => {});
   },
 
   // ---- Reset ----
   reset: () => {
     idbRemove(RAW_DATA_KEY);
     idbRemove(LIKERT_KEY);
+    idbRemove(SCHEMA_KEY);
     set({
       ...initialState,
       apiKey: loadApiKey(),
