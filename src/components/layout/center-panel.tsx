@@ -15,6 +15,7 @@ import { FactorStructure } from "@/components/analysis/factor-structure";
 import { StabilityCard } from "@/components/analysis/stability-card";
 import { DescriptiveCard } from "@/components/analysis/descriptive-card";
 import { DiagnosticDashboard } from "@/components/analysis/diagnostic-dashboard";
+import { AnalysisMatrixCard } from "@/components/analysis/analysis-matrix-card";
 import { FileSpreadsheet, BarChart3 } from "lucide-react";
 import { ExportBar } from "@/components/export/export-bar";
 import { CopyActionBar } from "@/components/analysis/copy-action-bar";
@@ -95,6 +96,7 @@ export function CenterPanel() {
       {activeTab === "overview" && (
         <div className="space-y-5">
           <DiagnosticDashboard />
+          <AnalysisMatrixCard />
           <OverviewDashboard results={results} />
         </div>
       )}
