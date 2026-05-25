@@ -20,6 +20,7 @@ import { ExportBar } from "@/components/export/export-bar";
 import { CopyActionBar } from "@/components/analysis/copy-action-bar";
 import { ChartWrapper } from "@/components/analysis/chart-wrapper";
 import { getSummaryAPA } from "@/lib/analysis/registry";
+import { t } from "@/lib/i18n";
 
 export function CenterPanel() {
   const rawData = useAppStore((s) => s.rawData);
@@ -27,7 +28,10 @@ export function CenterPanel() {
   const analysisStage = useAppStore((s) => s.analysisStage);
   const results = useAppStore((s) => s.results);
   const descriptiveResults = useAppStore((s) => s.descriptiveResults);
+  const lang = useAppStore((s) => s.reportLanguage);
   const [activeTab, setActiveTab] = useState<string>("overview");
+
+  const tl = (key: string) => t(key, lang);
 
   const activeModules = useMemo(() => results ? getActiveModules(results) : [], [results]);
   const insights = useMemo(() => results ? getOneLineAPA(results) : {}, [results]);
@@ -78,11 +82,11 @@ export function CenterPanel() {
       {/* Tab bar */}
       <div className="flex gap-1 p-0.5 rounded-lg bg-secondary/30 w-fit overflow-x-auto max-w-full">
         <TabBtn active={activeTab === "overview"} onClick={() => setActiveTab("overview")}>
-          概览
+          {tl("tab.overview")}
         </TabBtn>
         {activeModules.map((m) => (
           <TabBtn key={m.id} active={activeTab === m.id} onClick={() => setActiveTab(m.id)}>
-            {m.label}
+            {t(`tab.${m.id}`, lang)}
           </TabBtn>
         ))}
       </div>
@@ -144,11 +148,11 @@ export function CenterPanel() {
 
       {/* Quick copy bar */}
       <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-secondary/30 border border-border/50">
-        <span className="text-[10px] text-muted-foreground shrink-0">快速复制</span>
+        <span className="text-[10px] text-muted-foreground shrink-0">{tl("btn.quickCopy")}</span>
         <CopyActionBar
           actions={[
-            { label: "中文摘要", icon: "text", getContent: () => summaryZH },
-            { label: "English Summary", icon: "text", getContent: () => summaryEN },
+            { label: tl("btn.copySummary"), icon: "text", getContent: () => summaryZH },
+            { label: tl("btn.copySummaryEN"), icon: "text", getContent: () => summaryEN },
           ]}
         />
       </div>

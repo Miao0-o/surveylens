@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { Play, RefreshCw, Loader2, AlertTriangle } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { usePyodide } from "@/hooks/use-pyodide";
+import { t } from "@/lib/i18n";
 
 export function PipelineControl() {
   const pipelineState = useAppStore((s) => s.pipelineState);
@@ -14,6 +15,7 @@ export function PipelineControl() {
   const hasDesign = useAppStore((s) => s.researchDesign !== null && (s.researchDesign?.outcomeVariables?.length ?? 0) > 0);
   const aiMode = useAppStore((s) => s.aiMode);
   const reset = useAppStore((s) => s.reset);
+  const lang = useAppStore((s) => s.reportLanguage);
   const startProcessing = useAppStore((s) => s.startProcessing);
   const completeProcessing = useAppStore((s) => s.completeProcessing);
   const failProcessing = useAppStore((s) => s.failProcessing);
@@ -73,7 +75,7 @@ export function PipelineControl() {
         ) : (
           <>
             <Play className="w-4 h-4" fill="currentColor" />
-            开始分析
+{t("btn.analyze", lang)}
           </>
         )}
       </button>
@@ -84,11 +86,11 @@ export function PipelineControl() {
             <div className="flex gap-1.5">
               <button onClick={handleReset}
                 className="flex-1 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20 text-xs text-destructive font-medium hover:bg-destructive/20 transition-colors">
-                确认重置
+{t("btn.confirmReset", lang)}
               </button>
               <button onClick={() => setShowResetConfirm(false)}
                 className="flex-1 px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors">
-                取消
+{t("btn.cancel", lang)}
               </button>
             </div>
           ) : (
