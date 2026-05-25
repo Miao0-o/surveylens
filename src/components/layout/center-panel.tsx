@@ -13,6 +13,7 @@ import { CorrelationHeatmap } from "@/components/analysis/correlation-heatmap";
 import { EFACard } from "@/components/analysis/efa-card";
 import { FactorStructure } from "@/components/analysis/factor-structure";
 import { StabilityCard } from "@/components/analysis/stability-card";
+import { DescriptiveCard } from "@/components/analysis/descriptive-card";
 import { FileSpreadsheet, BarChart3 } from "lucide-react";
 import { ExportBar } from "@/components/export/export-bar";
 
@@ -21,6 +22,7 @@ export function CenterPanel() {
   const pipelineState = useAppStore((s) => s.pipelineState);
   const analysisStage = useAppStore((s) => s.analysisStage);
   const results = useAppStore((s) => s.results);
+  const descriptiveResults = useAppStore((s) => s.descriptiveResults);
   const [activeTab, setActiveTab] = useState<string>("overview");
 
   const activeModules = useMemo(() => results ? getActiveModules(results) : [], [results]);
@@ -103,6 +105,21 @@ export function CenterPanel() {
           <div className="mt-4">
             <FactorStructure data={results.efa} />
           </div>
+        </ResultCard>
+      )}
+
+      {activeTab === "descriptive" && descriptiveResults && (
+        <ResultCard title="描述性统计" insight={insights["descriptive"]}>
+          <DescriptiveCard
+            data={descriptiveResults as unknown as { n: number; mean: number | null; sd: number | null; min: number | null; max: number | null; skew: number | null; kurtosis: number | null }[]}
+            labels={results.efa.itemLabels}
+          />
+        </ResultCard>
+      )}
+
+      {activeTab === "correlation" && (
+        <ResultCard title="相关性分析" insight={insights["correlation"]}>
+          <CorrelationHeatmap data={results.validity} />
         </ResultCard>
       )}
 

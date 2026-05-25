@@ -8,7 +8,7 @@ interface DescriptiveRow {
   max: number | null;
   skew: number | null;
   kurtosis: number | null;
-  shapiroP: number | null;
+  shapiroP?: number | null;
 }
 
 interface Props {
@@ -16,8 +16,8 @@ interface Props {
   labels: string[];
 }
 
-function normalityLabel(p: number | null): string {
-  if (p === null) return "-";
+function normalityLabel(p: number | null | undefined): string {
+  if (p == null) return "-";
   if (p >= 0.05) return "正态";
   if (p >= 0.01) return "非正态*";
   return "非正态**";
@@ -75,8 +75,8 @@ export function DescriptiveCard({ data, labels }: Props) {
                   {row.kurtosis?.toFixed(2) ?? "-"}
                 </td>
                 <td className={`text-center px-2.5 py-1.5 font-medium ${
-                  row.shapiroP === null ? "text-muted-foreground" :
-                  row.shapiroP >= 0.05 ? "text-emerald-600" : "text-amber-600"
+                  row.shapiroP == null ? "text-muted-foreground" :
+                  row.shapiroP! >= 0.05 ? "text-emerald-600" : "text-amber-600"
                 }`}>
                   {normalityLabel(row.shapiroP)}
                 </td>

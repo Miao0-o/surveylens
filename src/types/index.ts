@@ -31,6 +31,8 @@ export type AnalysisStage =
   | "reliability"
   | "validity"
   | "efa"
+  | "descriptive"
+  | "correlation"
   | "stability"
   | "ai"
   | "completed"
@@ -45,6 +47,8 @@ export const STAGE_LABELS: Record<AnalysisStage, string> = {
   reliability: "正在计算 Cronbach's α...",
   validity: "正在进行 Bartlett 球形检验...",
   efa: "正在生成因子结构...",
+  descriptive: "正在计算描述性统计...",
+  correlation: "正在计算相关性矩阵...",
   stability: "正在进行 Bootstrap 稳定性评估...",
   ai: "AI 正在生成解读...",
   completed: "分析完成",

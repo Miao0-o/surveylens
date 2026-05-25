@@ -48,6 +48,41 @@ export const analysisModules: AnalysisModule[] = [
     },
   },
   {
+    id: "descriptive",
+    label: "描述",
+    intents: ["explore", "validate"],
+    sourceStep: "descriptive",
+    isAvailable: (r) => r.meta.sampleSize > 0,
+    apaInsight: (r) => {
+      const a = r.reliability.cronbachsAlpha;
+      if (a <= 0) return `N = ${r.meta.sampleSize}, ${r.meta.itemCount} items analyzed.`;
+      return `N = ${r.meta.sampleSize}, ${r.meta.itemCount} items. Mean α = ${a.toFixed(2)}.`;
+    },
+  },
+  {
+    id: "correlation",
+    label: "相关",
+    intents: ["explore", "validate", "relationship"],
+    sourceStep: "correlation",
+    isAvailable: (r) => r.validity.correlationMatrix.length > 0,
+    apaInsight: (r) => {
+      const cm = r.validity.correlationMatrix;
+      if (cm.length < 2) return null;
+      // Find strongest non-diagonal correlation
+      let maxR = 0; let maxI = 0; let maxJ = 0;
+      for (let i = 0; i < cm.length; i++) {
+        for (let j = 0; j < cm[i].length; j++) {
+          if (i !== j && Math.abs(cm[i][j]) > Math.abs(maxR)) {
+            maxR = cm[i][j]; maxI = i; maxJ = j;
+          }
+        }
+      }
+      const labels = r.validity.columnLabels;
+      const dir = maxR > 0 ? "positively" : "negatively";
+      return `Strongest correlation: ${labels[maxI] ?? `V${maxI+1}`} was ${dir} related to ${labels[maxJ] ?? `V${maxJ+1}`} (r = ${maxR.toFixed(2)}).`;
+    },
+  },
+  {
     id: "stability",
     label: "稳定性",
     intents: ["validate"],

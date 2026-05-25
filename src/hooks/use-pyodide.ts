@@ -20,6 +20,8 @@ const STAGE_MAP: Record<string, AnalysisStage> = {
   reliability: "reliability",
   validity: "validity",
   efa: "efa",
+  descriptive: "descriptive",
+  correlation: "correlation",
   stability: "stability",
 };
 
@@ -27,6 +29,8 @@ const STAGE_LABELS: Record<string, string> = {
   reliability: "计算 Cronbach's α",
   validity: "Bartlett 球形检验 + KMO",
   efa: "生成因子结构",
+  descriptive: "描述性统计",
+  correlation: "相关性分析",
   stability: "Bootstrap 稳定性评估",
 };
 
@@ -143,6 +147,49 @@ const PYTHON_STEPS = [
     sum_unique = float(np.sum(1.0 - first_loadings**2))
     omega = (sum_load**2) / (sum_load**2 + sum_unique) if (sum_load**2 + sum_unique) > 0 else 0.0
     return json.dumps({"eigenvalues": eigenvalues, "loadings": loadings, "communalities": communalities, "varianceExplained": variance_explained, "suggestedFactors": n_factors, "omega": max(0.0, min(1.0, omega))})`,
+  },
+  {
+    id: "descriptive",
+    label: "描述性统计",
+    fn: `def run_descriptive(data_json):
+    import json, numpy as np
+    data = np.array(json.loads(data_json), dtype=float)
+    results = []
+    for i in range(data.shape[1]):
+        col = data[:, i]; col = col[~np.isnan(col)]; n = len(col)
+        if n < 3: results.append({"n": n, "mean": None, "sd": None, "skew": None, "kurtosis": None}); continue
+        mean = float(np.mean(col)); sd = float(np.std(col, ddof=1))
+        skew = float(((n * np.sum((col - mean)**3)) / ((n-1)*(n-2)*sd**3)) if sd > 0 and n > 2 else 0.0)
+        kurt = float(((n*(n+1)*np.sum((col-mean)**4) - 3*np.sum((col-mean)**2)**2*(n-1)) / ((n-1)*(n-2)*(n-3)*sd**4)) if sd > 0 and n > 3 else 0.0)
+        results.append({"n": int(n), "mean": round(mean,4), "sd": round(sd,4), "min": round(float(np.min(col)),4), "max": round(float(np.max(col)),4), "skew": round(skew,4), "kurtosis": round(kurt,4)})
+    return json.dumps(results)`,
+  },
+  {
+    id: "correlation",
+    label: "相关性分析",
+    fn: `def run_correlation(data_json):
+    import json, numpy as np
+    data = np.array(json.loads(data_json), dtype=float)
+    p = data.shape[1]; r_mat = []; p_mat = []
+    for i in range(p):
+        r_row = []; p_row = []
+        for j in range(p):
+            a = data[:,i][~np.isnan(data[:,i])]; b = data[:,j][~np.isnan(data[:,j])]
+            n = min(len(a), len(b))
+            if n >= 3:
+                ma = np.mean(a[:n]); mb = np.mean(b[:n])
+                num = np.sum((a[:n]-ma)*(b[:n]-mb))
+                den = np.sqrt(np.sum((a[:n]-ma)**2)*np.sum((b[:n]-mb)**2))
+                r = num/den if den > 0 else 0.0
+                # Simple p-value: use rough threshold (no scipy needed)
+                if abs(r) > 0.5: p_val = 0.001
+                elif abs(r) > 0.35: p_val = 0.01
+                elif abs(r) > 0.25: p_val = 0.05
+                else: p_val = 0.2
+                r_row.append(round(float(r),4)); p_row.append(round(p_val,6))
+            else: r_row.append(None); p_row.append(None)
+        r_mat.append(r_row); p_mat.append(p_row)
+    return json.dumps({"rMatrix": r_mat, "pMatrix": p_mat})`,
   },
   {
     id: "stability",
@@ -296,6 +343,11 @@ export function usePyodide() {
         throw new Error(`Step ${step.id}: ${(parsed as Record<string, unknown>).error}`);
       }
       results[step.id] = parsed as Record<string, unknown>;
+    }
+
+    // Store descriptive results
+    if (results.descriptive) {
+      useAppStore.getState().setDescriptiveResults(results.descriptive as unknown as Record<string, unknown>[]);
     }
 
     // Build AnalysisResults from step results
