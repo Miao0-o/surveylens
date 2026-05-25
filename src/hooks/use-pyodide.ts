@@ -354,7 +354,8 @@ export function usePyodide() {
     const finalResults = sanitizeForStorage(buildResults(results, likertColumns));
     useAppStore.getState().setResults(finalResults);
 
-    const validation = validateResults(finalResults);
+    const lang = useAppStore.getState().reportLanguage;
+    const validation = validateResults(finalResults, lang);
     useAppStore.getState().setValidationReport(validation);
 
     const compressed = compressResults(finalResults, state.researchGoal);

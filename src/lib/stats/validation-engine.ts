@@ -34,106 +34,105 @@ export interface ValidationReport {
 
 // ---- Rule Engine ----
 
-export function validateResults(results: AnalysisResults): ValidationReport {
+export function validateResults(results: AnalysisResults, lang: "zh" | "en" = "zh"): ValidationReport {
   const flags: ValidationFlag[] = [];
   const { reliability, validity, efa, stability, meta } = results;
+
+  const en = lang === "en";
 
   // ── Reliability Rules ──
   const alpha = reliability.cronbachsAlpha;
 
   if (alpha > 0.98) {
     flags.push({
-      type: "warning",
-      source: "reliability",
-      code: "RELIABILITY_REDUNDANT",
-      message: `Cronbach's α = ${alpha.toFixed(3)} — 极高，题项可能存在冗余，建议检查重复内容。`,
+      type: "warning", source: "reliability", code: "RELIABILITY_REDUNDANT",
+      message: en
+        ? `Cronbach's α = ${alpha.toFixed(3)} — extremely high. Items may be redundant.`
+        : `Cronbach's α = ${alpha.toFixed(3)} — 极高，题项可能存在冗余，建议检查重复内容。`,
     });
   }
 
   if (alpha < 0.60) {
     flags.push({
-      type: "error",
-      source: "reliability",
-      code: "RELIABILITY_LOW",
-      message: `Cronbach's α = ${alpha.toFixed(3)} — 低于可接受阈值 (0.60)，量表缺乏内部一致性。`,
+      type: "error", source: "reliability", code: "RELIABILITY_LOW",
+      message: en
+        ? `Cronbach's α = ${alpha.toFixed(3)} — below acceptable threshold (0.60). Scale lacks internal consistency.`
+        : `Cronbach's α = ${alpha.toFixed(3)} — 低于可接受阈值 (0.60)，量表缺乏内部一致性。`,
     });
   } else if (alpha < 0.70) {
     flags.push({
-      type: "warning",
-      source: "reliability",
-      code: "RELIABILITY_MARGINAL",
-      message: `Cronbach's α = ${alpha.toFixed(3)} — 偏低，建议修订量表。`,
+      type: "warning", source: "reliability", code: "RELIABILITY_MARGINAL",
+      message: en
+        ? `Cronbach's α = ${alpha.toFixed(3)} — marginally low. Consider scale revision.`
+        : `Cronbach's α = ${alpha.toFixed(3)} — 偏低，建议修订量表。`,
     });
   }
 
-  // Check for items that significantly improve alpha if deleted
   for (const [item, alphaIfDel] of Object.entries(reliability.alphaIfItemDeleted)) {
     if (alphaIfDel !== null && alphaIfDel - alpha > 0.05) {
       flags.push({
-        type: "info",
-        source: "reliability",
-        code: "ALPHA_IMPROVE_IF_DELETED",
-        message: `删除 "${item}" 可能将 α 从 ${alpha.toFixed(3)} to ${alphaIfDel.toFixed(3)}.`,
+        type: "info", source: "reliability", code: "ALPHA_IMPROVE_IF_DELETED",
+        message: en
+          ? `Removing "${item}" would increase α from ${alpha.toFixed(3)} to ${alphaIfDel.toFixed(3)}.`
+          : `删除 "${item}" 可能将 α 从 ${alpha.toFixed(3)} 提升至 ${alphaIfDel.toFixed(3)}。`,
       });
     }
   }
 
-  // Check item-total correlations
   for (const [item, corr] of Object.entries(reliability.itemTotalCorrelation)) {
     if (corr < 0.2) {
       flags.push({
-        type: "warning",
-        source: "reliability",
-        code: "LOW_ITEM_TOTAL",
-        message: `"${item}" 题总相关偏低 (r = ${corr.toFixed(3)}). 建议检查。`,
+        type: "warning", source: "reliability", code: "LOW_ITEM_TOTAL",
+        message: en
+          ? `"${item}" has low item-total correlation (r = ${corr.toFixed(3)}). Consider review.`
+          : `"${item}" 题总相关偏低 (r = ${corr.toFixed(3)})，建议检查。`,
       });
     }
     if (corr < 0) {
       flags.push({
-        type: "error",
-        source: "reliability",
-        code: "NEGATIVE_ITEM_TOTAL",
-        message: `"${item}" 题总相关为负值 — 可能存在反向计分问题。`,
+        type: "error", source: "reliability", code: "NEGATIVE_ITEM_TOTAL",
+        message: en
+          ? `"${item}" has negative item-total correlation — possible reverse coding issue.`
+          : `"${item}" 题总相关为负值 — 可能存在反向计分问题。`,
       });
     }
   }
 
   // ── Validity Rules ──
   const kmo = validity.kmo;
-
   if (kmo < 0.50) {
     flags.push({
-      type: "error",
-      source: "validity",
-      code: "KMO_UNACCEPTABLE",
-      message: `KMO = ${kmo.toFixed(3)} — 因子分析不适用于当前数据。`,
+      type: "error", source: "validity", code: "KMO_UNACCEPTABLE",
+      message: en
+        ? `KMO = ${kmo.toFixed(3)} — factor analysis is not appropriate for this data.`
+        : `KMO = ${kmo.toFixed(3)} — 因子分析不适用于当前数据。`,
     });
   } else if (kmo < 0.60) {
     flags.push({
-      type: "warning",
-      source: "validity",
-      code: "KMO_LOW",
-      message: `KMO = ${kmo.toFixed(3)} — 取样适切性偏低。`,
+      type: "warning", source: "validity", code: "KMO_LOW",
+      message: en
+        ? `KMO = ${kmo.toFixed(3)} — marginal sampling adequacy.`
+        : `KMO = ${kmo.toFixed(3)} — 取样适切性偏低。`,
     });
   }
 
   for (const [item, itemKmo] of Object.entries(validity.kmoPerItem)) {
     if (itemKmo < 0.50) {
       flags.push({
-        type: "warning",
-        source: "validity",
-        code: "ITEM_KMO_LOW",
-        message: `"${item}" KMO 值偏低 (${itemKmo.toFixed(3)}) — 建议从因子分析中移除。`,
+        type: "warning", source: "validity", code: "ITEM_KMO_LOW",
+        message: en
+          ? `"${item}" has low KMO (${itemKmo.toFixed(3)}) — consider removing from factor analysis.`
+          : `"${item}" KMO 值偏低 (${itemKmo.toFixed(3)}) — 建议从因子分析中移除。`,
       });
     }
   }
 
   if (validity.bartlettPValue >= 0.05) {
     flags.push({
-      type: "error",
-      source: "validity",
-      code: "BARTLETT_NOT_SIGNIFICANT",
-      message: `Bartlett's test not significant (p = ${validity.bartlettPValue.toFixed(3)}) — 相关矩阵可能为单位矩阵。`,
+      type: "error", source: "validity", code: "BARTLETT_NOT_SIGNIFICANT",
+      message: en
+        ? `Bartlett's test not significant (p = ${validity.bartlettPValue.toFixed(3)}) — correlation matrix may be identity.`
+        : `Bartlett 球形检验不显著 (p = ${validity.bartlettPValue.toFixed(3)}) — 相关矩阵可能为单位矩阵。`,
     });
   }
 
@@ -145,35 +144,33 @@ export function validateResults(results: AnalysisResults): ValidationReport {
       if (sorted.length >= 2 && Math.abs(sorted[0]) - Math.abs(sorted[1]) < 0.20) {
         const label = efa.itemLabels[i] ?? `Item_${i}`;
         flags.push({
-          type: "warning",
-          source: "efa",
-          code: "CROSS_LOADING",
-          message: `"${label}" 存在交叉载荷 (max diff < 0.20) — 因子归属模糊。`,
+          type: "warning", source: "efa", code: "CROSS_LOADING",
+          message: en
+            ? `"${label}" has cross-loadings (max diff < 0.20) — factor assignment is ambiguous.`
+            : `"${label}" 存在交叉载荷 (max diff < 0.20) — 因子归属模糊。`,
         });
       }
     }
   }
 
-  // Check variance explained
   const totalVar = efa.varianceExplained.reduce((a, b) => a + b, 0);
   if (totalVar < 0.40) {
     flags.push({
-      type: "warning",
-      source: "efa",
-      code: "LOW_VARIANCE_EXPLAINED",
-      message: `Total variance explained = ${(totalVar * 100).toFixed(1)}% — below 40%. 因子结构可能较弱。`,
+      type: "warning", source: "efa", code: "LOW_VARIANCE_EXPLAINED",
+      message: en
+        ? `Total variance explained = ${(totalVar * 100).toFixed(1)}% — below 40%. Factor structure may be weak.`
+        : `累计方差解释率 = ${(totalVar * 100).toFixed(1)}% — 低于 40%，因子结构可能较弱。`,
     });
   }
 
-  // Check eigenvalue structure
   if (efa.suggestedFactors === 1 && efa.eigenvalues.length > 1) {
     const ratio = efa.eigenvalues[0] / efa.eigenvalues[1];
     if (ratio > 5) {
       flags.push({
-        type: "info",
-        source: "efa",
-        code: "DOMINANT_FIRST_FACTOR",
-        message: `First eigenvalue dominates (ratio = ${ratio.toFixed(1)}:1) — 可能存在单维性或方法效应。`,
+        type: "info", source: "efa", code: "DOMINANT_FIRST_FACTOR",
+        message: en
+          ? `First eigenvalue dominates (ratio = ${ratio.toFixed(1)}:1) — possible unidimensionality.`
+          : `首个特征值主导 (比值 = ${ratio.toFixed(1)}:1) — 可能存在单维性或方法效应。`,
       });
     }
   }
@@ -181,35 +178,35 @@ export function validateResults(results: AnalysisResults): ValidationReport {
   // ── Stability Rules ──
   if (stability.stabilityLevel === "unstable") {
     flags.push({
-      type: "warning",
-      source: "stability",
-      code: "UNSTABLE_SOLUTION",
-      message: "Bootstrap stability indicates an unstable factor solution. 建议增大样本量。",
+      type: "warning", source: "stability", code: "UNSTABLE_SOLUTION",
+      message: en
+        ? "Bootstrap stability indicates an unstable factor solution. Consider larger sample size."
+        : "Bootstrap 稳定性显示因子结构不稳定，建议增大样本量。",
     });
   }
 
   if (meta.sampleSize < stability.recommendedSampleSize) {
     flags.push({
-      type: "info",
-      source: "stability",
-      code: "SAMPLE_SIZE_BELOW_RECOMMENDED",
-      message: `Current N = ${meta.sampleSize} < recommended N = ${stability.recommendedSampleSize}. 结果可能不稳定。`,
+      type: "info", source: "stability", code: "SAMPLE_SIZE_BELOW_RECOMMENDED",
+      message: en
+        ? `Current N = ${meta.sampleSize} < recommended N = ${stability.recommendedSampleSize}. Results may be unstable.`
+        : `当前样本量 N = ${meta.sampleSize}，低于推荐值 ${stability.recommendedSampleSize}，结果可能不稳定。`,
     });
   }
 
   if (meta.sampleSize < 30) {
     flags.push({
-      type: "error",
-      source: "stability",
-      code: "SAMPLE_TOO_SMALL",
-      message: `N = ${meta.sampleSize} — 样本量过小，无法进行可靠的因子分析，建议至少 100 份。`,
+      type: "error", source: "stability", code: "SAMPLE_TOO_SMALL",
+      message: en
+        ? `N = ${meta.sampleSize} — too small for reliable factor analysis. Minimum 100 recommended.`
+        : `N = ${meta.sampleSize} — 样本量过小，无法进行可靠的因子分析，建议至少 100 份。`,
     });
   } else if (meta.sampleSize < 100) {
     flags.push({
-      type: "warning",
-      source: "stability",
-      code: "SAMPLE_SMALL",
-      message: `N = ${meta.sampleSize} — 样本量偏小，结果解读需谨慎。`,
+      type: "warning", source: "stability", code: "SAMPLE_SMALL",
+      message: en
+        ? `N = ${meta.sampleSize} — small sample. Results should be interpreted with caution.`
+        : `N = ${meta.sampleSize} — 样本量偏小，结果解读需谨慎。`,
     });
   }
 
