@@ -176,16 +176,16 @@ CRITICAL RULES:
     "questionnaireLevel": ["Fix in questionnaire design / item wording"],
     "analysisLevel": ["Fix in statistical method / approach"]
   },
-  "simple": "通俗中文总结（2-3句）",
-  "academic": "学术风格详细解读（2-3段）",
-  "apaResult": "APA 7th format results paragraph in English",
+  "simple": "Plain-language summary (2-3 sentences)",
+  "academic": "Academic interpretation (2-3 paragraphs)",
+  "apaResult": "APA 7th format results paragraph",
   "shortAPA": "One-sentence APA summary"
 }
 
-The "apaResult" field MUST be in English following APA 7th edition journal standards.
-
 # LANGUAGE RULE
 {lang_rule}
+
+CRITICAL: Follow the language rule for ALL output fields. Never mix languages.
 `;
 
 // Combined system prompt (Layers 0-3)
@@ -342,9 +342,9 @@ function extractJson(content: string): string {
 
 function buildLangRule(lang: "zh" | "en"): string {
   if (lang === "en") {
-    return "ALL text fields MUST be in English. Use academic English throughout.";
+    return "ALL output MUST be in English. Use academic English throughout. APA results in English.";
   }
-  return "The 'simple', 'academic', 'suggestions', and 'diagnosis' fields MUST be in Chinese. The 'apaResult' field MUST be in English.";
+  return "ALL output MUST be in Chinese (Simplified, zh-CN). Use academic Chinese throughout. APA results in Chinese. 所有输出必须使用简体中文，包括 APA 结果。";
 }
 
 export async function runAIInterpretation(
