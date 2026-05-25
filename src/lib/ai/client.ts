@@ -165,22 +165,34 @@ CRITICAL RULES:
 - Do NOT overgeneralize
 - Be conservative and precise
 
-# OUTPUT FORMAT (STRICT JSON)
+# UNIFIED OUTPUT PROTOCOL (STRICT JSON)
 
 {
-  "issueSummary": "One-line problem description",
-  "explanation": "2-3 sentence explanation of what the numbers mean",
-  "causes": ["Possible cause 1", "Possible cause 2"],
-  "fixes": {
-    "dataLevel": ["Fix in data cleaning / preprocessing"],
-    "questionnaireLevel": ["Fix in questionnaire design / item wording"],
-    "analysisLevel": ["Fix in statistical method / approach"]
+  "language": "zh-CN or en-US (same as input language)",
+
+  "diagnostic": {
+    "issues": ["issue 1", "issue 2"],
+    "severity": "low | medium | high",
+    "fixes": [
+      {"level": "data | questionnaire | analysis", "action": "specific fix"}
+    ]
   },
-  "simple": "Plain-language summary (2-3 sentences)",
-  "academic": "Academic interpretation (2-3 paragraphs)",
-  "apaResult": "APA 7th format results paragraph",
-  "shortAPA": "One-sentence APA summary"
+
+  "interpretation": {
+    "simple_summary": "Plain-language summary (2-3 sentences)",
+    "academic_interpretation": "Academic interpretation (2-3 paragraphs)"
+  },
+
+  "reporting": {
+    "apa_result": "APA 7th format results paragraph",
+    "short_apa": "One-sentence APA summary"
+  }
 }
+
+# LANGUAGE RULE
+{lang_rule}
+
+CRITICAL: ALL fields in ALL sections must use the SAME language. Never mix.
 
 # LANGUAGE RULE
 {lang_rule}
@@ -399,30 +411,36 @@ function parseAIResponse(content: string): AIResults {
     const jsonStr = extractJson(content);
     const parsed = JSON.parse(jsonStr);
 
-    // New format: issueSummary + explanation + causes + fixes
-    const fixes = parsed.fixes ?? {};
+    // Unified protocol: diagnostic + interpretation + reporting
+    const diag = parsed.diagnostic ?? {};
+    const interp = parsed.interpretation ?? {};
+    const report = parsed.reporting ?? {};
+
+    // Build suggestions from diagnostic fixes
     const suggestions: AIAdvisorSuggestion[] = [];
-
-    // Convert data-level fixes
-    if (fixes.dataLevel) {
-      for (const f of fixes.dataLevel as string[]) {
-        suggestions.push({ severity: "suggestion", title: "数据层面", detail: f as string });
-      }
-    }
-    // Convert questionnaire-level fixes
-    if (fixes.questionnaireLevel) {
-      for (const f of fixes.questionnaireLevel as string[]) {
-        suggestions.push({ severity: "warning", title: "量表层面", detail: f as string });
-      }
-    }
-    // Convert analysis-level fixes
-    if (fixes.analysisLevel) {
-      for (const f of fixes.analysisLevel as string[]) {
-        suggestions.push({ severity: "info", title: "分析层面", detail: f as string });
-      }
+    const fixes = diag.fixes ?? [];
+    for (const f of fixes as Record<string, unknown>[]) {
+      const level = String(f.level ?? "");
+      const levelLabel = level === "data" ? "数据层面" : level === "questionnaire" ? "量表层面" : "分析层面";
+      const sev = level === "questionnaire" ? "warning" as const : level === "data" ? "suggestion" as const : "info" as const;
+      suggestions.push({ severity: sev, title: levelLabel, detail: String(f.action ?? "") });
     }
 
-    // Fallback to old format if no fixes found
+    // Fallback: old format
+    if (suggestions.length === 0 && parsed.fixes) {
+      const oldFixes = parsed.fixes as Record<string, string[]>;
+      const levelMap: Record<string, { severity: "warning" | "suggestion" | "info"; label: string }> = {
+        dataLevel: { severity: "suggestion", label: "数据层面" },
+        questionnaireLevel: { severity: "warning", label: "量表层面" },
+        analysisLevel: { severity: "info", label: "分析层面" },
+      };
+      for (const [key, cfg] of Object.entries(levelMap)) {
+        for (const f of (oldFixes[key] ?? []) as string[]) {
+          suggestions.push({ severity: cfg.severity, title: cfg.label, detail: f });
+        }
+      }
+    }
+
     if (suggestions.length === 0 && parsed.suggestions) {
       for (const s of parsed.suggestions as Record<string, unknown>[]) {
         suggestions.push({
@@ -435,8 +453,8 @@ function parseAIResponse(content: string): AIResults {
 
     return {
       explanation: {
-        simple: parsed.simple ?? parsed.explanation ?? "",
-        academic: parsed.academic ?? parsed.issueSummary ?? "",
+        simple: interp.simple_summary ?? parsed.simple ?? "",
+        academic: interp.academic_interpretation ?? parsed.academic ?? "",
       },
       suggestions,
       diagnosis: {
@@ -444,8 +462,8 @@ function parseAIResponse(content: string): AIResults {
         crossLoadingItems: parsed.diagnosis?.crossLoadingItems ?? [],
         reverseItemRisks: parsed.diagnosis?.reverseItemRisks ?? [],
       },
-      apaResult: parsed.apaResult ?? "",
-      shortAPA: parsed.shortAPA ?? "",
+      apaResult: report.apa_result ?? parsed.apaResult ?? "",
+      shortAPA: report.short_apa ?? parsed.shortAPA ?? "",
     };
   } catch {
     return {
