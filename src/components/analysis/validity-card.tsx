@@ -66,7 +66,6 @@ export function ValidityCard({ data }: Props) {
         <p className="text-[11px] font-medium text-foreground mb-1.5">各题项 KMO</p>
         <div className="grid grid-cols-2 gap-1 max-h-[160px] overflow-y-auto">
           {Object.entries(data.kmoPerItem)
-            .slice(0, 20)
             .map(([item, kmo]) => {
               const isLow = kmo < 0.6;
               return (
