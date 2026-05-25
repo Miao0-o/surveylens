@@ -80,7 +80,7 @@ export function validateResults(results: AnalysisResults, lang: "zh" | "en" = "z
   }
 
   for (const [item, corr] of Object.entries(reliability.itemTotalCorrelation)) {
-    if (corr < 0.2) {
+    if (corr < 0.2 && corr >= 0) {
       flags.push({
         type: "warning", source: "reliability", code: "LOW_ITEM_TOTAL",
         message: en
@@ -89,11 +89,12 @@ export function validateResults(results: AnalysisResults, lang: "zh" | "en" = "z
       });
     }
     if (corr < 0) {
+      // This is a REVERSE CODING PROBLEM, not just "reverse item risk"
       flags.push({
-        type: "error", source: "reliability", code: "NEGATIVE_ITEM_TOTAL",
+        type: "error", source: "reliability", code: "REVERSE_CODING_PROBLEM",
         message: en
-          ? `"${item}" has negative item-total correlation — possible reverse coding issue.`
-          : `"${item}" 题总相关为负值 — 可能存在反向计分问题。`,
+          ? `"${item}" has negative item-total correlation (r = ${corr.toFixed(3)}) — likely reverse-coding problem. Verify scoring direction.`
+          : `"${item}" 题总相关为负值 (r = ${corr.toFixed(3)}) — 可能存在反向计分错误，请核实计分方向。`,
       });
     }
   }
