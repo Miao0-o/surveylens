@@ -11,19 +11,16 @@ import { CorrelationHeatmap } from "@/components/analysis/correlation-heatmap";
 import { EFACard } from "@/components/analysis/efa-card";
 import { FactorStructure } from "@/components/analysis/factor-structure";
 import { StabilityCard } from "@/components/analysis/stability-card";
-import { DescriptiveCard } from "@/components/analysis/descriptive-card";
 import { FileSpreadsheet, BarChart3 } from "lucide-react";
 import { ExportBar } from "@/components/export/export-bar";
 import { useState, useMemo } from "react";
 
-type ResultTab = "overview" | "reliability" | "validity" | "efa" | "descriptive" | "correlation" | "stability";
+type ResultTab = "overview" | "reliability" | "validity" | "efa" | "stability";
 
 const TABS: { id: ResultTab; label: string }[] = [
   { id: "overview", label: "概览" },
-  { id: "descriptive", label: "描述" },
   { id: "reliability", label: "信度" },
   { id: "validity", label: "效度" },
-  { id: "correlation", label: "相关" },
   { id: "efa", label: "因子" },
   { id: "stability", label: "稳定性" },
 ];
@@ -33,7 +30,6 @@ export function CenterPanel() {
   const pipelineState = useAppStore((s) => s.pipelineState);
   const analysisStage = useAppStore((s) => s.analysisStage);
   const results = useAppStore((s) => s.results);
-  const descriptiveResults = useAppStore((s) => s.descriptiveResults);
   const [activeTab, setActiveTab] = useState<ResultTab>("overview");
 
   // ---- Empty state ----
@@ -119,21 +115,6 @@ export function CenterPanel() {
               <div className="p-5 rounded-xl bg-card border border-border">
                 <FactorStructure data={results.efa} />
               </div>
-            </div>
-          )}
-
-          {activeTab === "descriptive" && descriptiveResults && (
-            <div className="p-5 rounded-xl bg-card border border-border">
-              <DescriptiveCard
-                data={descriptiveResults as unknown as { n: number; mean: number | null; sd: number | null; min: number | null; max: number | null; skew: number | null; kurtosis: number | null; shapiroP: number | null }[]}
-                labels={results?.efa.itemLabels ?? []}
-              />
-            </div>
-          )}
-
-          {activeTab === "correlation" && (
-            <div className="p-5 rounded-xl bg-card border border-border">
-              <CorrelationHeatmap data={results.validity} />
             </div>
           )}
 
