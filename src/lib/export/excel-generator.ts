@@ -4,13 +4,13 @@
 // ============================================================
 
 import type { AnalysisResults, AIResults } from "@/types";
-import * as XLSX from "xlsx";
 
 export async function downloadExcel(
   results: AnalysisResults,
   aiResults: AIResults | null,
   filename = "analysis-results.xlsx"
 ): Promise<void> {
+  const XLSX = await import("xlsx");
   const workbook = XLSX.utils.book_new();
 
   // Sheet 1: Summary

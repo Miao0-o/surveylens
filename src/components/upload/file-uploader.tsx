@@ -4,7 +4,6 @@ import { useCallback, useRef, useState } from "react";
 import { Upload, FileText, AlertCircle, Loader2 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import type { ParsedData } from "@/types";
-import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { parseSavFile } from "@/lib/parsers/sav-parser";
 
@@ -53,6 +52,7 @@ async function parseCSV(file: File): Promise<ParseResult> {
 }
 
 async function parseXLSXFile(file: File): Promise<ParseResult> {
+  const XLSX = await import("xlsx");
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: "array" });
   const sheetName = workbook.SheetNames[0];
