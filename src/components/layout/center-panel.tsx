@@ -1,39 +1,31 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { useAppStore } from "@/lib/store";
 import { STAGE_LABELS } from "@/types";
-import { generateAllSnippets } from "@/lib/export/apa-snippets";
+import { analysisRegistry } from "@/lib/analysis-registry";
 import { DataPreview } from "@/components/preprocessing/data-preview";
 import { OverviewDashboard } from "@/components/analysis/overview-dashboard";
-import { ReliabilityCard } from "@/components/analysis/reliability-card";
-import { ValidityCard } from "@/components/analysis/validity-card";
-import { CorrelationHeatmap } from "@/components/analysis/correlation-heatmap";
-import { EFACard } from "@/components/analysis/efa-card";
-import { FactorStructure } from "@/components/analysis/factor-structure";
-import { StabilityCard } from "@/components/analysis/stability-card";
 import { FileSpreadsheet, BarChart3 } from "lucide-react";
 import { ExportBar } from "@/components/export/export-bar";
-import { useState, useMemo } from "react";
-
-type ResultTab = "overview" | "reliability" | "validity" | "efa" | "stability";
-
-const TABS: { id: ResultTab; label: string }[] = [
-  { id: "overview", label: "概览" },
-  { id: "reliability", label: "信度" },
-  { id: "validity", label: "效度" },
-  { id: "efa", label: "因子" },
-  { id: "stability", label: "稳定性" },
-];
 
 export function CenterPanel() {
   const rawData = useAppStore((s) => s.rawData);
   const pipelineState = useAppStore((s) => s.pipelineState);
   const analysisStage = useAppStore((s) => s.analysisStage);
   const results = useAppStore((s) => s.results);
-  const [activeTab, setActiveTab] = useState<ResultTab>("overview");
-  const snippets = useMemo(() => results ? generateAllSnippets(results) : [], [results]);
+  const [activeTab, setActiveTab] = useState<string>("overview");
 
-  // ---- Empty state ----
+  // Build snippet map from registry summarize functions
+  const snippets = useMemo(() => {
+    if (!results) return {} as Record<string, string | null>;
+    const map: Record<string, string | null> = {};
+    for (const mod of analysisRegistry) {
+      map[mod.id] = mod.summarize(results);
+    }
+    return map;
+  }, [results]);
+
   if (!rawData) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3">
@@ -46,91 +38,64 @@ export function CenterPanel() {
     );
   }
 
-  // ---- Idle: show data preview ----
   if (pipelineState === "idle") {
     return <DataPreview />;
   }
 
-  // ---- Processing ----
   if (pipelineState === "processing" || pipelineState === "ai_processing") {
-    const stageLabel = STAGE_LABELS[analysisStage] ?? "处理中...";
+    const label = STAGE_LABELS[analysisStage] ?? "处理中...";
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4">
         <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
         <p className="text-sm text-foreground font-medium text-center">
-          {pipelineState === "ai_processing" ? "AI 解读中" : stageLabel}
+          {pipelineState === "ai_processing" ? "AI 解读中" : label}
         </p>
       </div>
     );
   }
 
-  // ---- Completed: show results ----
   if (pipelineState === "completed" && results) {
     return (
       <div id="report-content" className="space-y-5">
-        {/* Tab navigation */}
+        {/* Tab navigation — dynamic from registry */}
         <div className="flex gap-1 p-0.5 rounded-lg bg-secondary/30 w-fit overflow-x-auto max-w-full">
-          {TABS.map(({ id, label }) => (
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`px-3 py-1.5 rounded-md text-xs transition-colors whitespace-nowrap ${
+              activeTab === "overview" ? "bg-card text-foreground font-medium shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            概览
+          </button>
+          {analysisRegistry.map((mod) => (
             <button
-              key={id}
-              onClick={() => setActiveTab(id)}
+              key={mod.id}
+              onClick={() => setActiveTab(mod.id)}
               className={`px-3 py-1.5 rounded-md text-xs transition-colors whitespace-nowrap ${
-                activeTab === id
-                  ? "bg-card text-foreground font-medium shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+                activeTab === mod.id ? "bg-card text-foreground font-medium shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {label}
+              {mod.label}
             </button>
           ))}
         </div>
 
-        {/* Tab content */}
+        {/* Tab content — dynamic from registry */}
         <div className="space-y-5">
           {activeTab === "overview" && <OverviewDashboard results={results} />}
 
-          {activeTab === "reliability" && (
-            <div className="p-5 rounded-xl bg-card border border-border">
-              <ReliabilityCard data={results.reliability} snippet={snippets.find((s) => s.section === "信度")?.text} />
-            </div>
-          )}
-
-          {activeTab === "validity" && (
-            <div className="space-y-5">
-              <div className="p-5 rounded-xl bg-card border border-border">
-                <ValidityCard data={results.validity} />
-              </div>
-              <div className="p-5 rounded-xl bg-card border border-border">
-                <CorrelationHeatmap data={results.validity} />
-              </div>
-            </div>
-          )}
-
-          {activeTab === "efa" && (
-            <div className="space-y-5">
-              <div className="p-5 rounded-xl bg-card border border-border">
-                <EFACard data={results.efa} />
-              </div>
-              <div className="p-5 rounded-xl bg-card border border-border">
-                <FactorStructure data={results.efa} />
-              </div>
-            </div>
-          )}
-
-          {activeTab === "stability" && (
-            <div className="p-5 rounded-xl bg-card border border-border">
-              <StabilityCard data={results.stability} />
-            </div>
-          )}
+          {analysisRegistry.map((mod) => (
+            activeTab === mod.id && (
+              <mod.card key={mod.id} results={results} snippet={snippets[mod.id] ?? undefined} />
+            )
+          ))}
         </div>
 
-        {/* Export bar */}
         <ExportBar />
       </div>
     );
   }
 
-  // ---- Error ----
   if (pipelineState === "error") {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3">
