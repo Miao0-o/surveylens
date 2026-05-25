@@ -19,11 +19,15 @@ export interface DiagnosticReport {
     problem_items: string[];
     reverse_item_risk: string[];
   };
-  construct_validity: {
+  factorability: {
     score: number;
     kmo: number;
+    kmo_interpretation: string;
     bartlett: string;
-    factorability: string;
+    bartlett_interpretation: string;
+    readiness: string;
+    risk_level: string;
+    summary: string;
   };
   technical_risk: {
     score: number;
@@ -121,19 +125,33 @@ export function runDiagnostics(
   const dataQualityScore = Math.round(missingScore * 0.5 + imbalanceScore * 0.25 + distScore * 0.25);
 
   // ==========================================
-  // 3. Construct Validity (20%)
+  // 3. Factorability Assessment (20%)
   // ==========================================
+  const kmoInterpretation =
+    kmo >= 0.90 ? "Excellent" : kmo >= 0.80 ? "Good" : kmo >= 0.70 ? "Acceptable" : kmo >= 0.60 ? "Marginal" : kmo >= 0.50 ? "Weak" : "Unsuitable";
+  const bartlettInterpretation =
+    bartlettP < 0.05 ? "Significant inter-item correlations — suitable for factor analysis" : "Not significant — variables may not be suitable for factor analysis";
+  const factorReadiness =
+    kmo >= 0.80 ? "Good — factor analysis appropriate" : kmo >= 0.60 ? "Marginal — results may be unstable; interpret cautiously" : kmo > 0 ? "Poor — factor analysis not recommended" : "Not yet assessed";
+  const factorRisk =
+    kmo >= 0.80 ? "low" : kmo >= 0.60 ? "moderate" : kmo > 0 ? "high" : "unknown";
+  const factorSummary =
+    kmo > 0
+      ? `KMO = ${kmo.toFixed(3)} (${kmoInterpretation.toLowerCase()}). ${bartlettInterpretation}. ${factorReadiness}.`
+      : "Factorability not yet assessed — run validity analysis first.";
+
   let kmoScore = 25;
   if (kmo > 0) {
     if (kmo >= 0.90) kmoScore = 100;
     else if (kmo >= 0.80) kmoScore = 85;
     else if (kmo >= 0.70) kmoScore = 70;
     else if (kmo >= 0.60) kmoScore = 50;
-    else kmoScore = 25;
+    else if (kmo >= 0.50) kmoScore = 30;
+    else kmoScore = 15;
   }
-  if (kmo > 0 && bartlettP < 0.05) kmoScore = Math.min(100, kmoScore + 20);
-  if (kmo > 0 && bartlettP >= 0.05) kmoScore = Math.max(0, kmoScore - 20);
-  const validityScore = kmoScore;
+  if (kmo > 0 && bartlettP < 0.05) kmoScore = Math.min(100, kmoScore + 15);
+  if (kmo > 0 && bartlettP >= 0.05) kmoScore = Math.max(0, kmoScore - 15);
+  const factorabilityScore = kmoScore;
 
   // ==========================================
   // 4. Technical Risk (10%)
@@ -152,7 +170,7 @@ export function runDiagnostics(
   const readinessScore = Math.round(
     0.40 * scaleScore +
     0.30 * dataQualityScore +
-    0.20 * validityScore +
+    0.20 * factorabilityScore +
     0.10 * techRiskScore
   );
 
@@ -175,7 +193,7 @@ export function runDiagnostics(
     descriptive: columns.length > 0,
     correlation: numericCols.length >= 2,
     regression: numericCols.length >= 3 && hasAdequateN && readinessLevel !== "not_ready",
-    factor_analysis: hasScale && kmo >= 0.60 && hasAdequateN && readinessLevel !== "not_ready",
+    factor_analysis: hasScale && kmo >= 0.50 && hasAdequateN && readinessLevel !== "not_ready",
   };
 
   // Risk flags
@@ -217,11 +235,15 @@ export function runDiagnostics(
       problem_items: problemItems.slice(0, 10),
       reverse_item_risk: reverseRisks.slice(0, 10),
     },
-    construct_validity: {
-      score: validityScore,
+    factorability: {
+      score: factorabilityScore,
       kmo,
+      kmo_interpretation: kmoInterpretation,
       bartlett: bartlettLabel,
-      factorability: factorabilityLabel,
+      bartlett_interpretation: bartlettInterpretation,
+      readiness: factorReadiness,
+      risk_level: factorRisk,
+      summary: factorSummary,
     },
     technical_risk: {
       score: techRiskScore,

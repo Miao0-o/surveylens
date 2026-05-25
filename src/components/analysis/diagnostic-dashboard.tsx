@@ -46,7 +46,7 @@ export function DiagnosticDashboard() {
       <div className="grid grid-cols-4 gap-2">
         <ScoreBar label={en ? "Scale" : "量表"} score={report.scale_quality.score} weight="40%" />
         <ScoreBar label={en ? "Data" : "数据"} score={report.data_quality.score} weight="30%" />
-        <ScoreBar label={en ? "Validity" : "效度"} score={report.construct_validity.score} weight="20%" />
+        <ScoreBar label={en ? "Factorability" : "因子适配"} score={report.factorability.score} weight="20%" />
         <ScoreBar label={en ? "Risk" : "风险"} score={report.technical_risk.score} weight="10%" invert />
       </div>
 
@@ -64,10 +64,14 @@ export function DiagnosticDashboard() {
             <p className="text-[10px] text-red-500">{report.scale_quality.reverse_item_risk.length} {en ? "reverse risk" : "个反向题"}</p>
           )}
         </MiniCard>
-        <MiniCard icon={<CheckCircle2 className="w-3.5 h-3.5" />} title={en ? "Construct Validity" : "构念效度"}>
-          <Stat label="KMO" value={report.construct_validity.kmo > 0 ? report.construct_validity.kmo.toFixed(3) : "N/A"}
-            ok={report.construct_validity.kmo >= 0.80} warn={report.construct_validity.kmo >= 0.60} />
-          <p className="text-[10px] text-muted-foreground">{report.construct_validity.bartlett}</p>
+        <MiniCard icon={<CheckCircle2 className="w-3.5 h-3.5" />} title={en ? "Factorability Assessment" : "因子分析适配性"}>
+          <Stat label="KMO" value={report.factorability.kmo > 0 ? report.factorability.kmo.toFixed(3) : "N/A"}
+            ok={report.factorability.kmo >= 0.80} warn={report.factorability.kmo >= 0.60} />
+          <p className="text-[10px] text-muted-foreground">{report.factorability.kmo_interpretation}</p>
+          <p className="text-[10px] text-muted-foreground">{report.factorability.bartlett}</p>
+          {report.factorability.risk_level === "high" && (
+            <p className="text-[10px] text-amber-600">{report.factorability.readiness}</p>
+          )}
         </MiniCard>
         <MiniCard icon={<Zap className="w-3.5 h-3.5" />} title={en ? "Analysis Gates" : "分析准入"}>
           <Gate label={en ? "Descriptive" : "描述统计"} ok={report.readiness.descriptive} />
