@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { CopyActionBar } from "./copy-action-bar";
+import { useRef, type ReactNode } from "react";
+import { CopyImageButton } from "./copy-action-bar";
 
 interface Props {
   title: string;
@@ -12,27 +12,27 @@ interface Props {
 }
 
 export function ResultCard({ title, icon, insight, children, expanded }: Props) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
   return (
-    <div className="p-5 rounded-xl bg-card border border-border space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        {icon}
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+    <div ref={cardRef} className="p-5 rounded-xl bg-card border border-border space-y-4">
+      {/* Header + Copy Image */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {icon}
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        </div>
+        <CopyImageButton targetRef={cardRef} label="复制图片" />
       </div>
 
       {/* Chart / Table / Stats */}
       <div>{children}</div>
 
-      {/* APA One-Line Insight + Copy */}
+      {/* APA One-Line Insight */}
       {insight && (
-        <div className="space-y-1.5">
-          <p className="text-[11px] text-muted-foreground italic leading-relaxed border-l-2 border-muted-foreground/15 pl-2.5">
-            {insight}
-          </p>
-          <CopyActionBar
-            actions={[{ label: "复制 APA", icon: "text", getContent: () => insight }]}
-          />
-        </div>
+        <p className="text-[11px] text-muted-foreground italic leading-relaxed border-l-2 border-muted-foreground/15 pl-2.5">
+          {insight}
+        </p>
       )}
 
       {/* Optional Expanded Section */}

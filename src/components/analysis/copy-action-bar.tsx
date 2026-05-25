@@ -1,36 +1,46 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Copy, Check, Table, Image } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
+import { Copy, Check, Image } from "lucide-react";
+import { toPng } from "html-to-image";
 
 interface CopyAction {
   label: string;
-  icon: "text" | "table" | "image";
+  icon: "text" | "image";
   getContent: () => string | Promise<Blob>;
 }
 
 interface Props {
   actions: CopyAction[];
-  size?: "sm" | "md";
+  /** Optional ref to the DOM element to capture as image */
+  captureRef?: React.RefObject<HTMLElement | null>;
 }
 
-export function CopyActionBar({ actions, size = "sm" }: Props) {
+export function CopyActionBar({ actions, captureRef }: Props) {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
   const handleCopy = useCallback(async (idx: number, action: CopyAction) => {
     try {
-      const content = await action.getContent();
-      if (typeof content === "string") {
-        await navigator.clipboard.writeText(content);
-      } else {
+      if (action.icon === "image" && captureRef?.current) {
+        const blob = await toPng(captureRef.current, {
+          backgroundColor: "#FAFAF9",
+          pixelRatio: 2,
+          quality: 0.95,
+        });
+        const blobResp = await fetch(blob);
+        const finalBlob = await blobResp.blob();
         await navigator.clipboard.write([
-          new ClipboardItem({ "image/png": content }),
+          new ClipboardItem({ "image/png": finalBlob }),
         ]);
+      } else {
+        const content = await action.getContent();
+        if (typeof content === "string") {
+          await navigator.clipboard.writeText(content);
+        }
       }
       setCopiedIdx(idx);
       setTimeout(() => setCopiedIdx(null), 1500);
     } catch {
-      // Fallback: select text
       const content = await action.getContent();
       if (typeof content === "string") {
         const ta = document.createElement("textarea");
@@ -45,18 +55,14 @@ export function CopyActionBar({ actions, size = "sm" }: Props) {
         setTimeout(() => setCopiedIdx(null), 1500);
       }
     }
-  }, []);
+  }, [captureRef]);
 
   if (actions.length === 0) return null;
 
-  const iconMap = {
-    text: Copy,
-    table: Table,
-    image: Image,
-  };
+  const iconMap = { text: Copy, image: Image };
 
   return (
-    <div className={`flex items-center gap-1 ${size === "md" ? "mt-3" : ""}`}>
+    <div className="flex items-center gap-1">
       {actions.map((action, i) => {
         const Icon = iconMap[action.icon];
         const isCopied = copiedIdx === i;
@@ -81,11 +87,13 @@ export function CopyActionBar({ actions, size = "sm" }: Props) {
   );
 }
 
-/** Convenience: text-only copy button */
-export function CopyTextButton({ text, label = "复制" }: { text: string; label?: string }) {
+/** One-click: copy a DOM element as PNG to clipboard */
+export function CopyImageButton({ targetRef, label = "复制图片" }: { targetRef: React.RefObject<HTMLElement | null>; label?: string }) {
   return (
     <CopyActionBar
-      actions={[{ label, icon: "text", getContent: () => text }]}
+      captureRef={targetRef}
+      actions={[{ label, icon: "image", getContent: () => "" }]}
     />
   );
 }
+
