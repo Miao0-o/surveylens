@@ -11,8 +11,8 @@ interface ThreeColumnProps {
 export function ThreeColumn({ left, center, right }: ThreeColumnProps) {
   return (
     <div className="flex-1 flex overflow-hidden">
-      {/* Left Sidebar — 280px */}
-      <aside className="w-[280px] shrink-0 border-r border-border bg-card overflow-y-auto p-5">
+      {/* Left Sidebar — 340px */}
+      <aside className="w-[340px] shrink-0 border-r border-border bg-card overflow-y-auto p-5">
         {left}
       </aside>
 
@@ -21,8 +21,8 @@ export function ThreeColumn({ left, center, right }: ThreeColumnProps) {
         {center}
       </main>
 
-      {/* Right Sidebar — 360px */}
-      <aside className="w-[360px] shrink-0 border-l border-border bg-card overflow-y-auto p-5">
+      {/* Right Sidebar — 280px */}
+      <aside className="w-[280px] shrink-0 border-l border-border bg-card overflow-y-auto p-5">
         {right}
       </aside>
     </div>
