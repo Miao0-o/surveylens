@@ -1,5 +1,7 @@
 "use client";
 
+import { ChartWrapper } from "./chart-wrapper";
+
 interface DescriptiveRow {
   n: number;
   mean: number | null;
@@ -42,6 +44,7 @@ export function DescriptiveCard({ data, labels }: Props) {
         </p>
       </div>
 
+      <ChartWrapper title="描述性统计表">
       <div className="overflow-x-auto rounded-lg border border-border max-h-[400px] overflow-y-auto">
         <table className="w-full text-[10px]">
           <thead>
@@ -85,6 +88,7 @@ export function DescriptiveCard({ data, labels }: Props) {
           </tbody>
         </table>
       </div>
+      </ChartWrapper>
 
       <p className="text-[9px] text-muted-foreground/70">
         * p &lt; 0.05 &nbsp; ** p &lt; 0.01 &nbsp; 偏度 |s| &lt; 0.5 对称 · ≥ 1 偏态 &nbsp; 峰度 &gt; 3 尖峰 · &lt; 3 平峰
