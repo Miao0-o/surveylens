@@ -15,99 +15,107 @@ export function DiagnosticDashboard() {
   const report = useMemo(() => runDiagnostics(columns, results), [columns, results]);
   if (columns.length === 0) return null;
 
+  const levelConfig = {
+    ready:    { color: "text-emerald-600", bg: "bg-emerald-50", en: "Ready", zh: "就绪" },
+    partial:  { color: "text-amber-600", bg: "bg-amber-50", en: "Partial", zh: "部分就绪" },
+    low:      { color: "text-orange-600", bg: "bg-orange-50", en: "Low", zh: "偏低" },
+    not_ready:{ color: "text-red-600", bg: "bg-red-50", en: "Not Ready", zh: "未就绪" },
+  };
+  const lc = levelConfig[report.readiness.level];
+
   return (
     <div className="space-y-4">
-      {/* Header */}
+      {/* Header bar */}
       <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-card border border-border">
         <Shield className="w-5 h-5 text-muted-foreground" strokeWidth={1.5} />
         <div>
           <p className="text-sm font-semibold text-foreground">
-            {en ? "Data Readiness Report" : "数据准备度报告"}
+            {en ? "Data Readiness" : "数据准备度"}
           </p>
-          <p className="text-xs text-muted-foreground">
-            {en ? "Readiness" : "准备度"} {report.readiness_score}% · {en ? "Confidence" : "可信度"} {report.confidence}%
-          </p>
+          <p className="text-xs text-muted-foreground">{report.readiness.label}</p>
         </div>
-        <div className="ml-auto">
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-            report.readiness_score >= 75 ? "bg-emerald-50 text-emerald-600" :
-            report.readiness_score >= 50 ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600"
-          }`}>
-            {report.readiness_score >= 75 ? (en ? "Ready" : "就绪") :
-             report.readiness_score >= 50 ? (en ? "Caution" : "注意") : (en ? "Not Ready" : "未就绪")}
+        <div className="ml-auto text-right">
+          <p className={`text-lg font-bold ${lc.color}`}>{report.readiness.score}</p>
+          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${lc.bg} ${lc.color}`}>
+            {en ? lc.en : lc.zh}
           </span>
         </div>
       </div>
 
-      {/* 4-Card Grid */}
+      {/* 4 sub-scores */}
+      <div className="grid grid-cols-4 gap-2">
+        <ScoreBar label={en ? "Scale" : "量表"} score={report.scale_quality.score} weight="40%" />
+        <ScoreBar label={en ? "Data" : "数据"} score={report.data_quality.score} weight="30%" />
+        <ScoreBar label={en ? "Validity" : "效度"} score={report.construct_validity.score} weight="20%" />
+        <ScoreBar label={en ? "Risk" : "风险"} score={report.technical_risk.score} weight="10%" invert />
+      </div>
+
+      {/* Readiness gates */}
       <div className="grid grid-cols-2 gap-3">
         <MiniCard icon={<BarChart3 className="w-3.5 h-3.5" />} title={en ? "Data Quality" : "数据质量"}>
-          <Stat label={en ? "Missing" : "缺失"} value={report.data_quality.missing}
-            ok={report.data_quality.missing === "low"} />
-          <Stat label={en ? "Distribution" : "分布"} value={report.data_quality.distribution_risk} ok={true} />
+          <Stat label={en ? "Missing" : "缺失"} value={`${report.data_quality.missing_pct}%`}
+            ok={report.data_quality.missing === "low"} warn={report.data_quality.missing === "moderate"} />
+          <Stat label={en ? "Balance" : "平衡"} value={report.data_quality.imbalance} ok={true} />
         </MiniCard>
-
-        <MiniCard icon={<Shield className="w-3.5 h-3.5" />} title={en ? "Scale Quality" : "量表质量"}>
-          {report.scale_quality.cronbach_alpha > 0 ? (
-            <>
-              <Stat label="α" value={report.scale_quality.cronbach_alpha.toFixed(3)}
-                ok={report.scale_quality.cronbach_alpha >= 0.80} warn={report.scale_quality.cronbach_alpha >= 0.70} />
-              {report.scale_quality.problem_items.length > 0 && (
-                <p className="text-[10px] text-amber-600">{report.scale_quality.problem_items.length} {en ? "weak items" : "个弱题项"}</p>
-              )}
-              {report.scale_quality.reverse_item_risk.length > 0 && (
-                <p className="text-[10px] text-red-500">{report.scale_quality.reverse_item_risk.length} {en ? "reverse risks" : "个反向题风险"}</p>
-              )}
-            </>
-          ) : (
-            <p className="text-[10px] text-muted-foreground">{en ? "Not yet assessed" : "尚未评估"}</p>
+        <MiniCard icon={<Shield className="w-3.5 h-3.5" />} title={en ? "Scale" : "量表"}>
+          <Stat label="α" value={report.scale_quality.cronbach_alpha > 0 ? report.scale_quality.cronbach_alpha.toFixed(3) : "N/A"}
+            ok={report.scale_quality.cronbach_alpha >= 0.80} warn={report.scale_quality.cronbach_alpha >= 0.70} />
+          {report.scale_quality.reverse_item_risk.length > 0 && (
+            <p className="text-[10px] text-red-500">{report.scale_quality.reverse_item_risk.length} {en ? "reverse risk" : "个反向题"}</p>
           )}
         </MiniCard>
-
-        <MiniCard icon={<CheckCircle2 className="w-3.5 h-3.5" />} title={en ? "Validity" : "效度适配"}>
-          {report.validity.kmo > 0 ? (
-            <>
-              <Stat label="KMO" value={report.validity.kmo.toFixed(3)}
-                ok={report.validity.kmo >= 0.80} warn={report.validity.kmo >= 0.60} />
-              <p className="text-[10px] text-muted-foreground">{report.validity.bartlett}</p>
-            </>
-          ) : (
-            <p className="text-[10px] text-muted-foreground">{en ? "Not yet assessed" : "尚未评估"}</p>
-          )}
+        <MiniCard icon={<CheckCircle2 className="w-3.5 h-3.5" />} title={en ? "Construct Validity" : "构念效度"}>
+          <Stat label="KMO" value={report.construct_validity.kmo > 0 ? report.construct_validity.kmo.toFixed(3) : "N/A"}
+            ok={report.construct_validity.kmo >= 0.80} warn={report.construct_validity.kmo >= 0.60} />
+          <p className="text-[10px] text-muted-foreground">{report.construct_validity.bartlett}</p>
         </MiniCard>
-
-        <MiniCard icon={<Zap className="w-3.5 h-3.5" />} title={en ? "Readiness" : "分析就绪"}>
-          <div className="space-y-0.5 text-[10px]">
-            <ReadyItem label={en ? "Descriptive" : "描述统计"} ok={report.readiness.descriptive} />
-            <ReadyItem label={en ? "Correlation" : "相关分析"} ok={report.readiness.correlation} />
-            <ReadyItem label={en ? "Regression" : "回归分析"} ok={report.readiness.regression} />
-            <ReadyItem label={en ? "Factor Analysis" : "因子分析"} ok={report.readiness.factor_analysis} />
-          </div>
+        <MiniCard icon={<Zap className="w-3.5 h-3.5" />} title={en ? "Analysis Gates" : "分析准入"}>
+          <Gate label={en ? "Descriptive" : "描述统计"} ok={report.readiness.descriptive} />
+          <Gate label={en ? "Correlation" : "相关分析"} ok={report.readiness.correlation} />
+          <Gate label={en ? "Regression" : "回归分析"} ok={report.readiness.regression} />
+          <Gate label={en ? "Factor Analysis" : "因子分析"} ok={report.readiness.factor_analysis} />
         </MiniCard>
       </div>
 
-      {/* Risk Flags + Recommendations */}
-      {(report.risk_flags.length > 0 || report.recommendations.length > 0) && (
+      {/* Risk Flags */}
+      {report.risk_flags.length > 0 && (
         <div className="px-4 py-3 rounded-xl bg-card border border-border space-y-2">
           <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
             <AlertTriangle className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.5} />
-            {en ? "Risks & Recommendations" : "风险与建议"}
+            {en ? "Risks & Fixes" : "风险与修复建议"}
           </p>
           {report.risk_flags.slice(0, 4).map((r, i) => (
             <div key={i} className="flex items-start gap-2 text-[10px]">
-              <span className={`w-1.5 h-1.5 rounded-full mt-1 shrink-0 ${r.type === "error" ? "bg-red-400" : "bg-amber-400"}`} />
+              <span className={`w-1.5 h-1.5 rounded-full mt-1 shrink-0 ${r.type === "error" ? "bg-red-400" : r.type === "warning" ? "bg-amber-400" : "bg-blue-400"}`} />
               <span className="text-foreground">{r.message}</span>
             </div>
           ))}
           {report.recommendations.slice(0, 3).map((r, i) => (
-            <div key={`rec-${i}`} className="flex items-start gap-2 text-[10px]">
-              <span className="w-1.5 h-1.5 rounded-full mt-1 shrink-0 bg-blue-400" />
-              <span className="text-foreground font-medium">{r.issue}</span>
-              <span className="text-muted-foreground">— {r.fix}</span>
+            <div key={`rec-${i}`} className="flex items-start gap-2 text-[10px] ml-3.5">
+              <span className="text-muted-foreground">→</span>
+              <span className="text-muted-foreground">{r.fix}</span>
             </div>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ScoreBar({ label, score, weight, invert }: { label: string; score: number; weight: string; invert?: boolean }) {
+  const color = invert
+    ? (score >= 80 ? "bg-emerald-400" : score >= 60 ? "bg-amber-400" : "bg-red-400")
+    : (score >= 80 ? "bg-emerald-400" : score >= 60 ? "bg-blue-400" : score >= 40 ? "bg-amber-400" : "bg-red-400");
+  return (
+    <div className="text-center">
+      <div className="flex items-end gap-0.5 mb-1">
+        <div className="flex-1 h-8 rounded-sm bg-secondary relative overflow-hidden">
+          <div className={`absolute bottom-0 w-full ${color} rounded-sm transition-all`} style={{ height: `${score}%` }} />
+        </div>
+      </div>
+      <p className="text-[10px] font-medium text-foreground">{score}</p>
+      <p className="text-[9px] text-muted-foreground">{label}</p>
+      <p className="text-[8px] text-muted-foreground/60">{weight}</p>
     </div>
   );
 }
@@ -133,9 +141,9 @@ function Stat({ label, value, ok, warn }: { label: string; value: string; ok?: b
   );
 }
 
-function ReadyItem({ label, ok }: { label: string; ok: boolean }) {
+function Gate({ label, ok }: { label: string; ok: boolean }) {
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5 text-[10px]">
       {ok ? <CheckCircle2 className="w-3 h-3 text-emerald-500" strokeWidth={2} /> : <XCircle className="w-3 h-3 text-red-300" strokeWidth={1.5} />}
       <span className={ok ? "text-foreground" : "text-muted-foreground/50"}>{label}</span>
     </div>
