@@ -171,7 +171,8 @@ Output JSON schema:
     "crossLoadingItems": [],
     "reverseItemRisks": []
   },
-  "apaResult": "APA 7th format results paragraph in English, ready for paper insertion"
+  "apaResult": "Full APA 7th format results paragraph in English, ready for paper insertion",
+  "shortAPA": "One-sentence APA format summary (e.g. 'The scale demonstrated high internal consistency, α = .89, 95% CI [.84, .93].')"
 }
 
 The "apaResult" field MUST be in English following APA 7th edition journal standards.
@@ -406,6 +407,7 @@ function parseAIResponse(content: string): AIResults {
         reverseItemRisks: parsed.diagnosis?.reverseItemRisks ?? [],
       },
       apaResult: parsed.apaResult ?? "",
+      shortAPA: parsed.shortAPA ?? "",
     };
   } catch {
     return {
@@ -413,6 +415,7 @@ function parseAIResponse(content: string): AIResults {
       suggestions: [],
       diagnosis: { lowReliabilityItems: [], crossLoadingItems: [], reverseItemRisks: [] },
       apaResult: "",
+      shortAPA: "",
     };
   }
 }

@@ -256,6 +256,7 @@ export interface AIResults {
     reverseItemRisks: string[];
   };
   apaResult: string;
+  shortAPA: string;
   /** Cache key to avoid re-running on same results */
   cachedAt?: number;
 }

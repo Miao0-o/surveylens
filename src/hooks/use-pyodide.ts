@@ -342,6 +342,8 @@ json.dumps = lambda *a, **kw: _orig_dumps(*a, default=_safe, **kw)
       setLoadingMessage(stageLabel);
 
       // Register the function
+      // Yield to browser between steps to prevent UI freeze
+      await new Promise((r) => setTimeout(r, 0));
       await py.runPythonAsync(step.fn);
 
       // Execute — data is already in __data_json__
@@ -361,6 +363,8 @@ json.dumps = lambda *a, **kw: _orig_dumps(*a, default=_safe, **kw)
         throw new Error(`Step ${step.id}: ${parsed.error}`);
       }
       results[step.id] = parsed as Record<string, unknown>;
+      // Yield after each step
+      await new Promise((r) => setTimeout(r, 0));
     }
 
     // Store descriptive results

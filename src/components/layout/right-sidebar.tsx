@@ -167,8 +167,17 @@ export function RightSidebar() {
           </div>
         )}
 
+        {aiResults.shortAPA && (
+          <div className="px-3 py-2.5 rounded-lg bg-emerald-50/30 border border-emerald-100/50">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-medium text-emerald-700">APA 摘要</p>
+              <CopyButton text={aiResults.shortAPA} />
+            </div>
+            <p className="text-xs text-emerald-600/80 leading-relaxed">{aiResults.shortAPA}</p>
+          </div>
+        )}
         {aiResults.apaResult && (
-          <ResultCard title="APA 格式" icon={<FileText className="w-3.5 h-3.5 text-emerald-400" strokeWidth={1.5} />} action={<CopyButton text={aiResults.apaResult} />}>
+          <ResultCard title="APA 完整格式" icon={<FileText className="w-3.5 h-3.5 text-emerald-400" strokeWidth={1.5} />} action={<CopyButton text={aiResults.apaResult} />}>
             <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">{aiResults.apaResult}</pre>
           </ResultCard>
         )}
