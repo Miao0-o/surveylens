@@ -14,6 +14,7 @@ import { EFACard } from "@/components/analysis/efa-card";
 import { FactorStructure } from "@/components/analysis/factor-structure";
 import { StabilityCard } from "@/components/analysis/stability-card";
 import { DescriptiveCard } from "@/components/analysis/descriptive-card";
+import { DiagnosticDashboard } from "@/components/analysis/diagnostic-dashboard";
 import { FileSpreadsheet, BarChart3 } from "lucide-react";
 import { ExportBar } from "@/components/export/export-bar";
 import { CopyActionBar } from "@/components/analysis/copy-action-bar";
@@ -87,7 +88,12 @@ export function CenterPanel() {
       </div>
 
       {/* Content */}
-      {activeTab === "overview" && <OverviewDashboard results={results} />}
+      {activeTab === "overview" && (
+        <div className="space-y-5">
+          <DiagnosticDashboard />
+          <OverviewDashboard results={results} />
+        </div>
+      )}
 
       {activeTab === "reliability" && (
         <ResultCard title="信度分析" insight={insights["reliability"]}>
