@@ -220,22 +220,22 @@ export function runDiagnostics(
 
   // Risk flags
   const riskFlags: DiagnosticReport["risk_flags"] = [];
-  if (missingRate >= 0.10) riskFlags.push({ type: "warning", source: "data_quality", message: `Missing rate ${(missingRate*100).toFixed(0)}% — consider imputation.` });
-  if (sampleSize < 100) riskFlags.push({ type: "warning", source: "data_quality", message: `Small sample (N=${sampleSize}). Results may be unstable.` });
-  if (sampleSize < 30) riskFlags.push({ type: "error", source: "data_quality", message: `N=${sampleSize} too small for reliable inference.` });
-  if (alpha > 0 && alpha < 0.70) riskFlags.push({ type: "warning", source: "scale_quality", message: `Low reliability (α=${alpha.toFixed(2)}). Review items.` });
-  if (alpha > 0.95) riskFlags.push({ type: "info", source: "scale_quality", message: `Very high α (${alpha.toFixed(2)}) — possible item redundancy.` });
-  if (reverseRisks.length > 0) riskFlags.push({ type: "warning", source: "scale_quality", message: `${reverseRisks.length} items with negative item-total r — possible reverse coding.` });
-  if (kmo > 0 && kmo < 0.60) riskFlags.push({ type: "error", source: "validity", message: `KMO=${kmo.toFixed(2)} — factor analysis not appropriate.` });
-  if (kmo > 0 && bartlettP >= 0.05) riskFlags.push({ type: "warning", source: "validity", message: `Bartlett not significant — correlation matrix may be identity.` });
+  if (missingRate >= 0.10) riskFlags.push({ type: "warning", source: "data_quality", message: en ? `Missing rate ${(missingRate*100).toFixed(0)}% — consider imputation.` : `缺失率 ${(missingRate*100).toFixed(0)}% — 建议插补处理。` });
+  if (sampleSize < 100) riskFlags.push({ type: "warning", source: "data_quality", message: en ? `Small sample (N=${sampleSize}). Results may be unstable.` : `样本量较小 (N=${sampleSize})，结果可能不稳定。` });
+  if (sampleSize < 30) riskFlags.push({ type: "error", source: "data_quality", message: en ? `N=${sampleSize} too small for reliable inference.` : `N=${sampleSize} 过小，无法进行可靠推断。` });
+  if (alpha > 0 && alpha < 0.70) riskFlags.push({ type: "warning", source: "scale_quality", message: en ? `Low reliability (α=${alpha.toFixed(2)}). Review items.` : `信度偏低 (α=${alpha.toFixed(2)})，请检查题项。` });
+  if (alpha > 0.95) riskFlags.push({ type: "info", source: "scale_quality", message: en ? `Very high α (${alpha.toFixed(2)}) — possible item redundancy.` : `α 极高 (${alpha.toFixed(2)}) — 可能存在题项冗余。` });
+  if (reverseRisks.length > 0) riskFlags.push({ type: "warning", source: "scale_quality", message: en ? `${reverseRisks.length} possible reverse-coded items detected.` : `检测到 ${reverseRisks.length} 个可能为反向计分的题项。` });
+  if (kmo > 0 && kmo < 0.60) riskFlags.push({ type: "error", source: "validity", message: en ? `KMO=${kmo.toFixed(2)} — factor analysis not appropriate.` : `KMO=${kmo.toFixed(2)} — 不适合因子分析。` });
+  if (kmo > 0 && bartlettP >= 0.05) riskFlags.push({ type: "warning", source: "validity", message: en ? `Bartlett not significant — correlation matrix may be identity.` : `Bartlett 不显著 — 相关矩阵可能接近单位矩阵。` });
 
   // Recommendations
   const recs: DiagnosticReport["recommendations"] = [];
-  if (missingRate >= 0.10) recs.push({ issue: `Missing: ${(missingRate*100).toFixed(0)}%`, fix: "Apply imputation or listwise deletion." });
-  if (sampleSize < 100) recs.push({ issue: `N=${sampleSize} (small)`, fix: "Use bootstrap. Triangulate with other samples." });
-  if (alpha > 0 && alpha < 0.70) recs.push({ issue: `Low α (${alpha.toFixed(2)})`, fix: "Remove weak items and re-test reliability." });
-  if (reverseRisks.length > 0) recs.push({ issue: `${reverseRisks.length} reverse-coded items`, fix: "Verify coding. Reverse-score if confirmed." });
-  if (kmo > 0 && kmo < 0.60) recs.push({ issue: `KMO too low (${kmo.toFixed(2)})`, fix: "Collect more data or remove problematic items." });
+  if (missingRate >= 0.10) recs.push({ issue: en ? `Missing: ${(missingRate*100).toFixed(0)}%` : `缺失: ${(missingRate*100).toFixed(0)}%`, fix: en ? "Apply imputation or listwise deletion." : "应用插补法或整行删除处理。" });
+  if (sampleSize < 100) recs.push({ issue: en ? `N=${sampleSize} (small)` : `N=${sampleSize} (偏小)`, fix: en ? "Use bootstrap. Triangulate with other samples." : "使用 Bootstrap 方法，结合其他样本交叉验证。" });
+  if (alpha > 0 && alpha < 0.70) recs.push({ issue: en ? `Low α (${alpha.toFixed(2)})` : `α 偏低 (${alpha.toFixed(2)})`, fix: en ? "Remove weak items and re-test reliability." : "删除弱题项并重新测试信度。" });
+  if (reverseRisks.length > 0) recs.push({ issue: en ? `${reverseRisks.length} reverse-coded items` : `${reverseRisks.length} 个反向计分题项`, fix: en ? "Verify coding. Reverse-score if confirmed." : "核实计分方向，确认后重新编码并重跑。" });
+  if (kmo > 0 && kmo < 0.60) recs.push({ issue: en ? `KMO too low (${kmo.toFixed(2)})` : `KMO 过低 (${kmo.toFixed(2)})`, fix: en ? "Collect more data or remove problematic items." : "增加样本量或删除问题题项。" });
 
   const bartlettLabel = kmo > 0
     ? (bartlettP < 0.001 ? "Significant, p < .001" : `p = ${bartlettP.toFixed(3)}`)
