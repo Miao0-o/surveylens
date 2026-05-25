@@ -8,7 +8,7 @@
 // ============================================================
 // promptVersion: scientific_reviewer_v2.0
 
-import type { AICompressedInput, AIResults, ValidationReport } from "@/types";
+import type { AICompressedInput, AIResults, AIAdvisorSuggestion, ValidationReport } from "@/types";
 
 const PROXY_URL = process.env.NEXT_PUBLIC_API_PROXY_URL ?? "http://localhost:8000";
 export const PROMPT_VERSION = "scientific_reviewer_v2.0";
@@ -149,30 +149,37 @@ If these are not specified, state the assumption.
 // ============================================================
 
 const LAYER_3_OUTPUT_STRUCTURER = `
-# OUTPUT FORMAT (STRICT)
+# ROLE
 
-You must output EXACTLY the requested JSON structure.
-No additional sections. No narrative expansion beyond required fields.
-No speculation beyond provided statistics.
+You are an Academic Statistical Diagnostic Interpreter.
+You interpret statistical outputs AND provide actionable fixes.
 
-Output JSON schema:
+You MUST:
+1. Explain the statistical issue in simple academic language
+2. Identify possible causes
+3. Provide structured, actionable fixes at THREE levels
+
+CRITICAL RULES:
+- Separate fixes into: data-level, questionnaire-level, analysis-level
+- Do NOT hallucinate missing statistics
+- Do NOT overgeneralize
+- Be conservative and precise
+
+# OUTPUT FORMAT (STRICT JSON)
+
 {
-  "simple": "通俗中文总结（2-3句，面向零基础用户）",
-  "academic": "学术风格详细解读（2-3段中文，专业术语保留英文如 Cronbach's α, KMO, Bartlett）",
-  "suggestions": [
-    {
-      "severity": "warning|suggestion|info",
-      "title": "简短中文建议标题",
-      "detail": "具体可操作的中文建议内容"
-    }
-  ],
-  "diagnosis": {
-    "lowReliabilityItems": [],
-    "crossLoadingItems": [],
-    "reverseItemRisks": []
+  "issueSummary": "One-line problem description",
+  "explanation": "2-3 sentence explanation of what the numbers mean",
+  "causes": ["Possible cause 1", "Possible cause 2"],
+  "fixes": {
+    "dataLevel": ["Fix in data cleaning / preprocessing"],
+    "questionnaireLevel": ["Fix in questionnaire design / item wording"],
+    "analysisLevel": ["Fix in statistical method / approach"]
   },
-  "apaResult": "Full APA 7th format results paragraph in English, ready for paper insertion",
-  "shortAPA": "One-sentence APA format summary (e.g. 'The scale demonstrated high internal consistency, α = .89, 95% CI [.84, .93].')"
+  "simple": "通俗中文总结（2-3句）",
+  "academic": "学术风格详细解读（2-3段）",
+  "apaResult": "APA 7th format results paragraph in English",
+  "shortAPA": "One-sentence APA summary"
 }
 
 The "apaResult" field MUST be in English following APA 7th edition journal standards.
@@ -391,16 +398,47 @@ function parseAIResponse(content: string): AIResults {
   try {
     const jsonStr = extractJson(content);
     const parsed = JSON.parse(jsonStr);
+
+    // New format: issueSummary + explanation + causes + fixes
+    const fixes = parsed.fixes ?? {};
+    const suggestions: AIAdvisorSuggestion[] = [];
+
+    // Convert data-level fixes
+    if (fixes.dataLevel) {
+      for (const f of fixes.dataLevel as string[]) {
+        suggestions.push({ severity: "suggestion", title: "数据层面", detail: f as string });
+      }
+    }
+    // Convert questionnaire-level fixes
+    if (fixes.questionnaireLevel) {
+      for (const f of fixes.questionnaireLevel as string[]) {
+        suggestions.push({ severity: "warning", title: "量表层面", detail: f as string });
+      }
+    }
+    // Convert analysis-level fixes
+    if (fixes.analysisLevel) {
+      for (const f of fixes.analysisLevel as string[]) {
+        suggestions.push({ severity: "info", title: "分析层面", detail: f as string });
+      }
+    }
+
+    // Fallback to old format if no fixes found
+    if (suggestions.length === 0 && parsed.suggestions) {
+      for (const s of parsed.suggestions as Record<string, unknown>[]) {
+        suggestions.push({
+          severity: (s.severity as "warning" | "suggestion" | "info") ?? "info",
+          title: String(s.title ?? ""),
+          detail: String(s.detail ?? ""),
+        });
+      }
+    }
+
     return {
       explanation: {
-        simple: parsed.simple ?? "",
-        academic: parsed.academic ?? "",
+        simple: parsed.simple ?? parsed.explanation ?? "",
+        academic: parsed.academic ?? parsed.issueSummary ?? "",
       },
-      suggestions: (parsed.suggestions ?? []).map((s: Record<string, unknown>) => ({
-        severity: (s.severity as "warning" | "suggestion" | "info") ?? "info",
-        title: String(s.title ?? ""),
-        detail: String(s.detail ?? ""),
-      })),
+      suggestions,
       diagnosis: {
         lowReliabilityItems: parsed.diagnosis?.lowReliabilityItems ?? [],
         crossLoadingItems: parsed.diagnosis?.crossLoadingItems ?? [],
