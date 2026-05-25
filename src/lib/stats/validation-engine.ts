@@ -46,7 +46,7 @@ export function validateResults(results: AnalysisResults): ValidationReport {
       type: "warning",
       source: "reliability",
       code: "RELIABILITY_REDUNDANT",
-      message: `Cronbach's α = ${alpha.toFixed(3)} — extremely high. Items may be redundant; consider reviewing for duplicate content.`,
+      message: `Cronbach's α = ${alpha.toFixed(3)} — 极高，题项可能存在冗余，建议检查重复内容。`,
     });
   }
 
@@ -55,14 +55,14 @@ export function validateResults(results: AnalysisResults): ValidationReport {
       type: "error",
       source: "reliability",
       code: "RELIABILITY_LOW",
-      message: `Cronbach's α = ${alpha.toFixed(3)} — below acceptable threshold (0.60). Scale lacks internal consistency.`,
+      message: `Cronbach's α = ${alpha.toFixed(3)} — 低于可接受阈值 (0.60)，量表缺乏内部一致性。`,
     });
   } else if (alpha < 0.70) {
     flags.push({
       type: "warning",
       source: "reliability",
       code: "RELIABILITY_MARGINAL",
-      message: `Cronbach's α = ${alpha.toFixed(3)} — marginally low. Consider scale revision.`,
+      message: `Cronbach's α = ${alpha.toFixed(3)} — 偏低，建议修订量表。`,
     });
   }
 
@@ -73,7 +73,7 @@ export function validateResults(results: AnalysisResults): ValidationReport {
         type: "info",
         source: "reliability",
         code: "ALPHA_IMPROVE_IF_DELETED",
-        message: `Removing "${item}" would increase α from ${alpha.toFixed(3)} to ${alphaIfDel.toFixed(3)}.`,
+        message: `删除 "${item}" 可能将 α 从 ${alpha.toFixed(3)} to ${alphaIfDel.toFixed(3)}.`,
       });
     }
   }
@@ -85,7 +85,7 @@ export function validateResults(results: AnalysisResults): ValidationReport {
         type: "warning",
         source: "reliability",
         code: "LOW_ITEM_TOTAL",
-        message: `"${item}" has low item-total correlation (r = ${corr.toFixed(3)}). Consider review.`,
+        message: `"${item}" 题总相关偏低 (r = ${corr.toFixed(3)}). 建议检查。`,
       });
     }
     if (corr < 0) {
@@ -93,7 +93,7 @@ export function validateResults(results: AnalysisResults): ValidationReport {
         type: "error",
         source: "reliability",
         code: "NEGATIVE_ITEM_TOTAL",
-        message: `"${item}" has negative item-total correlation — possible reverse coding issue.`,
+        message: `"${item}" 题总相关为负值 — 可能存在反向计分问题。`,
       });
     }
   }
@@ -106,14 +106,14 @@ export function validateResults(results: AnalysisResults): ValidationReport {
       type: "error",
       source: "validity",
       code: "KMO_UNACCEPTABLE",
-      message: `KMO = ${kmo.toFixed(3)} — factor analysis is not appropriate for this data.`,
+      message: `KMO = ${kmo.toFixed(3)} — 因子分析不适用于当前数据。`,
     });
   } else if (kmo < 0.60) {
     flags.push({
       type: "warning",
       source: "validity",
       code: "KMO_LOW",
-      message: `KMO = ${kmo.toFixed(3)} — marginal sampling adequacy.`,
+      message: `KMO = ${kmo.toFixed(3)} — 取样适切性偏低。`,
     });
   }
 
@@ -123,7 +123,7 @@ export function validateResults(results: AnalysisResults): ValidationReport {
         type: "warning",
         source: "validity",
         code: "ITEM_KMO_LOW",
-        message: `"${item}" has low KMO (${itemKmo.toFixed(3)}) — consider removing from factor analysis.`,
+        message: `"${item}" KMO 值偏低 (${itemKmo.toFixed(3)}) — 建议从因子分析中移除。`,
       });
     }
   }
@@ -133,7 +133,7 @@ export function validateResults(results: AnalysisResults): ValidationReport {
       type: "error",
       source: "validity",
       code: "BARTLETT_NOT_SIGNIFICANT",
-      message: `Bartlett's test not significant (p = ${validity.bartlettPValue.toFixed(3)}) — correlation matrix may be identity.`,
+      message: `Bartlett's test not significant (p = ${validity.bartlettPValue.toFixed(3)}) — 相关矩阵可能为单位矩阵。`,
     });
   }
 
@@ -148,7 +148,7 @@ export function validateResults(results: AnalysisResults): ValidationReport {
           type: "warning",
           source: "efa",
           code: "CROSS_LOADING",
-          message: `"${label}" has cross-loadings (max diff < 0.20) — factor assignment is ambiguous.`,
+          message: `"${label}" 存在交叉载荷 (max diff < 0.20) — 因子归属模糊。`,
         });
       }
     }
@@ -161,7 +161,7 @@ export function validateResults(results: AnalysisResults): ValidationReport {
       type: "warning",
       source: "efa",
       code: "LOW_VARIANCE_EXPLAINED",
-      message: `Total variance explained = ${(totalVar * 100).toFixed(1)}% — below 40%. Factor structure may be weak.`,
+      message: `Total variance explained = ${(totalVar * 100).toFixed(1)}% — below 40%. 因子结构可能较弱。`,
     });
   }
 
@@ -173,7 +173,7 @@ export function validateResults(results: AnalysisResults): ValidationReport {
         type: "info",
         source: "efa",
         code: "DOMINANT_FIRST_FACTOR",
-        message: `First eigenvalue dominates (ratio = ${ratio.toFixed(1)}:1) — possible unidimensionality or method effect.`,
+        message: `First eigenvalue dominates (ratio = ${ratio.toFixed(1)}:1) — 可能存在单维性或方法效应。`,
       });
     }
   }
@@ -184,7 +184,7 @@ export function validateResults(results: AnalysisResults): ValidationReport {
       type: "warning",
       source: "stability",
       code: "UNSTABLE_SOLUTION",
-      message: "Bootstrap stability indicates an unstable factor solution. Consider larger sample size.",
+      message: "Bootstrap stability indicates an unstable factor solution. 建议增大样本量。",
     });
   }
 
@@ -193,7 +193,7 @@ export function validateResults(results: AnalysisResults): ValidationReport {
       type: "info",
       source: "stability",
       code: "SAMPLE_SIZE_BELOW_RECOMMENDED",
-      message: `Current N = ${meta.sampleSize} < recommended N = ${stability.recommendedSampleSize}. Results may be unstable.`,
+      message: `Current N = ${meta.sampleSize} < recommended N = ${stability.recommendedSampleSize}. 结果可能不稳定。`,
     });
   }
 
@@ -202,14 +202,14 @@ export function validateResults(results: AnalysisResults): ValidationReport {
       type: "error",
       source: "stability",
       code: "SAMPLE_TOO_SMALL",
-      message: `N = ${meta.sampleSize} — too small for reliable factor analysis. Minimum 100 recommended.`,
+      message: `N = ${meta.sampleSize} — 样本量过小，无法进行可靠的因子分析，建议至少 100 份。`,
     });
   } else if (meta.sampleSize < 100) {
     flags.push({
       type: "warning",
       source: "stability",
       code: "SAMPLE_SMALL",
-      message: `N = ${meta.sampleSize} — small sample. Results should be interpreted with caution.`,
+      message: `N = ${meta.sampleSize} — 样本量偏小，结果解读需谨慎。`,
     });
   }
 
