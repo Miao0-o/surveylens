@@ -8,10 +8,25 @@ import type { AnalysisResults, ColumnInfo } from "@/types";
 export interface DiagnosticReport {
   data_quality: {
     score: number;
-    missing: string;
-    missing_pct: number;
-    imbalance: string;
-    distribution_risk: string;
+    missing_data: {
+      rate: number;
+      interpretation: string;
+      risk_level: "low" | "medium" | "high";
+    };
+    response_distribution: {
+      status: string;
+      interpretation: string;
+      risk_level: "low" | "medium" | "high";
+    };
+    response_variability: {
+      status: string;
+      interpretation: string;
+      risk_level: "low" | "medium" | "high";
+    };
+    overall: {
+      risk_level: "low" | "medium" | "high";
+      summary: string;
+    };
   };
   scale_quality: {
     score: number;
@@ -116,10 +131,9 @@ export function runDiagnostics(
   }
 
   let distScore = 100;
-  let distLabel = "Normal (scale data)";
-  if (likertCols.length === 0) { distScore = 50; distLabel = "No scale items — cannot assess normality"; }
+  if (likertCols.length === 0) { distScore = 50; }
   else if (columns.some((c) => c.type === "numeric" && (c.max ?? 0) - (c.min ?? 0) > 100)) {
-    distScore = 70; distLabel = "Mild skew possible";
+    distScore = 70;
   }
 
   const dataQualityScore = Math.round(missingScore * 0.5 + imbalanceScore * 0.25 + distScore * 0.25);
@@ -224,10 +238,21 @@ export function runDiagnostics(
   return {
     data_quality: {
       score: dataQualityScore,
-      missing: missingRate < 0.05 ? "low" : missingRate < 0.15 ? "moderate" : "high",
-      missing_pct: Math.round(missingRate * 100),
-      imbalance: imbalanceLabel,
-      distribution_risk: distLabel,
+      missing_data: {
+        rate: Math.round(missingRate * 100),
+        interpretation: missingRate < 0.05 ? "Excellent — negligible missing data." : missingRate < 0.15 ? "Acceptable — minor missing data present." : "Problematic — missing data may bias results.",
+        risk_level: missingRate < 0.05 ? "low" : missingRate < 0.15 ? "medium" : "high",
+      },
+      response_distribution: {
+        status: imbalanceLabel,
+        interpretation: imbalanceLabel === "Balanced" ? "Response distribution is balanced, indicating no strong response bias." : imbalanceLabel.includes("Moderate") ? "Mild imbalance detected — may slightly affect statistical stability." : "Severe imbalance — group comparisons may be unreliable.",
+        risk_level: imbalanceLabel === "Balanced" ? "low" : imbalanceLabel.includes("Moderate") ? "medium" : "high",
+      },
+      response_variability: computeVariability(columns),
+      overall: {
+        risk_level: dataQualityScore >= 80 ? "low" : dataQualityScore >= 60 ? "medium" : "high",
+        summary: dataQualityScore >= 80 ? "Data is clean and ready for analysis." : dataQualityScore >= 60 ? "Data is usable but has minor quality concerns." : "Data has quality issues — interpret results with caution.",
+      },
     },
     scale_quality: {
       score: scaleScore,
@@ -253,5 +278,49 @@ export function runDiagnostics(
     readiness,
     risk_flags: riskFlags,
     recommendations: recs,
+  };
+}
+
+function computeVariability(columns: ColumnInfo[]): {
+  status: string;
+  interpretation: string;
+  risk_level: "low" | "medium" | "high";
+} {
+  const likertCols = columns.filter((c) => c.type === "likert");
+  if (likertCols.length === 0) {
+    return {
+      status: "Cannot assess",
+      interpretation: "No scale items available for variability check.",
+      risk_level: "medium",
+    };
+  }
+
+  // Check for low-variance items (possible straight-lining)
+  const lowVarItems = likertCols.filter((c) => {
+    if (c.min === undefined || c.max === undefined || c.mean === undefined) return false;
+    const range = c.max - c.min;
+    return range <= 1;
+  });
+
+  if (lowVarItems.length > likertCols.length * 0.3) {
+    return {
+      status: "Low variability detected",
+      interpretation: `${lowVarItems.length} items show very low response variability — possible straight-lining or careless responding. Results may be attenuated.`,
+      risk_level: "high",
+    };
+  }
+
+  if (lowVarItems.length > 0) {
+    return {
+      status: "Minor variability concern",
+      interpretation: `${lowVarItems.length} items show limited variability — may indicate response set bias. Interpret with caution.`,
+      risk_level: "medium",
+    };
+  }
+
+  return {
+    status: "Adequate variability",
+    interpretation: "Response variability is adequate across all items, indicating engaged responding.",
+    risk_level: "low",
   };
 }

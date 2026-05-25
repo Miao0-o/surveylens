@@ -53,9 +53,17 @@ export function DiagnosticDashboard() {
       {/* Readiness gates */}
       <div className="grid grid-cols-2 gap-3">
         <MiniCard icon={<BarChart3 className="w-3.5 h-3.5" />} title={en ? "Data Quality" : "数据质量"}>
-          <Stat label={en ? "Missing" : "缺失"} value={`${report.data_quality.missing_pct}%`}
-            ok={report.data_quality.missing === "low"} warn={report.data_quality.missing === "moderate"} />
-          <Stat label={en ? "Balance" : "平衡"} value={report.data_quality.imbalance} ok={true} />
+          <p className="text-[10px]"><span className="text-muted-foreground">{en ? "Missing" : "缺失"} </span>
+            <span className={`font-medium ${report.data_quality.missing_data.risk_level === "low" ? "text-emerald-600" : report.data_quality.missing_data.risk_level === "medium" ? "text-amber-600" : "text-red-500"}`}>
+              {report.data_quality.missing_data.rate}%</span></p>
+          <p className="text-[9px] text-muted-foreground/70 mt-0.5">{report.data_quality.missing_data.interpretation}</p>
+          <p className="text-[10px] mt-1.5"><span className="text-muted-foreground">{en ? "Distribution" : "分布"} </span>
+            <span className={`font-medium ${report.data_quality.response_distribution.risk_level === "low" ? "text-emerald-600" : "text-amber-600"}`}>
+              {report.data_quality.response_distribution.status}</span></p>
+          <p className="text-[9px] text-muted-foreground/70 mt-0.5">{report.data_quality.response_distribution.interpretation}</p>
+          {report.data_quality.response_variability.risk_level !== "low" && (
+            <p className="text-[10px] mt-1.5 text-amber-600">{report.data_quality.response_variability.interpretation}</p>
+          )}
         </MiniCard>
         <MiniCard icon={<Shield className="w-3.5 h-3.5" />} title={en ? "Scale" : "量表"}>
           <Stat label="α" value={report.scale_quality.cronbach_alpha > 0 ? report.scale_quality.cronbach_alpha.toFixed(3) : "N/A"}
