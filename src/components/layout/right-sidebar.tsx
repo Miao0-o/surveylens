@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { useAI } from "@/hooks/use-ai";
 import { LanguageToggle } from "./language-toggle";
+import { MethodAdvisor } from "@/components/analysis/method-advisor";
 import {
   Sparkles,
   AlertTriangle,
@@ -199,9 +200,13 @@ export function RightSidebar() {
             <LanguageToggle />
           </div>
 
+          <MethodAdvisor />
+
+          <hr className="border-border" />
+
           <p className="text-sm font-medium text-foreground">AI 学术解读</p>
           <p className="text-xs text-muted-foreground">
-            选择要生成的内容。AI 基于分析结果生成，原始数据不会上传。
+            选择要生成的内容。AI 基于诊断结果生成，原始数据不会上传。
           </p>
 
           <div className="space-y-2">
