@@ -2,6 +2,7 @@
 
 import { useAppStore } from "@/lib/store";
 import { STAGE_LABELS } from "@/types";
+import { generateAllSnippets } from "@/lib/export/apa-snippets";
 import { DataPreview } from "@/components/preprocessing/data-preview";
 import { OverviewDashboard } from "@/components/analysis/overview-dashboard";
 import { ReliabilityCard } from "@/components/analysis/reliability-card";
@@ -13,7 +14,7 @@ import { StabilityCard } from "@/components/analysis/stability-card";
 import { DescriptiveCard } from "@/components/analysis/descriptive-card";
 import { FileSpreadsheet, BarChart3 } from "lucide-react";
 import { ExportBar } from "@/components/export/export-bar";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 type ResultTab = "overview" | "reliability" | "validity" | "efa" | "descriptive" | "correlation" | "stability";
 
@@ -67,6 +68,8 @@ export function CenterPanel() {
   }
 
   // ---- Completed: show results ----
+  const snippets = useMemo(() => results ? generateAllSnippets(results) : [], [results]);
+
   if (pipelineState === "completed" && results) {
     return (
       <div id="report-content" className="space-y-5">
@@ -93,7 +96,7 @@ export function CenterPanel() {
 
           {activeTab === "reliability" && (
             <div className="p-5 rounded-xl bg-card border border-border">
-              <ReliabilityCard data={results.reliability} />
+              <ReliabilityCard data={results.reliability} snippet={snippets.find((s) => s.section === "信度")?.text} />
             </div>
           )}
 

@@ -2,6 +2,7 @@
 
 import type { ReliabilityResult } from "@/types";
 import { InfoTip } from "./stat-tooltip";
+import { APASnippetBar } from "./apa-snippet-bar";
 import {
   ResponsiveContainer,
   BarChart,
@@ -14,6 +15,7 @@ import {
 
 interface Props {
   data: ReliabilityResult;
+  snippet?: string;
 }
 
 function alphaInterpretation(alpha: number): { label: string; color: string } {
@@ -24,7 +26,7 @@ function alphaInterpretation(alpha: number): { label: string; color: string } {
   return { label: "不可接受", color: "text-red-500" };
 }
 
-export function ReliabilityCard({ data }: Props) {
+export function ReliabilityCard({ data, snippet }: Props) {
   const interp = alphaInterpretation(data.cronbachsAlpha);
 
   const alphaIfDeleted = Object.entries(data.alphaIfItemDeleted)
@@ -140,6 +142,7 @@ export function ReliabilityCard({ data }: Props) {
             </div>
           ))}
       </div>
+      {snippet && <APASnippetBar text={snippet} />}
     </div>
   );
 }
