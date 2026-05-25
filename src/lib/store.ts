@@ -160,19 +160,10 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
 
   // ---- Data ----
   setRawData: (data) => {
-    const clean = sanitizeForStorage(data);
-    // Cap stored rows at 5000 to keep IDB fast
-    const toStore = clean.rowCount > 5000
-      ? { ...clean, rows: clean.rows.slice(0, 5000) }
-      : clean;
-    idbSet(RAW_DATA_KEY, toStore).catch(() => {});
-    return set({ rawData: clean, pipelineStep: "upload", analysisStage: "uploading", error: null });
+    return set({ rawData: data, pipelineStep: "upload", analysisStage: "uploading", error: null });
   },
 
-  setLikertColumns: (cols) => {
-    idbSet(LIKERT_KEY, sanitizeForStorage(cols)).catch(() => {});
-    return set({ likertColumns: cols });
-  },
+  setLikertColumns: (cols) => set({ likertColumns: cols }),
 
   setColumns: (columns) => set({ columns }),
   setClassification: (classification) => set({ classification }),
