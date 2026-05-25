@@ -320,21 +320,6 @@ export function usePyodide() {
 
     const results = {} as Record<string, Record<string, unknown>>;
 
-    // Patch json.dumps to sanitize NaN/Infinity
-    await py.runPythonAsync(`
-import json, math, numpy as np
-_orig_dumps = json.dumps
-def _safe(obj):
-    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
-        return None
-    if isinstance(obj, np.ndarray):
-        return [None if (isinstance(x, float) and (math.isnan(x) or math.isinf(x))) else x for x in obj.tolist()]
-    if isinstance(obj, list):
-        return [None if (isinstance(x, float) and (math.isnan(x) or math.isinf(x))) else x for x in obj]
-    raise TypeError(f"Unserializable: {type(obj)}")
-json.dumps = lambda *a, **kw: _orig_dumps(*a, default=_safe, **kw)
-`);
-
     // Run each step sequentially with progress
     for (const step of PYTHON_STEPS) {
       const stageLabel = STAGE_LABELS[step.id] ?? step.id;
