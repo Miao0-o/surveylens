@@ -16,6 +16,8 @@ import { StabilityCard } from "@/components/analysis/stability-card";
 import { DescriptiveCard } from "@/components/analysis/descriptive-card";
 import { FileSpreadsheet, BarChart3 } from "lucide-react";
 import { ExportBar } from "@/components/export/export-bar";
+import { CopyActionBar } from "@/components/analysis/copy-action-bar";
+import { getSummaryAPA } from "@/lib/analysis/registry";
 
 export function CenterPanel() {
   const rawData = useAppStore((s) => s.rawData);
@@ -27,6 +29,8 @@ export function CenterPanel() {
 
   const activeModules = useMemo(() => results ? getActiveModules(results) : [], [results]);
   const insights = useMemo(() => results ? getOneLineAPA(results) : {}, [results]);
+  const summaryZH = useMemo(() => results ? getSummaryAPA(results, "zh") : "", [results]);
+  const summaryEN = useMemo(() => results ? getSummaryAPA(results, "en") : "", [results]);
 
   // ---- States ----
   if (!rawData) {
@@ -128,6 +132,17 @@ export function CenterPanel() {
           <StabilityCard data={results.stability} />
         </ResultCard>
       )}
+
+      {/* Quick copy bar */}
+      <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-secondary/30 border border-border/50">
+        <span className="text-[10px] text-muted-foreground shrink-0">快速复制</span>
+        <CopyActionBar
+          actions={[
+            { label: "中文摘要", icon: "text", getContent: () => summaryZH },
+            { label: "English Summary", icon: "text", getContent: () => summaryEN },
+          ]}
+        />
+      </div>
 
       <ExportBar />
     </div>

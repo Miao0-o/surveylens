@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { CopyActionBar } from "./copy-action-bar";
 
 interface Props {
   title: string;
@@ -22,11 +23,16 @@ export function ResultCard({ title, icon, insight, children, expanded }: Props) 
       {/* Chart / Table / Stats */}
       <div>{children}</div>
 
-      {/* APA One-Line Insight */}
+      {/* APA One-Line Insight + Copy */}
       {insight && (
-        <p className="text-[11px] text-muted-foreground italic leading-relaxed border-l-2 border-muted-foreground/15 pl-2.5">
-          {insight}
-        </p>
+        <div className="space-y-1.5">
+          <p className="text-[11px] text-muted-foreground italic leading-relaxed border-l-2 border-muted-foreground/15 pl-2.5">
+            {insight}
+          </p>
+          <CopyActionBar
+            actions={[{ label: "复制 APA", icon: "text", getContent: () => insight }]}
+          />
+        </div>
       )}
 
       {/* Optional Expanded Section */}
