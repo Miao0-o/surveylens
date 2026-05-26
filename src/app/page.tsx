@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Cpu, Shield, FileText, CheckCircle2 } from "lucide-react";
+import { Shield, FileText, ArrowRight, Sparkles, BarChart3, Zap } from "lucide-react";
 
 export default function Home() {
   return (
@@ -8,70 +8,137 @@ export default function Home() {
         <span className="text-sm font-semibold tracking-tight text-foreground">SurveyLens</span>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-16 max-w-2xl mx-auto text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground mb-3">SurveyLens</h1>
-        <p className="text-base text-foreground/80 font-medium mb-1">
-          帮助您判断问卷数据是否准备好进入下一阶段分析
+      {/* ---- HERO ---- */}
+      <section className="flex flex-col items-center text-center px-6 pt-20 pb-12 max-w-2xl mx-auto">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground mb-3 leading-snug">
+          Know whether your questionnaire data<br />is ready for analysis.
+        </h1>
+        <p className="text-sm text-muted-foreground max-w-md mb-8 leading-relaxed">
+          Upload your survey data and instantly evaluate reliability, validity, factor structure,
+          and APA-ready results — fully in your browser.
         </p>
-        <p className="text-xs text-muted-foreground/60 mb-6">
-          We help you decide whether your survey data is ready for analysis.
-        </p>
-        <p className="text-sm text-muted-foreground/70 max-w-md mb-8 leading-relaxed">
-          SurveyLens 在浏览器本地完成信度检验、效度分析、因子分析与稳定性评估，
-          帮助研究者判断当前数据是否具备足够的统计质量以支持后续建模与学术报告。
-          所有计算均在本地完成，数据不会离开您的设备。
-        </p>
-
-        <div className="grid grid-cols-3 gap-4 mb-10 w-full max-w-lg">
-          <Feature icon={<Cpu className="w-5 h-5" strokeWidth={1.5} />} title="本地计算" desc="基于 Pyodide (WASM) 引擎，数据全程不离开浏览器" />
-          <Feature icon={<Shield className="w-5 h-5" strokeWidth={1.5} />} title="零数据上传" desc="问卷数据不上传服务器，保护受访者隐私" />
-          <Feature icon={<FileText className="w-5 h-5" strokeWidth={1.5} />} title="APA 学术格式" desc="自动生成 APA 7 格式结果段落，可复制至论文" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 mb-10 w-full max-w-lg text-left">
-          <Capability title="信度分析" items={["Cronbach's α", "题总相关", "删除后 α 变化", "分维度信度"]} />
-          <Capability title="效度与因子" items={["KMO + Bartlett 检验", "探索性因子分析 (EFA)", "碎石图 + 载荷矩阵", "样本稳定性评估"]} />
-          <Capability title="AI 学术解读" items={["研究导向的结果解释", "谨慎的诊断建议", "证据可追溯", "中英双语"]} />
-          <Capability title="数据管理" items={["编码簿映射 (CSV/XLSX/PDF)", "反向题检测与确认", "缺失值处理", "维度分组管理"]} />
-        </div>
-
         <Link
           href="/analyze"
           className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity"
         >
-          开始分析
+          Start Analysis
         </Link>
-
-        <p className="text-xs text-muted-foreground/50 mt-6">
-          无需注册 · 免费使用 · 数据全程本地运行
+        <p className="text-xs text-muted-foreground/50 mt-4">
+          No login required · Local analysis · Your data stays on your device
         </p>
-      </main>
+      </section>
+
+      {/* ---- HOW IT WORKS ---- */}
+      <section className="px-6 pb-16 max-w-2xl mx-auto w-full">
+        <div className="grid grid-cols-3 gap-6">
+          {[
+            { step: "1", icon: <FileText className="w-5 h-5" strokeWidth={1.5} />, title: "Upload CSV or Excel", desc: "Drag and drop your questionnaire data. Supports Likert-scale, text labels, and codebook mapping." },
+            { step: "2", icon: <BarChart3 className="w-5 h-5" strokeWidth={1.5} />, title: "Analyze reliability & validity", desc: "Local engine computes Cronbach's α, KMO, Bartlett, EFA, and sample stability." },
+            { step: "3", icon: <Sparkles className="w-5 h-5" strokeWidth={1.5} />, title: "Get AI interpretation + APA output", desc: "Evidence-traceable academic interpretation plus APA-7 formatted results." },
+          ].map((s) => (
+            <div key={s.step} className="flex flex-col items-center text-center gap-2">
+              <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center text-muted-foreground">{s.icon}</div>
+              <p className="text-xs font-medium text-foreground">{s.title}</p>
+              <p className="text-[11px] text-muted-foreground/70 leading-relaxed">{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ---- EXAMPLE OUTPUT ---- */}
+      <section className="px-6 pb-20 max-w-2xl mx-auto w-full">
+        <p className="text-sm font-semibold text-foreground text-center mb-8">
+          What you get after uploading
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <OutputCard
+            title="Reliability"
+            highlight="Cronbach's α = 0.87"
+            label="Internal consistency: Good"
+            labelColor="text-emerald-600"
+            notes={["Q5 flagged: low item-total correlation detected"]}
+          />
+          <OutputCard
+            title="Validity"
+            highlight="KMO = 0.82"
+            label="Bartlett's test: significant"
+            labelColor="text-emerald-600"
+            notes={["Factor structure appears suitable for exploratory analysis"]}
+          />
+          <OutputCard
+            title="AI Interpretation"
+            highlight=""
+            label=""
+            labelColor=""
+            notes={["The scale demonstrates acceptable internal consistency and appears appropriate for further statistical analysis."]}
+            muted
+          />
+          <OutputCard
+            title="APA Output"
+            highlight=""
+            label=""
+            labelColor=""
+            notes={["Cronbach's alpha indicated good internal consistency (α = .87)."]}
+            muted
+          />
+        </div>
+        <p className="text-[10px] text-muted-foreground/50 text-center mt-4">
+          Example output — actual results depend on your data
+        </p>
+      </section>
+
+      {/* ---- WHY ---- */}
+      <section className="px-6 pb-20 max-w-2xl mx-auto w-full">
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { icon: <Shield className="w-5 h-5" strokeWidth={1.5} />, title: "Local-first privacy", desc: "Data stays in your browser. No uploads, no servers, no tracking." },
+            { icon: <FileText className="w-5 h-5" strokeWidth={1.5} />, title: "Research-ready outputs", desc: "APA-style interpretations and diagnostics you can use in your paper." },
+            { icon: <Zap className="w-5 h-5" strokeWidth={1.5} />, title: "Fast issue detection", desc: "Identify weak items and scale problems in minutes, not days." },
+          ].map((c, i) => (
+            <div key={i} className="flex flex-col items-center text-center gap-1.5 p-4 rounded-xl bg-card border border-border/40">
+              <span className="text-muted-foreground">{c.icon}</span>
+              <p className="text-xs font-medium text-foreground">{c.title}</p>
+              <p className="text-[10px] text-muted-foreground/60 leading-relaxed">{c.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ---- FINAL CTA ---- */}
+      <section className="flex flex-col items-center text-center px-6 pb-24">
+        <p className="text-lg font-bold text-foreground mb-3">
+          Start evaluating your survey data in minutes.
+        </p>
+        <Link
+          href="/analyze"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          Open Analyzer
+          <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
+        </Link>
+        <p className="text-xs text-muted-foreground/50 mt-4">
+          Works directly in your browser. No installation required.
+        </p>
+      </section>
     </div>
   );
 }
 
-function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
+function OutputCard({ title, highlight, label, labelColor, notes, muted }: {
+  title: string; highlight: string; label: string; labelColor: string; notes: string[]; muted?: boolean;
+}) {
   return (
-    <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-card border border-border/50">
-      <span className="text-muted-foreground">{icon}</span>
-      <p className="text-xs font-medium text-foreground">{title}</p>
-      <p className="text-[10px] text-muted-foreground/60 leading-relaxed">{desc}</p>
-    </div>
-  );
-}
-
-function Capability({ title, items }: { title: string; items: string[] }) {
-  return (
-    <div className="px-3 py-2.5 rounded-lg bg-secondary/20 border border-border/50">
-      <p className="text-xs font-medium text-foreground mb-1">{title}</p>
-      <ul className="text-[10px] text-muted-foreground space-y-0.5">
-        {items.map((item, i) => (
-          <li key={i} className="flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" strokeWidth={1.5} />
-            {item}
-          </li>
+    <div className={`rounded-xl border p-4 ${muted ? "bg-secondary/20 border-border/60" : "bg-card border-border"}`}>
+      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">{title}</p>
+      {highlight && <p className="text-sm font-semibold text-foreground mb-0.5">{highlight}</p>}
+      {label && <p className={`text-xs font-medium ${labelColor} mb-2`}>{label}</p>}
+      <div className="space-y-1">
+        {notes.map((n, i) => (
+          <p key={i} className={`text-[11px] leading-relaxed ${muted ? "text-muted-foreground/70" : "text-muted-foreground"}`}>
+            {n}
+          </p>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
