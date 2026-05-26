@@ -84,8 +84,8 @@ export default function Home() {
       </header>
 
       <section className="flex flex-col items-center text-center px-6 pt-20 pb-8 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground mb-3 leading-snug">{T.heroTitle[lang]}</h1>
-        <p className="text-sm text-muted-foreground max-w-md mb-2 leading-relaxed">{T.heroSub[lang]}</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-4 leading-tight">{T.heroTitle[lang]}</h1>
+        <p className="text-base text-muted-foreground max-w-md mb-2 leading-relaxed">{T.heroSub[lang]}</p>
         <p className="text-xs text-muted-foreground/60 mb-6">{T.heroNote[lang]}</p>
         <Link href="/analyze" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity">
           {T.cta[lang]}
