@@ -582,8 +582,13 @@ For each finding, you MUST answer:
 3. Where does the evidence come from?
 
 Rules:
-- No direct evidence → use dataset-level indicators (e.g., Bartlett, overall α, KMO) OR explicitly state "[limitation: item-level evidence not available]".
-- No inference without linkage. Every interpretation SHOULD reference at least one metric. If constrained to dataset-level only, acknowledge the limitation.
+- EVIDENCE HIERARCHY RULE (CRITICAL):
+  - item-level claims (e.g., "Q5 is weak") → MUST use item-level evidence (item-total r, alpha-if-deleted, factor loading)
+  - dimension-level claims → use dimension-level evidence (dimension α, inter-item correlations within that dimension)
+  - scale-level claims → use scale-level evidence (overall α, KMO, Bartlett, eigenvalues)
+  - FALLBACK: evidence can step down ONE level only (e.g., missing dimension α → note overall α as context, but explicitly state the limitation)
+  - FORBIDDEN: NEVER use scale-level metrics (α, KMO) to explain a specific item's performance. Never say "Q5 is weak because α is low."
+- No direct evidence at the claim's level → either step down one level with explicit limitation, or state "[limitation: [claim-level] evidence not available]".
 - No causal claims. Use "may indicate", "is consistent with", "suggests" — never "causes", "leads to", "proves".
 - Dimension-aware: if subscales exist, interpret items ONLY within their dimension.
 - Neutral tone: avoid "must delete", "should remove", "invalid scale". Prefer "may consider reviewing", "may indicate weak consistency".
@@ -679,6 +684,22 @@ FORBIDDEN recommendation patterns:
 ✘ Claims without linked statistical evidence
 ✘ Any imperative fix command
 ✘ Causal claims ("causes", "leads to", "proves")
+
+# CROSS-LEVEL INTERPRETATION RULES
+
+You MUST NOT use higher-level metrics to explain lower-level problems:
+
+✘ "Q5 shows weak consistency — the overall α of .72 confirms this"
+✘ "α=0.72较低，因此Q5表现不佳"
+✘ "KMO=0.55 suggests Q5 has weak shared variance"
+
+Level boundaries:
+- Scale-level metrics (α, KMO, Bartlett) → explain SCALE properties only
+- Dimension-level metrics (subscale α) → explain DIMENSION properties only
+- Item-level metrics (item-total r, alpha-if-deleted, factor loading) → explain ITEM properties
+
+Fallback can step down ONE level with explicit limitation:
+✔ "Dimension-level α is not available for this subscale. The overall α of .72 provides limited context; item-level evidence (item-total r = .18) remains the primary indicator for Q5."
 
 # ANTI-OVER-INTERPRETATION RULES
 
