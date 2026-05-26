@@ -1,12 +1,12 @@
-# AI 信效度分析系统｜AI Reliability & Validity Analyzer
+# SurveyLens
 
-一个**完全本地运行**的 AI 问卷信效度分析工具。上传 CSV/Excel/Qualtrics 数据，自动完成信度分析、效度检验、因子分析、样本稳定性评估与 APA 格式结果生成。
+SurveyLens 是一个**完全本地运行**的 AI 问卷信效度分析工具。上传 CSV/Excel/Qualtrics 数据，自动完成信度分析、效度检验、因子分析、样本稳定性评估与 APA 格式结果生成。
 
 ---
 
 ## 在线体验（Live Demo）
 
-> 即将上线...
+👉 **[miao0-o.github.io/reliability-analysis-system](https://miao0-o.github.io/reliability-analysis-system/)**
 
 ---
 
@@ -19,7 +19,7 @@
 - 学术论文撰写需要 APA 格式输出
 - 现有工具缺乏智能化引导
 
-AI 信效度分析系统致力于解决这些痛点：
+SurveyLens 致力于解决这些痛点：
 
 - **零门槛操作**：拖拽上传 → 自动识别 → 一键分析 → AI 解读
 - **隐私保护**：所有统计计算在浏览器本地 Pyodide (WASM) 引擎中完成，数据不出电脑
@@ -97,7 +97,7 @@ AI 信效度分析系统致力于解决这些痛点：
 
 ```bash
 # 1. 克隆仓库
-git clone git@github.com:Miao0-o/reliability-analysis-system.git
+git clone https://github.com/Miao0-o/reliability-analysis-system.git
 cd reliability-analysis-system
 
 # 2. 安装前端依赖
@@ -157,8 +157,9 @@ src/
 
 - 所有文件解析、统计分析在浏览器本地执行
 - 统计计算通过 Pyodide (WebAssembly) 在 Web Worker 中完成
-- AI 解读仅提取结构化摘要（~500 字节），不含原始数据
-- Claude API Key 仅存储于浏览器 localStorage
+- AI 解读仅提取结构化摘要，不含原始数据
+- Claude API Key 仅存储于浏览器 sessionStorage
+- 15 分钟无操作自动清除分析数据
 
 ---
 
