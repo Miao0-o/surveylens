@@ -15,24 +15,24 @@
 
 ## Why SurveyLens
 
-Before you can run regressions or SEM, you need to know your scale works. Existing tools require installation, upload your data to a server, or leave you manually formatting APA tables. SurveyLens does all three in the browser — no install, no upload, instant results.
+Before you can run regressions or SEM, your scale needs to hold up. Existing tools require installation, upload your data to a server, or leave you manually formatting APA tables. SurveyLens handles all three — in the browser, with no install and no upload.
 
 ---
 
 ## Features
 
-- **One-click reliability** — Cronbach's α, per-dimension diagnostics, item-total correlations
-- **Validity & factor analysis** — KMO, Bartlett's test, EFA with scree plots and loading matrices
-- **Codebook-aware mapping** — Drop in a codebook (CSV, XLSX, SPSS, PDF, Markdown) and SurveyLens auto-maps text responses
-- **AI interpretation** — Evidence-traceable, research-oriented explanations with APA 7th edition output. Bilingual (EN/ZH)
-- **Zero data upload** — All computation runs locally via WebAssembly. Your data never leaves your browser
+- **Reliability** — Cronbach's α, per-dimension diagnostics, item-total correlations
+- **Validity & Factor** — KMO, Bartlett's test, EFA with scree plots and loading matrices
+- **Codebook-aware** — Drop a codebook (CSV, XLSX, SPSS, PDF, Markdown) and responses are auto-mapped to values
+- **AI interpretation** — Evidence-traceable explanations with APA 7th edition output. Bilingual (EN/ZH)
+- **Zero data upload** — All computation runs in-browser via WebAssembly. Your data never leaves your device
 
 ---
 
 ## How it works
 
 1. **Upload** your survey data (CSV, XLSX, SAV, DTA, or Qualtrics export)
-2. **Analyze** — reliability, validity, and factor structure computed in your browser via Pyodide
+2. **Analyze** — reliability, validity, and factor structure computed locally via Pyodide
 3. **Export** — APA-ready results and AI interpretation, ready for your manuscript
 
 ---
@@ -63,7 +63,7 @@ Core analysis runs with no configuration. AI interpretation requires an API key 
 
 ## Deployment
 
-Built as a static Next.js export. Deployed via GitHub Actions to GitHub Pages on every push to `main`.
+Static Next.js export. Deployed via GitHub Actions to GitHub Pages on every push to `main`.
 
 ---
 
