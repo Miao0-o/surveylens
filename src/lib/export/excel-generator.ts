@@ -15,7 +15,7 @@ export async function downloadExcel(
 
   // Sheet 1: Summary
   const summaryData: (string | number)[][] = [
-    ["AI Reliability & Validity Analysis Report"],
+    ["SurveyLens Analysis Report"],
     [""],
     ["Generated", new Date(results.meta.timestamp).toISOString()],
     ["Schema Version", results.meta.schemaVersion],

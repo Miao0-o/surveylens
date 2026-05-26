@@ -33,6 +33,7 @@ export interface DiagnosticReport {
     cronbach_alpha: number;
     problem_items: string[];
     reverse_item_risk: string[];
+    reason: string;
   };
   factorability: {
     score: number;
@@ -59,13 +60,19 @@ export interface DiagnosticReport {
     factor_analysis: boolean;
   };
   risk_flags: Array<{ type: "error" | "warning" | "info"; source: string; message: string }>;
-  recommendations: Array<{ issue: string; fix: string }>;
+  recommendations: Array<{ recommendation: string; impact: string; strength: "强推荐" | "建议" | "可选"; action: string; issue: string }>;
+  score_explanation: {
+    why_this_score: string;
+    stability_factors: string;
+    uncertainty_notes: string;
+  };
 }
 
 export function runDiagnostics(
   columns: ColumnInfo[],
   results: AnalysisResults | null,
-  lang: "zh" | "en" = "zh"
+  lang: "zh" | "en" = "zh",
+  freezeStats?: { confidence: number; mappedCells: number; totalCells: number } | null
 ): DiagnosticReport {
   const en = lang === "en";
   const likertCols = columns.filter((c) => c.type === "likert");
@@ -77,14 +84,15 @@ export function runDiagnostics(
     ? Math.max(...columns.map((c) => c.uniqueValues + c.missingCount))
     : 0;
 
-  const alpha = results?.reliability.cronbachsAlpha ?? 0;
-  const kmo = results?.validity.kmo ?? 0;
+  const alpha = results?.reliability._meta.status === "ok" ? (results.reliability.cronbachsAlpha) : 0;
+  const kmo = results?.validity._meta.status === "ok" ? (results.validity.kmo) : 0;
   const bartlettP = results?.validity.bartlettPValue ?? 1;
 
   // ==========================================
   // 1. Scale Quality (40%)
   // ==========================================
   let scaleScore = 0;
+  let scaleReason = "";
   if (alpha > 0) {
     if (alpha >= 0.90) scaleScore = 100;
     else if (alpha >= 0.80) scaleScore = 85;
@@ -92,15 +100,31 @@ export function runDiagnostics(
     else if (alpha >= 0.60) scaleScore = 50;
     else scaleScore = 25;
 
-    // Item penalties
-    if (results) {
-      let penaltyCount = 0;
-      for (const [, corr] of Object.entries(results.reliability.itemTotalCorrelation)) {
-        if (corr < 0.3 && corr >= 0) penaltyCount++;
-        if (corr < 0) penaltyCount += 2; // reverse item = double penalty
-      }
-      scaleScore = Math.max(0, scaleScore - penaltyCount * 5);
+    // No item-level penalties — Cronbach's α alone is the scale quality indicator.
+    // Reverse items, weak correlations etc. are detected separately.
+    // The researcher makes item-level decisions.
+  } else if (likertCols.length < 2) {
+    scaleReason = en
+      ? `Need ≥ 2 Likert items (found ${likertCols.length})`
+      : `需要 ≥ 2 个 Likert 题项 (当前 ${likertCols.length} 个)`;
+  } else if (results) {
+    const analyzerCols = columns.filter(c => c.type === "numeric" || c.type === "likert");
+    const textCols = columns.filter(c => c.type === "text" && c.uniqueValues <= 20);
+    if (freezeStats && freezeStats.confidence > 0) {
+      scaleReason = en
+        ? `α = 0 — Codebook applied (${(freezeStats.confidence*100).toFixed(0)}% mapped, ${freezeStats.mappedCells}/${freezeStats.totalCells} cells). Check for constant responses or scale invariance.`
+        : `α = 0 — 编码簿已应用 (${(freezeStats.confidence*100).toFixed(0)}% 已映射, ${freezeStats.mappedCells}/${freezeStats.totalCells} 单元格)。请检查是否存在固定应答或量表无变异。`;
+    } else if (textCols.length > 0 && analyzerCols.length === 0) {
+      scaleReason = en
+        ? `α = 0 — Found ${textCols.length} text/categorical columns but no numeric items. Upload a codebook to map labels to values.`
+        : `α = 0 — 发现 ${textCols.length} 个文本/分类列但无数值题项。请上传编码簿将文本标签映射为数值。`;
+    } else {
+      scaleReason = en
+        ? `α = 0 — ${analyzerCols.length} items analyzed. Check for constant responses or insufficient variance.`
+        : `α = 0 — 已分析 ${analyzerCols.length} 个题项。请检查是否存在固定应答或方差不足。`;
     }
+  } else {
+    scaleReason = en ? "Run analysis to compute α" : "请运行分析以计算 α";
   }
 
   const problemItems: string[] = [];
@@ -151,7 +175,7 @@ export function runDiagnostics(
     : (bartlettP < 0.05 ? "题项间相关显著 — 适合进行因子分析" : "不显著 — 变量可能不适合因子分析");
   const factorReadiness = en
     ? (kmo >= 0.80 ? "Good — factor analysis appropriate" : kmo >= 0.60 ? "Marginal — results may be unstable; interpret cautiously" : kmo > 0 ? "Poor — factor analysis not recommended" : "Not yet assessed")
-    : (kmo >= 0.80 ? "良好 — 适合因子分析" : kmo >= 0.60 ? "勉强 — 结果可能不稳定" : kmo > 0 ? "较差 — 不建议因子分析" : "尚未评估");
+    : (kmo >= 0.80 ? "良好 — 适合因子分析" : kmo >= 0.60 ? "勉强 — 结果可能不稳定" : kmo > 0 ? "较低 — 因子分析稳定性可能受限" : "尚未评估");
   const factorRisk = kmo >= 0.80 ? "low" : kmo >= 0.60 ? "moderate" : kmo > 0 ? "high" : "unknown";
   const factorSummary = kmo > 0
     ? `KMO = ${kmo.toFixed(3)} (${kmoInterpretation.toLowerCase()}). ${bartlettInterpretation}. ${factorReadiness}.`
@@ -220,22 +244,22 @@ export function runDiagnostics(
 
   // Risk flags
   const riskFlags: DiagnosticReport["risk_flags"] = [];
-  if (missingRate >= 0.10) riskFlags.push({ type: "warning", source: "data_quality", message: en ? `Missing rate ${(missingRate*100).toFixed(0)}% — consider imputation.` : `缺失率 ${(missingRate*100).toFixed(0)}% — 建议插补处理。` });
+  if (missingRate >= 0.10) riskFlags.push({ type: "warning", source: "data_quality", message: en ? `Missing rate ${(missingRate*100).toFixed(0)}% — imputation may be considered.` : `缺失率 ${(missingRate*100).toFixed(0)}%，可考虑插补处理。` });
   if (sampleSize < 100) riskFlags.push({ type: "warning", source: "data_quality", message: en ? `Small sample (N=${sampleSize}). Results may be unstable.` : `样本量较小 (N=${sampleSize})，结果可能不稳定。` });
   if (sampleSize < 30) riskFlags.push({ type: "error", source: "data_quality", message: en ? `N=${sampleSize} too small for reliable inference.` : `N=${sampleSize} 过小，无法进行可靠推断。` });
   if (alpha > 0 && alpha < 0.70) riskFlags.push({ type: "warning", source: "scale_quality", message: en ? `Low reliability (α=${alpha.toFixed(2)}). Review items.` : `信度偏低 (α=${alpha.toFixed(2)})，请检查题项。` });
   if (alpha > 0.95) riskFlags.push({ type: "info", source: "scale_quality", message: en ? `Very high α (${alpha.toFixed(2)}) — possible item redundancy.` : `α 极高 (${alpha.toFixed(2)}) — 可能存在题项冗余。` });
-  if (reverseRisks.length > 0) riskFlags.push({ type: "warning", source: "scale_quality", message: en ? `${reverseRisks.length} possible reverse-coded items detected.` : `检测到 ${reverseRisks.length} 个可能为反向计分的题项。` });
+  if (reverseRisks.length > 0) riskFlags.push({ type: "warning", source: "scale_quality", message: en ? `${reverseRisks.length} items may need direction verification.` : `检测到 ${reverseRisks.length} 个可能需要核实方向的题项。` });
   if (kmo > 0 && kmo < 0.60) riskFlags.push({ type: "error", source: "validity", message: en ? `KMO=${kmo.toFixed(2)} — factor analysis not appropriate.` : `KMO=${kmo.toFixed(2)} — 不适合因子分析。` });
   if (kmo > 0 && bartlettP >= 0.05) riskFlags.push({ type: "warning", source: "validity", message: en ? `Bartlett not significant — correlation matrix may be identity.` : `Bartlett 不显著 — 相关矩阵可能接近单位矩阵。` });
 
-  // Recommendations
+  // Recommendations — simple, actionable, decision-focused
   const recs: DiagnosticReport["recommendations"] = [];
-  if (missingRate >= 0.10) recs.push({ issue: en ? `Missing: ${(missingRate*100).toFixed(0)}%` : `缺失: ${(missingRate*100).toFixed(0)}%`, fix: en ? "Apply imputation or listwise deletion." : "应用插补法或整行删除处理。" });
-  if (sampleSize < 100) recs.push({ issue: en ? `N=${sampleSize} (small)` : `N=${sampleSize} (偏小)`, fix: en ? "Use bootstrap. Triangulate with other samples." : "使用 Bootstrap 方法，结合其他样本交叉验证。" });
-  if (alpha > 0 && alpha < 0.70) recs.push({ issue: en ? `Low α (${alpha.toFixed(2)})` : `α 偏低 (${alpha.toFixed(2)})`, fix: en ? "Remove weak items and re-test reliability." : "删除弱题项并重新测试信度。" });
-  if (reverseRisks.length > 0) recs.push({ issue: en ? `${reverseRisks.length} reverse-coded items` : `${reverseRisks.length} 个反向计分题项`, fix: en ? "Verify coding. Reverse-score if confirmed." : "核实计分方向，确认后重新编码并重跑。" });
-  if (kmo > 0 && kmo < 0.60) recs.push({ issue: en ? `KMO too low (${kmo.toFixed(2)})` : `KMO 过低 (${kmo.toFixed(2)})`, fix: en ? "Collect more data or remove problematic items." : "增加样本量或删除问题题项。" });
+  if (missingRate >= 0.10) recs.push({ issue: en ? `Missing: ${(missingRate*100).toFixed(0)}%` : `缺失: ${(missingRate*100).toFixed(0)}%`, recommendation: en ? "Review missing data patterns and consider imputation" : "检查缺失数据模式，可考虑插补处理", impact: en ? "May improve analysis stability" : "可能提升分析稳定性", strength: "强推荐", action: en ? "Handle missing" : "处理缺失" });
+  if (sampleSize < 100) recs.push({ issue: en ? `N=${sampleSize} (small)` : `N=${sampleSize} (偏小)`, recommendation: en ? "Use Bootstrap estimation to assess result stability" : "使用 Bootstrap 方法评估结果稳定性", impact: en ? "Helps assess whether results are stable" : "有助于判断结果是否稳定", strength: "建议", action: en ? "Bootstrap" : "Bootstrap" });
+  if (alpha > 0 && alpha < 0.70) recs.push({ issue: en ? `Low α (${alpha.toFixed(2)})` : `α 偏低 (${alpha.toFixed(2)})`, recommendation: en ? "Review items with low item-total correlations" : "检查题总相关较低的题项", impact: en ? "Item review may help identify sources of low consistency" : "题项检查可能有助于发现一致性偏低的原因", strength: "强推荐", action: en ? "Review items" : "检查题项" });
+  if (reverseRisks.length > 0) recs.push({ issue: en ? `${reverseRisks.length} items may need direction check` : `${reverseRisks.length} 个题项可能需要核实方向`, recommendation: en ? "Verify coding direction for potentially reverse-scored items" : "核实可能存在反向计分的题项方向", impact: en ? "Correct coding may improve scale consistency" : "正确计分可能提升量表一致性", strength: "建议", action: en ? "Verify items" : "核实题项" });
+  if (kmo > 0 && kmo < 0.60) recs.push({ issue: en ? `KMO too low (${kmo.toFixed(2)})` : `KMO 过低 (${kmo.toFixed(2)})`, recommendation: en ? "Review inter-item correlation structure" : "检查题项间相关结构", impact: en ? "May help identify items with low shared variance" : "可能有助于发现共享方差较低的题项", strength: "可选", action: en ? "Review" : "检查" });
 
   const bartlettLabel = kmo > 0
     ? (bartlettP < 0.001 ? "Significant, p < .001" : `p = ${bartlettP.toFixed(3)}`)
@@ -273,6 +297,7 @@ export function runDiagnostics(
       cronbach_alpha: alpha,
       problem_items: problemItems.slice(0, 10),
       reverse_item_risk: reverseRisks.slice(0, 10),
+      reason: scaleReason,
     },
     factorability: {
       score: factorabilityScore,
@@ -292,7 +317,28 @@ export function runDiagnostics(
     readiness,
     risk_flags: riskFlags,
     recommendations: recs,
+    score_explanation: buildScoreExplanation(alpha, likertCols.length, en),
   };
+}
+
+function buildScoreExplanation(alpha: number, itemCount: number, en: boolean) {
+  const why = alpha > 0
+    ? (en
+      ? `Cronbach's α = ${alpha.toFixed(3)}. Score mapping: α ≥ .90 → 100, ≥ .80 → 85, ≥ .70 → 70, ≥ .60 → 50, < .60 → 25. Current α falls in the ${alpha >= 0.9 ? "≥ .90" : alpha >= 0.8 ? "≥ .80" : alpha >= 0.7 ? "≥ .70" : alpha >= 0.6 ? "≥ .60" : "< .60"} range.`
+      : (en ? "α not computed." : `α 未计算。`))
+    : (en
+      ? `Cronbach's α not available — ${itemCount < 2 ? `only ${itemCount} Likert item(s), need ≥ 2` : "no analysis has been run"}.`
+      : `Cronbach's α 不可用 — ${itemCount < 2 ? `仅 ${itemCount} 个 Likert 题项，需要 ≥ 2` : "尚未运行分析"}。`);
+
+  const stability = en
+    ? `Score based solely on Cronbach's α. Does not factor in sample size, missing data, or factor structure — those are separate sub-scores.`
+    : `分数仅基于 Cronbach's α。未纳入样本量、缺失数据或因子结构——这些由其他子分数独立评估。`;
+
+  const uncertainty = en
+    ? `This score reflects internal consistency only. It does not assess construct validity, content validity, or test-retest reliability. Researchers should triangulate with other evidence.`
+    : `此分数仅反映内部一致性。不评估构念效度、内容效度或重测信度。研究者应结合其他证据综合判断。`;
+
+  return { why_this_score: why, stability_factors: stability, uncertainty_notes: uncertainty };
 }
 
 function computeVariability(columns: ColumnInfo[], en: boolean): {

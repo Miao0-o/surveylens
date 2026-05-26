@@ -30,12 +30,13 @@ export function CenterPanel() {
   const results = useAppStore((s) => s.results);
   const descriptiveResults = useAppStore((s) => s.descriptiveResults);
   const lang = useAppStore((s) => s.reportLanguage);
+  const en = lang === "en";
   const [activeTab, setActiveTab] = useState<string>("overview");
 
   const tl = (key: string) => t(key, lang);
 
   const activeModules = useMemo(() => results ? getActiveModules(results) : [], [results]);
-  const insights = useMemo(() => results ? getOneLineAPA(results) : {}, [results]);
+  const insights = useMemo(() => results ? getOneLineAPA(results, lang) : {}, [results, lang]);
   const summaryZH = useMemo(() => results ? getSummaryAPA(results, "zh") : "", [results]);
   const summaryEN = useMemo(() => results ? getSummaryAPA(results, "en") : "", [results]);
 
@@ -102,31 +103,52 @@ export function CenterPanel() {
       )}
 
       {activeTab === "reliability" && (
-        <ResultCard title="信度分析" insight={insights["reliability"]}>
-          <ReliabilityCard data={results.reliability} />
-        </ResultCard>
+        results.reliability._meta.status === "ok" ? (
+          <ResultCard title={t("section.reliability", lang)} insight={insights["reliability"]}>
+            <ReliabilityCard data={results.reliability} />
+          </ResultCard>
+        ) : (
+          <UnavailableCard
+            title={t("section.reliability", lang)}
+            reason={results.reliability._meta.reason}
+          />
+        )
       )}
 
       {activeTab === "validity" && (
-        <ResultCard title="效度分析" insight={insights["validity"]}>
-          <ValidityCard data={results.validity} />
-          <div className="mt-4">
-            <CorrelationHeatmap data={results.validity} />
-          </div>
-        </ResultCard>
+        results.validity._meta.status === "ok" ? (
+          <ResultCard title={t("section.validity", lang)} insight={insights["validity"]}>
+            <ValidityCard data={results.validity} />
+            <div className="mt-4">
+              <CorrelationHeatmap data={results.validity} />
+            </div>
+          </ResultCard>
+        ) : (
+          <UnavailableCard
+            title={t("section.validity", lang)}
+            reason={results.validity._meta.reason}
+          />
+        )
       )}
 
       {activeTab === "efa" && (
-        <ResultCard title="因子分析" insight={insights["efa"]}>
-          <EFACard data={results.efa} />
-          <div className="mt-4">
-            <FactorStructure data={results.efa} />
-          </div>
-        </ResultCard>
+        results.efa._meta.status === "ok" ? (
+          <ResultCard title={t("section.efa", lang)} insight={insights["efa"]}>
+            <EFACard data={results.efa} />
+            <div className="mt-4">
+              <FactorStructure data={results.efa} />
+            </div>
+          </ResultCard>
+        ) : (
+          <UnavailableCard
+            title={t("section.efa", lang)}
+            reason={results.efa._meta.reason}
+          />
+        )
       )}
 
       {activeTab === "descriptive" && descriptiveResults && (
-        <ResultCard title="描述性统计" insight={insights["descriptive"]}>
+        <ResultCard title={t("section.descriptive", lang)} insight={insights["descriptive"]}>
           <DescriptiveCard
             data={descriptiveResults as unknown as { n: number; mean: number | null; sd: number | null; min: number | null; max: number | null; skew: number | null; kurtosis: number | null }[]}
             labels={results.efa.itemLabels}
@@ -135,15 +157,15 @@ export function CenterPanel() {
       )}
 
       {activeTab === "correlation" && (
-        <ResultCard title="相关性分析" insight={insights["correlation"]}>
-          <ChartWrapper title="相关矩阵热力图">
+        <ResultCard title={t("section.correlation", lang)} insight={insights["correlation"]}>
+          <ChartWrapper title={t("section.heatmap", lang)}>
             <CorrelationHeatmap data={results.validity} />
           </ChartWrapper>
         </ResultCard>
       )}
 
       {activeTab === "stability" && (
-        <ResultCard title="样本稳定性" insight={insights["stability"]}>
+        <ResultCard title={t("section.stability", lang)} insight={insights["stability"]}>
           <StabilityCard data={results.stability} />
         </ResultCard>
       )}
@@ -174,5 +196,21 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
     >
       {children}
     </button>
+  );
+}
+
+function UnavailableCard({ title, reason }: { title: string; reason: string }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-secondary/20 border border-border/50">
+        <div className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center shrink-0">
+          <div className="w-3 h-3 rounded-full border-2 border-muted-foreground/30" />
+        </div>
+        <div>
+          <p className="text-xs font-medium text-foreground">{title}</p>
+          <p className="text-[10px] text-muted-foreground/70 mt-0.5">{reason}</p>
+        </div>
+      </div>
+    </div>
   );
 }

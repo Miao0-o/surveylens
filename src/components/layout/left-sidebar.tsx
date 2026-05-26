@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { FileUploader } from "@/components/upload/file-uploader";
+import { CodebookUploader } from "@/components/upload/codebook-uploader";
 import { GuidedResearchSetup } from "@/components/upload/guided-research-setup";
 import { ResearchDesignReview } from "@/components/upload/research-design-review";
 import { MissingHandler } from "@/components/preprocessing/missing-handler";
@@ -29,12 +29,15 @@ const STEPS: { id: LeftStep; label: string; icon: typeof Upload }[] = [
 export function LeftSidebar() {
   const pipelineState = useAppStore((s) => s.pipelineState);
   const hasData = useAppStore((s) => s.rawData !== null);
+  const codebook = useAppStore((s) => s.codebook);
+  const setCodebook = useAppStore((s) => s.setCodebook);
   const design = useAppStore((s) => s.researchDesign);
   const designConfirmed = useAppStore((s) => s.designConfirmed);
   const classification = useAppStore((s) => s.classification);
   const analysisMode = useAppStore((s) => s.analysisMode);
   const setAnalysisMode = useAppStore((s) => s.setAnalysisMode);
-  const [activeStep, setActiveStep] = useState<LeftStep>("upload");
+  const activeStep = useAppStore((s) => s.leftStep) as LeftStep;
+  const setActiveStep = useAppStore((s) => s.setLeftStep);
 
   return (
     <div className="flex flex-col h-full gap-5">
@@ -101,6 +104,10 @@ export function LeftSidebar() {
         {activeStep === "upload" && (
           <div className="space-y-4">
             <FileUploader />
+            <CodebookUploader
+              codebook={codebook}
+              onChange={setCodebook}
+            />
             {/* Research setup: only in custom mode */}
             {hasData && analysisMode === "custom" && <GuidedResearchSetup />}
             {hasData && analysisMode === "custom" && design?.analysisIntent && design.outcomeVariables.length > 0 && (
@@ -201,7 +208,7 @@ function QuickModeSummary() {
         <span className="text-xs font-medium text-emerald-700">自动检测结果</span>
       </div>
       <p className="text-[11px] text-emerald-600/80">
-        已识别 {likertColumns.length} 个 Likert 题项，将自动进行信效度分析
+        已识别 {likertColumns.length} 个 Likert 题项，将自动进行分析
       </p>
       {classification && classification.metadataColumns.length > 0 && (
         <p className="text-[10px] text-emerald-500/60 mt-1">

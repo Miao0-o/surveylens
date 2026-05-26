@@ -48,7 +48,7 @@ export function validateResults(results: AnalysisResults, lang: "zh" | "en" = "z
       type: "warning", source: "reliability", code: "RELIABILITY_REDUNDANT",
       message: en
         ? `Cronbach's α = ${alpha.toFixed(3)} — extremely high. Items may be redundant.`
-        : `Cronbach's α = ${alpha.toFixed(3)} — 极高，题项可能存在冗余，建议检查重复内容。`,
+        : `Cronbach's α = ${alpha.toFixed(3)} — 极高，可能存在题项内容重叠。`,
     });
   }
 
@@ -63,8 +63,8 @@ export function validateResults(results: AnalysisResults, lang: "zh" | "en" = "z
     flags.push({
       type: "warning", source: "reliability", code: "RELIABILITY_MARGINAL",
       message: en
-        ? `Cronbach's α = ${alpha.toFixed(3)} — marginally low. Consider scale revision.`
-        : `Cronbach's α = ${alpha.toFixed(3)} — 偏低，建议修订量表。`,
+        ? `Cronbach's α = ${alpha.toFixed(3)} — marginally low. Item review may be informative.`
+        : `Cronbach's α = ${alpha.toFixed(3)} — 内部一致性偏低。`,
     });
   }
 
@@ -73,8 +73,8 @@ export function validateResults(results: AnalysisResults, lang: "zh" | "en" = "z
       flags.push({
         type: "info", source: "reliability", code: "ALPHA_IMPROVE_IF_DELETED",
         message: en
-          ? `Removing "${item}" would increase α from ${alpha.toFixed(3)} to ${alphaIfDel.toFixed(3)}.`
-          : `删除 "${item}" 可能将 α 从 ${alpha.toFixed(3)} 提升至 ${alphaIfDel.toFixed(3)}。`,
+          ? `Excluding "${item}" from the scale, α would change from ${alpha.toFixed(3)} to ${alphaIfDel.toFixed(3)}.`
+          : `若排除 "${item}"，α 预估从 ${alpha.toFixed(3)} 变化至 ${alphaIfDel.toFixed(3)}。`,
       });
     }
   }
@@ -85,7 +85,7 @@ export function validateResults(results: AnalysisResults, lang: "zh" | "en" = "z
         type: "warning", source: "reliability", code: "LOW_ITEM_TOTAL",
         message: en
           ? `"${item}" has low item-total correlation (r = ${corr.toFixed(3)}). Consider review.`
-          : `"${item}" 题总相关偏低 (r = ${corr.toFixed(3)})，建议检查。`,
+          : `"${item}" 题总相关偏低 (r = ${corr.toFixed(3)})，可进一步关注。`,
       });
     }
     if (corr < 0) {
@@ -93,7 +93,7 @@ export function validateResults(results: AnalysisResults, lang: "zh" | "en" = "z
       flags.push({
         type: "error", source: "reliability", code: "REVERSE_CODING_PROBLEM",
         message: en
-          ? `"${item}" has negative item-total correlation (r = ${corr.toFixed(3)}) — likely reverse-coding problem. Verify scoring direction.`
+          ? `"${item}" has negative item-total correlation (r = ${corr.toFixed(3)}) — may indicate a coding direction difference. Scoring direction can be verified.`
           : `"${item}" 题总相关为负值 (r = ${corr.toFixed(3)}) — 可能存在反向计分错误，请核实计分方向。`,
       });
     }
@@ -105,7 +105,7 @@ export function validateResults(results: AnalysisResults, lang: "zh" | "en" = "z
     flags.push({
       type: "error", source: "validity", code: "KMO_UNACCEPTABLE",
       message: en
-        ? `KMO = ${kmo.toFixed(3)} — factor analysis is not appropriate for this data.`
+        ? `KMO = ${kmo.toFixed(3)} — factor analysis assumptions may not be fully met.`
         : `KMO = ${kmo.toFixed(3)} — 因子分析不适用于当前数据。`,
     });
   } else if (kmo < 0.60) {
@@ -122,8 +122,8 @@ export function validateResults(results: AnalysisResults, lang: "zh" | "en" = "z
       flags.push({
         type: "warning", source: "validity", code: "ITEM_KMO_LOW",
         message: en
-          ? `"${item}" has low KMO (${itemKmo.toFixed(3)}) — consider removing from factor analysis.`
-          : `"${item}" KMO 值偏低 (${itemKmo.toFixed(3)}) — 建议从因子分析中移除。`,
+          ? `"${item}" has low KMO (${itemKmo.toFixed(3)}) — its contribution to factor structure may be limited.`
+          : `"${item}" KMO 值偏低 (${itemKmo.toFixed(3)}) — 该题项在因子分析中的贡献可能有限。`,
       });
     }
   }
@@ -182,7 +182,7 @@ export function validateResults(results: AnalysisResults, lang: "zh" | "en" = "z
       type: "warning", source: "stability", code: "UNSTABLE_SOLUTION",
       message: en
         ? "Bootstrap stability indicates an unstable factor solution. Consider larger sample size."
-        : "Bootstrap 稳定性显示因子结构不稳定，建议增大样本量。",
+        : "Bootstrap 稳定性显示因子结构波动较大，更大样本量可能提升稳定性。",
     });
   }
 
@@ -200,7 +200,7 @@ export function validateResults(results: AnalysisResults, lang: "zh" | "en" = "z
       type: "error", source: "stability", code: "SAMPLE_TOO_SMALL",
       message: en
         ? `N = ${meta.sampleSize} — too small for reliable factor analysis. Minimum 100 recommended.`
-        : `N = ${meta.sampleSize} — 样本量过小，无法进行可靠的因子分析，建议至少 100 份。`,
+        : `N = ${meta.sampleSize} — 样本量较小，因子分析结果稳定性可能受限。通常 N ≥ 100 时结果更稳定。`,
     });
   } else if (meta.sampleSize < 100) {
     flags.push({

@@ -1,7 +1,7 @@
 "use client";
 
 import { useAppStore } from "@/lib/store";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Check } from "lucide-react";
 import { useMemo } from "react";
 
 export function MissingHandler() {
@@ -9,6 +9,9 @@ export function MissingHandler() {
   const columns = useAppStore((s) => s.columns);
   const missingStrategy = useAppStore((s) => s.missingStrategy);
   const setMissingStrategy = useAppStore((s) => s.setMissingStrategy);
+  const repair = useAppStore((s) => s.repair);
+  const applyFix = useAppStore((s) => s.applyFix);
+  const setRepairAction = useAppStore((s) => s.setRepairAction);
 
   const missingSummary = useMemo(() => {
     if (!rawData) return null;
@@ -147,6 +150,28 @@ export function MissingHandler() {
             })}
           </div>
         </div>
+      )}
+
+      {/* Apply fix button — only visible when repair workflow is active */}
+      {repair.currentAction === "missing" && (
+        <button
+          onClick={() => {
+            applyFix("missing");
+            setRepairAction(null);
+          }}
+          disabled={repair.appliedFixes.missing}
+          className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+            repair.appliedFixes.missing
+              ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
+              : "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20"
+          }`}
+        >
+          {repair.appliedFixes.missing ? (
+            <><Check className="w-3.5 h-3.5" /> 已应用缺失值修复</>
+          ) : (
+            <>应用修复（{missingStrategy.method === "mean_imputation" ? "均值填补" : "整行删除"} · 阈值 {Math.round(missingStrategy.threshold * 100)}%）</>
+          )}
+        </button>
       )}
     </div>
   );

@@ -32,7 +32,7 @@ export interface AnalysisModule {
   /** Required data shape for this module to render */
   isAvailable: (results: AnalysisResults) => boolean;
   /** Generate one-line APA insight from results */
-  apaInsight: (results: AnalysisResults) => string | null;
+  apaInsight: (results: AnalysisResults, lang: "zh" | "en") => string | null;
 }
 
 // ---- Unified Result Card Props ----

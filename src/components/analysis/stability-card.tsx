@@ -1,6 +1,7 @@
 "use client";
 
 import type { StabilityResult } from "@/types";
+import { useAppStore } from "@/lib/store";
 import { InfoTip } from "./stat-tooltip";
 import { ChartWrapper } from "./chart-wrapper";
 import {
@@ -18,37 +19,46 @@ interface Props {
   data: StabilityResult;
 }
 
-const levelConfig = {
-  stable: { label: "稳定", color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100" },
-  moderate: { label: "中等", color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
-  unstable: { label: "不稳定", color: "text-red-600", bg: "bg-red-50", border: "border-red-100" },
+const levelLabels: Record<string, { zh: string; en: string }> = {
+  stable: { zh: "稳定", en: "Stable" },
+  moderate: { zh: "中等", en: "Moderate" },
+  unstable: { zh: "不稳定", en: "Unstable" },
+};
+
+const levelColors: Record<string, { color: string; bg: string; border: string }> = {
+  stable: { color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100" },
+  moderate: { color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
+  unstable: { color: "text-red-600", bg: "bg-red-50", border: "border-red-100" },
 };
 
 export function StabilityCard({ data }: Props) {
-  const config = levelConfig[data.stabilityLevel];
+  const lang = useAppStore((s) => s.reportLanguage);
+  const en = lang === "en";
+  const cfg = levelColors[data.stabilityLevel];
+  const label = levelLabels[data.stabilityLevel]?.[lang === "en" ? "en" : "zh"] ?? data.stabilityLevel;
 
   return (
     <div className="space-y-4">
       {/* Status badge */}
       <div className="flex items-center gap-3">
         <div
-          className={`px-3 py-1.5 rounded-lg ${config.bg} ${config.border} border`}
+          className={`px-3 py-1.5 rounded-lg ${cfg.bg} ${cfg.border} border`}
         >
-          <span className={`text-sm font-semibold ${config.color}`}>
-            {config.label}
+          <span className={`text-sm font-semibold ${cfg.color}`}>
+            {label}
           </span>
         </div>
         <div>
           <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-            推荐样本量:{" "}
+            {en ? "Recommended N: " : "推荐样本量: "}
             <span className="text-foreground font-semibold">
               {data.recommendedSampleSize}
             </span>
-            <InfoTip text="Bootstrap 稳定性拐点对应的样本量。低于此值时 α 估计可能不稳定。经验法则：≥ 100 为可接受，≥ 200 为良好。" />
+            <InfoTip text={en ? "Sample size at the Bootstrap stability elbow. Below this, α estimates may be unstable. Rule of thumb: ≥ 100 acceptable, ≥ 200 good." : "Bootstrap 稳定性拐点对应的样本量。低于此值时 α 估计可能不稳定。经验法则：≥ 100 为可接受，≥ 200 为良好。"} />
           </p>
           {data.elbowPoint && (
             <p className="text-[10px] text-muted-foreground/70">
-              拐点位置: n = {data.elbowPoint}
+              {en ? "Elbow point: n = " : "拐点位置: n = "}{data.elbowPoint}
             </p>
           )}
         </div>
@@ -56,7 +66,7 @@ export function StabilityCard({ data }: Props) {
 
       {/* Stability curve */}
       {data.alphaCurve.length > 0 && (
-        <ChartWrapper title="样本稳定性曲线">
+        <ChartWrapper title={en ? "Stability Curve" : "样本稳定性曲线"}>
           <div className="h-[160px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart

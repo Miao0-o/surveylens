@@ -2,7 +2,7 @@
 
 import { useAppStore } from "@/lib/store";
 import { classifyDataset } from "@/lib/stats/data-classifier";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import type { ColumnInfo } from "@/types";
 
 function profileColumns(
@@ -68,19 +68,30 @@ function profileColumns(
 
 export function DataPreview() {
   const rawData = useAppStore((s) => s.rawData);
+  const codebook = useAppStore((s) => s.codebook);
   const setColumns = useAppStore((s) => s.setColumns);
   const setLikertColumns = useAppStore((s) => s.setLikertColumns);
 
   const columns = useMemo(() => {
     if (!rawData) return [];
-    const cols = profileColumns(rawData.headers, rawData.rows);
-    setColumns(cols);
-    setLikertColumns(cols.filter((c) => c.type === "likert").map((c) => c.name));
-    // Run data classification
-    const classResult = classifyDataset(cols, rawData);
-    useAppStore.getState().setClassification(classResult);
-    return cols;
-  }, [rawData, setColumns, setLikertColumns]);
+    const profiled = profileColumns(rawData.headers, rawData.rows);
+    // Single source of truth: codebook is authoritative for mapped columns.
+    const authoritative = profiled.map((c) => ({
+      ...c,
+      type: codebook?.questions[c.name] ? ("likert" as const) : c.type,
+    }));
+    return authoritative;
+  }, [rawData, codebook]);
+
+  // Side-effects: update store-derived state when columns change
+  useEffect(() => {
+    if (columns.length > 0 && rawData) {
+      setColumns(columns);
+      setLikertColumns(columns.filter((c) => c.type === "likert").map((c) => c.name));
+      const classResult = classifyDataset(columns, rawData);
+      useAppStore.getState().setClassification(classResult);
+    }
+  }, [columns, rawData, setColumns, setLikertColumns]);
 
   if (!rawData) return null;
 

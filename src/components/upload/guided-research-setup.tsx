@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useAppStore } from "@/lib/store";
 import type { AnalysisIntent, ResearchDesign } from "@/types";
+import { classifyAll, getTypeBadge, computeAnalysisAvailability } from "@/lib/stats/variable-classifier";
 import { ChevronRight, ChevronLeft, Check, Target, Users, Lightbulb, FileText, MessageSquare, Calculator, Layers, Plus, X } from "lucide-react";
 
 const INTENT_OPTIONS: { value: AnalysisIntent; label: string; desc: string; icon: typeof Target }[] = [
@@ -230,20 +231,34 @@ function ConstructStep({
     else update({ predictorVariables: vars });
   };
 
-  const likertCols = useMemo(() => {
-    const headers = rawData?.headers ?? [];
-    // For outcome step, exclude already-selected predictors
+  const allHeaders = rawData?.headers ?? [];
+  const storeColumns = useAppStore((s) => s.columns);
+  const codebook = useAppStore((s) => s.codebook);
+  const lang = useAppStore((s) => s.reportLanguage);
+
+  const varMeta = useMemo(() =>
+    classifyAll(storeColumns, allHeaders, codebook),
+    [storeColumns, allHeaders, codebook]
+  );
+
+  // Show ALL columns from the dataset
+  const availableCols = useMemo(() => {
     if (isOutcome) {
-      return headers.filter((c) => !(design?.predictorVariables ?? []).includes(c));
+      return allHeaders.filter((c) => !(design?.predictorVariables ?? []).includes(c));
     }
-    // For predictor step, exclude already-selected outcomes
-    return headers.filter((c) => !(design?.outcomeVariables ?? []).some((v) => v === c || v.startsWith(c + " ")));
-  }, [rawData, design?.predictorVariables, design?.outcomeVariables, isOutcome]);
+    return allHeaders.filter((c) => !(design?.outcomeVariables ?? []).some((v) => v === c || v.startsWith(c + " ")));
+  }, [allHeaders, design?.predictorVariables, design?.outcomeVariables, isOutcome]);
 
   // Current composite group name
   const [compositeName, setCompositeName] = useState("");
   const [compositeMode, setCompositeMode] = useState<CompositeMode>("mean");
   const [compositeItems, setCompositeItems] = useState<string[]>([]);
+
+  // Analysis availability matrix
+  const analysisMatrix = useMemo(() =>
+    computeAnalysisAvailability(selected, varMeta),
+    [selected, varMeta]
+  );
 
   const addComposite = () => {
     if (!compositeName.trim() || compositeItems.length < 2) return;
@@ -333,23 +348,40 @@ function ConstructStep({
         />
 
         {/* Item selection for composite */}
-        <div className="max-h-[100px] overflow-y-auto space-y-0.5">
-          {likertCols.map((col) => {
+        <div className="max-h-[200px] overflow-y-auto space-y-0.5">
+          {availableCols.map((col) => {
+            const meta = varMeta.get(col);
+            const badge = meta ? getTypeBadge(meta.semanticType, lang) : null;
             const inComposite = compositeItems.includes(col);
+            const eligible = meta?.eligibleAnalyses.reliability !== "unavailable";
             return (
               <button
                 key={col}
-                onClick={() => toggleCompositeItem(col)}
+                onClick={() => eligible && toggleCompositeItem(col)}
+                disabled={!eligible}
+                title={!eligible && meta ? meta.eligibilityReason : (badge?.tooltip ?? "")}
                 className={`w-full flex items-center gap-1.5 px-2 py-1 rounded text-[10px] ${
+                  !eligible ? "text-muted-foreground/40 cursor-not-allowed" :
                   inComposite ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary/50"
                 }`}
               >
                 <div className={`w-3 h-3 rounded border flex items-center justify-center shrink-0 ${
+                  !eligible ? "border-muted-foreground/20" :
                   inComposite ? "bg-primary border-primary" : "border-muted-foreground/30"
                 }`}>
                   {inComposite && <Check className="w-2 h-2 text-white" strokeWidth={2.5} />}
                 </div>
-                {col}
+                <span className="flex-1 truncate">{col}</span>
+                {badge && (
+                  <span className={`text-[8px] px-1 py-0 rounded border ${badge.color} shrink-0`} title={badge.tooltip}>
+                    {badge.label}
+                  </span>
+                )}
+                {!eligible && meta && (
+                  <span className="text-[7px] text-muted-foreground/50 shrink-0">
+                    {lang === "en" ? "excluded" : "不可用"}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -366,29 +398,77 @@ function ConstructStep({
         </button>
       </div>
 
+      {/* Analysis availability matrix */}
+      {selected.length > 0 && (
+        <div className="space-y-1 px-2 py-1.5 rounded bg-secondary/20 border border-border/50">
+          <span className="text-[9px] text-muted-foreground">
+            {lang === "en" ? "Analysis availability:" : "可用分析："}
+          </span>
+          <div className="flex flex-wrap gap-1">
+            {(["descriptive", "reliability", "validity", "efa", "correlation", "regression"] as const).map((a) => {
+              const key = a === "validity" ? "efa" : a;
+              const info = analysisMatrix[key];
+              const ok = info?.available;
+              return (
+                <span key={a} className={`text-[8px] px-1.5 py-0.5 rounded-full border ${
+                  ok ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-gray-50 text-gray-400 border-gray-100"
+                }`}>
+                  {ok ? "✓" : "✕"} {a === "descriptive" ? (lang === "en" ? "Descriptive" : "描述") :
+                     a === "reliability" ? (lang === "en" ? "Reliability" : "信度") :
+                     a === "validity" ? (lang === "en" ? "Validity" : "效度") :
+                     a === "efa" ? (lang === "en" ? "EFA" : "因子") :
+                     a === "correlation" ? (lang === "en" ? "Correlation" : "相关") :
+                     (lang === "en" ? "Regression" : "回归")}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Direct item selection */}
       <div>
         <div className="flex items-center gap-1.5 mb-1.5">
           <Layers className="w-3 h-3 text-muted-foreground" strokeWidth={1.5} />
           <span className="text-[10px] text-muted-foreground">或直接选择题项</span>
         </div>
-        <div className="max-h-[100px] overflow-y-auto space-y-0.5">
-          {likertCols.slice(0, 20).map((col) => (
-            <button
-              key={col}
-              onClick={() => toggleItem(col)}
-              className={`w-full flex items-center gap-1.5 px-2 py-1 rounded text-[10px] ${
-                selected.includes(col) ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-secondary/50"
-              }`}
-            >
-              <div className={`w-3 h-3 rounded border flex items-center justify-center shrink-0 ${
-                selected.includes(col) ? "bg-primary border-primary" : "border-muted-foreground/30"
-              }`}>
-                {selected.includes(col) && <Check className="w-2 h-2 text-white" strokeWidth={2.5} />}
-              </div>
-              {col}
-            </button>
-          ))}
+        <div className="max-h-[250px] overflow-y-auto space-y-0.5">
+          {availableCols.map((col) => {
+            const meta = varMeta.get(col);
+            const badge = meta ? getTypeBadge(meta.semanticType, lang) : null;
+            const isSelected = selected.includes(col);
+            const eligible = meta ? (meta.eligibleAnalyses.descriptive !== "unavailable") : true;
+            return (
+              <button
+                key={col}
+                onClick={() => eligible && toggleItem(col)}
+                disabled={!eligible}
+                title={!eligible && meta ? meta.eligibilityReason : (badge?.tooltip ?? "")}
+                className={`w-full flex items-center gap-1.5 px-2 py-1 rounded text-[10px] ${
+                  !eligible ? "text-muted-foreground/40 cursor-not-allowed" :
+                  isSelected ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-secondary/50"
+                }`}
+              >
+                <div className={`w-3 h-3 rounded border flex items-center justify-center shrink-0 ${
+                  !eligible ? "border-muted-foreground/20" :
+                  isSelected ? "bg-primary border-primary" : "border-muted-foreground/30"
+                }`}>
+                  {isSelected && <Check className="w-2 h-2 text-white" strokeWidth={2.5} />}
+                </div>
+                <span className="flex-1 truncate">{col}</span>
+                {badge && (
+                  <span className={`text-[8px] px-1 py-0 rounded border ${badge.color} shrink-0`} title={badge.tooltip}>
+                    {badge.label}
+                  </span>
+                )}
+                {!eligible && meta && (
+                  <span className="text-[7px] text-muted-foreground/50 shrink-0">
+                    {lang === "en" ? "excluded" : "不可用"}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 

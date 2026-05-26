@@ -17,8 +17,12 @@ export const analysisModules: AnalysisModule[] = [
     intents: ["explore", "validate"],
     sourceStep: "descriptive",
     isAvailable: (r) => r.meta.sampleSize > 0,
-    apaInsight: (r) => {
+    apaInsight: (r, lang) => {
       const a = r.reliability.cronbachsAlpha;
+      if (lang === "zh") {
+        if (a <= 0) return `共${r.meta.sampleSize}份样本、${r.meta.itemCount}个测量题项。`;
+        return `共${r.meta.sampleSize}份样本、${r.meta.itemCount}个题项，平均α＝${a.toFixed(2)}。`;
+      }
       if (a <= 0) return `N = ${r.meta.sampleSize}, ${r.meta.itemCount} items analyzed.`;
       return `N = ${r.meta.sampleSize}, ${r.meta.itemCount} items. Mean α = ${a.toFixed(2)}.`;
     },
@@ -28,10 +32,14 @@ export const analysisModules: AnalysisModule[] = [
     label: "信度",
     intents: ["validate"],
     sourceStep: "reliability",
-    isAvailable: (r) => r.reliability.cronbachsAlpha > 0,
-    apaInsight: (r) => {
+    isAvailable: (r) => r.reliability._meta.status === "ok",
+    apaInsight: (r, lang) => {
       const a = r.reliability.cronbachsAlpha;
       if (a <= 0) return null;
+      if (lang === "zh") {
+        const level = a >= 0.90 ? "优秀" : a >= 0.80 ? "良好" : a >= 0.70 ? "尚可" : "偏低";
+        return `Cronbach's α系数为${a.toFixed(2)}，内部一致性${level}。`;
+      }
       return `Cronbach's α indicated ${alphaLabel(a)} internal consistency (α = ${a.toFixed(2)}).`;
     },
   },
@@ -40,9 +48,13 @@ export const analysisModules: AnalysisModule[] = [
     label: "效度",
     intents: ["validate"],
     sourceStep: "validity",
-    isAvailable: (r) => r.validity.kmo > 0,
-    apaInsight: (r) => {
+    isAvailable: (r) => r.validity._meta.status === "ok",
+    apaInsight: (r, lang) => {
       const v = r.validity;
+      if (lang === "zh") {
+        const sig = v.bartlettPValue < 0.001 ? "p＜0.001" : v.bartlettPValue < 0.05 ? `p＝${v.bartlettPValue.toFixed(3)}` : `p＝${v.bartlettPValue.toFixed(3)} (不显著)`;
+        return `KMO＝${v.kmo.toFixed(2)}；Bartlett球形检验${sig}。`;
+      }
       const sig = v.bartlettPValue < 0.001 ? "p < .001" : v.bartlettPValue < 0.05 ? `p = ${v.bartlettPValue.toFixed(3)}` : `p = ${v.bartlettPValue.toFixed(3)} (n.s.)`;
       return `KMO = ${v.kmo.toFixed(2)}; Bartlett's test ${sig}.`;
     },
@@ -52,11 +64,19 @@ export const analysisModules: AnalysisModule[] = [
     label: "因子",
     intents: ["validate", "explore"],
     sourceStep: "efa",
-    isAvailable: (r) => r.efa.suggestedFactors > 0,
-    apaInsight: (r) => {
+    isAvailable: (r) => r.efa._meta.status === "ok",
+    apaInsight: (r, lang) => {
       const e = r.efa;
       const tv = (e.varianceExplained.reduce((a, b) => a + b, 0) * 100).toFixed(1);
-      return `EFA (${e.rotation}) suggested ${e.suggestedFactors} factor(s), explaining ${tv}% of variance.`;
+      const displayN = e.suggestedFactors;
+      const kaiserN = e.metadata?.raw_factor_estimation?.kaiser_n ?? displayN;
+      if (lang === "zh") {
+        const w = (n: number) => n <= 9 ? ["", "一", "两", "三", "四", "五", "六", "七", "八", "九"][n] ?? String(n) : String(n);
+        const base = `探索性因子分析（${e.rotation}）：Kaiser准则建议${kaiserN}个因子，累计解释${tv}%方差。`;
+        return kaiserN !== displayN ? `${base}为可解释性显示${w(displayN)}个因子。` : base;
+      }
+      const base = `EFA (${e.rotation}): Kaiser criterion suggested ${kaiserN} factor(s), explaining ${tv}% of variance.`;
+      return kaiserN !== displayN ? `${base} Showing ${displayN} factors for interpretability.` : base;
     },
   },
   {
@@ -65,10 +85,9 @@ export const analysisModules: AnalysisModule[] = [
     intents: ["explore", "validate", "relationship"],
     sourceStep: "correlation",
     isAvailable: (r) => r.validity.correlationMatrix.length > 0,
-    apaInsight: (r) => {
+    apaInsight: (r, lang) => {
       const cm = r.validity.correlationMatrix;
       if (cm.length < 2) return null;
-      // Find strongest non-diagonal correlation
       let maxR = 0; let maxI = 0; let maxJ = 0;
       for (let i = 0; i < cm.length; i++) {
         for (let j = 0; j < cm[i].length; j++) {
@@ -78,8 +97,14 @@ export const analysisModules: AnalysisModule[] = [
         }
       }
       const labels = r.validity.columnLabels;
+      const li = labels[maxI] ?? `V${maxI+1}`;
+      const lj = labels[maxJ] ?? `V${maxJ+1}`;
+      if (lang === "zh") {
+        const dir = maxR > 0 ? "正相关" : "负相关";
+        return `最强相关：${li}与${lj}呈${dir}（r＝${maxR.toFixed(2)}）。`;
+      }
       const dir = maxR > 0 ? "positively" : "negatively";
-      return `Strongest correlation: ${labels[maxI] ?? `V${maxI+1}`} was ${dir} related to ${labels[maxJ] ?? `V${maxJ+1}`} (r = ${maxR.toFixed(2)}).`;
+      return `Strongest correlation: ${li} was ${dir} related to ${lj} (r = ${maxR.toFixed(2)}).`;
     },
   },
   {
@@ -88,8 +113,12 @@ export const analysisModules: AnalysisModule[] = [
     intents: ["validate"],
     sourceStep: "stability",
     isAvailable: (r) => r.stability.stabilityLevel !== "unstable" || r.stability.recommendedSampleSize > 0,
-    apaInsight: (r) => {
+    apaInsight: (r, lang) => {
       const s = r.stability;
+      if (lang === "zh") {
+        const sl = s.stabilityLevel === "stable" ? "稳定" : s.stabilityLevel === "moderate" ? "一般" : "不稳定";
+        return `Bootstrap（${s.bootstrapSamples}次）显示因子结构${sl}；建议N≥${s.recommendedSampleSize}。`;
+      }
       return `Bootstrap (${s.bootstrapSamples}) indicated ${s.stabilityLevel} solution; recommended N ≥ ${s.recommendedSampleSize}.`;
     },
   },
@@ -110,7 +139,7 @@ export function getOneLineAPA(results: AnalysisResults, lang: "zh" | "en" = "en"
   const map: Record<string, string> = {};
   for (const m of analysisModules) {
     if (m.isAvailable(results)) {
-      const insight = m.apaInsight(results);
+      const insight = m.apaInsight(results, lang);
       if (insight) map[m.id] = insight;
     }
   }
@@ -119,7 +148,7 @@ export function getOneLineAPA(results: AnalysisResults, lang: "zh" | "en" = "en"
 
 /** Generate 2-5 sentence APA summary (PDF Mode) */
 export function getSummaryAPA(results: AnalysisResults, lang: "zh" | "en" = "en"): string {
-  const insights = getOneLineAPA(results);
+  const insights = getOneLineAPA(results, lang);
   const lines = Object.values(insights).filter(Boolean);
   const sampleN = results.meta.sampleSize;
   const itemN = results.meta.itemCount;
@@ -184,8 +213,13 @@ function buildSummaryZH(results: AnalysisResults, _insights: string[], n: number
   // EFA
   if (efa.suggestedFactors > 0) {
     const tv = (efa.varianceExplained.reduce((a, b) => a + b, 0) * 100).toFixed(1);
-    const factorWord = efa.suggestedFactors <= 9 ? ["", "一", "两", "三", "四", "五", "六", "七", "八", "九"][efa.suggestedFactors] ?? efa.suggestedFactors : efa.suggestedFactors;
-    parts.push(`经探索性因子分析（EFA），共提取${factorWord}个公因子，累计方差解释率达${tv}%。`);
+    const factorWord = (n: number) => n <= 9 ? ["", "一", "两", "三", "四", "五", "六", "七", "八", "九"][n] ?? String(n) : String(n);
+    const kaiserN = efa.metadata?.raw_factor_estimation?.kaiser_n ?? efa.suggestedFactors;
+    if (kaiserN !== efa.suggestedFactors) {
+      parts.push(`Kaiser准则建议${kaiserN}个因子，但为可解释性与模型稳定性，经探索性因子分析共呈现${factorWord(efa.suggestedFactors)}个公因子，累计方差解释率达${tv}%。`);
+    } else {
+      parts.push(`经探索性因子分析（EFA），共提取${factorWord(efa.suggestedFactors)}个公因子，累计方差解释率达${tv}%。`);
+    }
   }
 
   // Stability

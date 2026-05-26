@@ -1,6 +1,7 @@
 "use client";
 
 import type { EFAResult } from "@/types";
+import { useAppStore } from "@/lib/store";
 import { InfoTip } from "./stat-tooltip";
 import { ChartWrapper } from "./chart-wrapper";
 import {
@@ -19,6 +20,9 @@ interface Props {
 }
 
 export function EFACard({ data }: Props) {
+  const lang = useAppStore((s) => s.reportLanguage);
+  const en = lang === "en";
+
   // Scree plot data
   const screeData = data.eigenvalues.map((val, i) => ({
     factor: i + 1,
@@ -30,13 +34,46 @@ export function EFACard({ data }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Two-line factor display: statistical result + model decision */}
+      {data.metadata && (
+        <div className="space-y-2 w-full">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50/50 border border-emerald-100">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+            <p className="text-[11px] text-emerald-700">
+              {en ? "Kaiser criterion suggested " : "Kaiser 准则建议 "}
+              <span className="font-semibold">{data.metadata.raw_factor_estimation.kaiser_n}</span>
+              {en ? " factors" : " 个因子"}
+              {data.metadata.raw_factor_estimation.scree_suggestion && (
+                <span className="text-emerald-600/70">
+                  {en ? ` · Scree elbow: ${data.metadata.raw_factor_estimation.scree_suggestion}` : ` · 碎石拐点: ${data.metadata.raw_factor_estimation.scree_suggestion}`}
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50/50 border border-amber-100">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+            <p className="text-[11px] text-amber-700">
+              {en ? "Showing " : "为可解释性呈现 "}
+              <span className="font-semibold">{data.suggestedFactors}</span>
+              {en ? " factors for interpretability" : " 个因子"}
+              {data.metadata.factor_stability.risk_level === "high" && (
+                <span className="text-amber-600/70">
+                  {" · "}{en ? "Potential over-extraction risk detected" : "检测到潜在过度提取风险"}
+                </span>
+              )}
+              {data.metadata.factor_stability.risk_level === "moderate" && (
+                <span className="text-amber-600/70">
+                  {" · "}{en ? "Structural instability detected" : "检测到结构不稳定性"}
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-3">
-        <span className="text-2xl font-semibold text-foreground">
-          {data.suggestedFactors} 个因子
-        </span>
-        <InfoTip text="Kaiser 准则：保留特征值 > 1 的因子。碎石图中拐点之前的因子数也可作为参考。" />
+        <InfoTip text={en ? "Kaiser criterion retains eigenvalues > 1. Scree elbow is the point of maximum eigenvalue drop. To ensure interpretable results, the system shows at most min(kaiser or scree, items/3, 8) factors — this is a presentation decision, not a statistical conclusion." : "Kaiser准则保留特征值 > 1 的因子。碎石拐点为特征值最大降幅点。为确保结果可解释性，系统最多呈现 min(kaiser或碎石拐点, 题项数/3, 8) 个因子——这是展示决策，不是统计结论。"} />
         <div className="text-[11px] text-muted-foreground">
-          累计解释方差:{" "}
+          {en ? "Cumulative variance: " : "累计解释方差: "}
           {data.varianceExplained.length > 0
             ? (data.varianceExplained.reduce((a, b) => a + b, 0) * 100).toFixed(1)
             : "0"}
@@ -48,7 +85,7 @@ export function EFACard({ data }: Props) {
       </div>
 
       {/* Scree plot */}
-      <ChartWrapper title="碎石图">
+      <ChartWrapper title={en ? "Scree Plot" : "碎石图"}>
         <div className="h-[160px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={screeData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
@@ -89,8 +126,8 @@ export function EFACard({ data }: Props) {
       {data.loadings.length > 0 && (
         <div>
           <p className="text-[11px] font-medium text-foreground mb-1.5 flex items-center gap-1">
-            因子载荷矩阵
-            <InfoTip text="载荷 ≥ 0.40 视为显著归属该因子。0.30−0.40 为边缘。交叉载荷差值 < 0.20 表示因子归属模糊。" />
+            {en ? "Factor Loadings" : "因子载荷矩阵"}
+            <InfoTip text={en ? "Loadings ≥ .40 indicate strong factor membership. .30−.40 is marginal. Cross-loading difference < .20 suggests ambiguous factor assignment." : "载荷 ≥ 0.40 视为显著归属该因子。0.30−0.40 为边缘。交叉载荷差值 < 0.20 表示因子归属模糊。"} />
           </p>
           <div className="overflow-x-auto rounded-lg border border-border max-h-[300px] overflow-y-auto">
             <table className="w-full text-[10px]">

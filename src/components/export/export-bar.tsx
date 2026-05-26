@@ -12,6 +12,7 @@ export function ExportBar() {
   const results = useAppStore((s) => s.results);
   const aiResults = useAppStore((s) => s.aiResults);
   const researchGoal = useAppStore((s) => s.researchGoal);
+  const lang = useAppStore((s) => s.reportLanguage);
   const [excelStatus, setExcelStatus] = useState<ExportStatus>("idle");
   const [pdfStatus, setPdfStatus] = useState<ExportStatus>("idle");
 
@@ -31,7 +32,7 @@ export function ExportBar() {
 
   const handlePDF = () => {
     setPdfStatus("done");
-    printPDF(results, aiResults, researchGoal);
+    printPDF(results, aiResults, researchGoal, lang);
     setTimeout(() => setPdfStatus("idle"), 2000);
   };
 

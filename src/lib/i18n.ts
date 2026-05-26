@@ -4,7 +4,7 @@
 
 const dict: Record<string, Record<string, string>> = {
   // Nav
-  "nav.title": { zh: "AI 信效度分析系统", en: "AI Reliability & Validity Analyzer" },
+  "nav.title": { zh: "SurveyLens", en: "SurveyLens" },
   "nav.aiSettings": { zh: "AI 设置", en: "AI Settings" },
   "nav.help": { zh: "帮助", en: "Help" },
   "nav.localMode": { zh: "仅本地模式", en: "Local Only" },
@@ -30,6 +30,15 @@ const dict: Record<string, Record<string, string>> = {
   "tab.efa": { zh: "因子", en: "EFA" },
   "tab.correlation": { zh: "相关", en: "Correlation" },
   "tab.stability": { zh: "稳定性", en: "Stability" },
+
+  // Section titles
+  "section.descriptive": { zh: "描述性统计", en: "Descriptive Statistics" },
+  "section.reliability": { zh: "信度分析", en: "Reliability Analysis" },
+  "section.validity": { zh: "效度分析", en: "Validity Analysis" },
+  "section.efa": { zh: "因子分析", en: "Factor Analysis" },
+  "section.correlation": { zh: "相关性分析", en: "Correlation Analysis" },
+  "section.stability": { zh: "样本稳定性", en: "Sample Stability" },
+  "section.heatmap": { zh: "相关矩阵热力图", en: "Correlation Matrix Heatmap" },
 
   // Buttons
   "btn.analyze": { zh: "开始分析", en: "Run Analysis" },

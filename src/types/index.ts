@@ -1,9 +1,11 @@
 // ============================================================
-// AI信效度分析系统 - Type Definitions
+// SurveyLens - Type Definitions
 // schemaVersion: 1.0.0
 // ============================================================
 
 import type { ClassificationResult } from "@/lib/stats/data-classifier";
+import type { CodebookSchema } from "@/lib/codebook/schema";
+import type { MappingFreeze } from "@/lib/codebook/schema";
 
 // ---- Pipeline State (coarse) ----
 export type PipelineState =
@@ -98,6 +100,34 @@ export interface ColumnInfo {
   missingCount: number;
 }
 
+// ---- Variable Semantic Metadata ----
+
+export type SemanticType = "likert" | "numeric" | "categorical" | "metadata" | "text";
+
+export type Eligibility = "eligible" | "potentially" | "unavailable";
+
+export interface AnalysisEligibility {
+  reliability: Eligibility;
+  efa: Eligibility;
+  correlation: Eligibility;
+  regression: Eligibility;
+  descriptive: Eligibility;
+}
+
+export interface EligibilityDetail {
+  status: Eligibility;
+  reason: string;
+}
+
+export interface VariableMeta {
+  name: string;
+  rawType: "string" | "number" | "mixed";
+  semanticType: SemanticType;
+  mappingStatus: "mapped" | "raw" | "failed";
+  eligibleAnalyses: AnalysisEligibility;
+  eligibilityReason: string;
+}
+
 // ---- Preprocessing ----
 export interface ReverseItemWarning {
   column: string;
@@ -141,6 +171,25 @@ export interface ResearchDesign {
   freeNotes: string;
 }
 
+// ---- Semantic Status Wrapper ----
+export type StatStatus = "ok" | "not_applicable" | "insufficient_data";
+
+export interface StatValue {
+  value: number | null;
+  status: StatStatus;
+  reason: string;
+  confidence: number; // 0-1
+}
+
+export const STAT_OK = (value: number, reason: string, confidence = 1.0): StatValue =>
+  ({ value, status: "ok" as const, reason, confidence });
+
+export const STAT_NA = (reason: string): StatValue =>
+  ({ value: null, status: "not_applicable" as const, reason, confidence: 1.0 });
+
+export const STAT_INSUFFICIENT = (reason: string, confidence = 0.7): StatValue =>
+  ({ value: null, status: "insufficient_data" as const, reason, confidence });
+
 // ---- Statistical Results (Standardized Schema v1.0.0) ----
 export interface AnalysisMeta {
   schemaVersion: "1.0.0";
@@ -149,6 +198,19 @@ export interface AnalysisMeta {
   dimensionCount: number;
   timestamp: number;
   analysisDurationMs: number;
+  /** Canonical dataset version this analysis was derived from */
+  datasetVersion: number;
+  /** Input snapshot: hash of column names + rowCount at analysis time */
+  inputSnapshot: string;
+}
+
+export interface DimensionReliability {
+  name: string;
+  items: string[];
+  cronbachsAlpha: number;
+  standardizedAlpha: number;
+  itemTotalCorrelation: Record<string, number>;
+  alphaIfItemDeleted: Record<string, number>;
 }
 
 export interface ReliabilityResult {
@@ -157,6 +219,10 @@ export interface ReliabilityResult {
   mcdonaldsOmega: number;
   itemTotalCorrelation: Record<string, number>;
   alphaIfItemDeleted: Record<string, number>;
+  /** Per-dimension subscale reliability */
+  dimensions?: DimensionReliability[];
+  /** Semantic status of the reliability computation */
+  _meta: StatValue;
 }
 
 export interface ValidityResult {
@@ -167,6 +233,37 @@ export interface ValidityResult {
   bartlettPValue: number;
   correlationMatrix: number[][];
   columnLabels: string[];
+  _meta: StatValue;
+}
+
+// ---- EFA 3-Layer Metadata ----
+
+export interface RawFactorEstimation {
+  /** Kaiser criterion: count of eigenvalues > 1.0 */
+  kaiser_n: number;
+  /** Scree plot elbow suggestion (simple delta method) */
+  scree_suggestion: number | null;
+  /** Placeholder for future parallel analysis */
+  parallel_analysis_n: number | null;
+}
+
+export interface FactorStability {
+  risk_level: "low" | "moderate" | "high";
+  too_many_factors: boolean;
+  recommended_range: [number, number];
+  warnings: string[];
+}
+
+export interface ProductDecision {
+  display_factor_n: number;
+  decision_rule: string;
+  type: "presentation_constraint";
+}
+
+export interface EFAMetadata {
+  raw_factor_estimation: RawFactorEstimation;
+  factor_stability: FactorStability;
+  product_decision: ProductDecision;
 }
 
 export interface EFAResult {
@@ -176,7 +273,9 @@ export interface EFAResult {
   varianceExplained: number[];
   rotation: "varimax" | "oblimin";
   suggestedFactors: number;
+  metadata: EFAMetadata;
   itemLabels: string[];
+  _meta: StatValue;
 }
 
 export interface StabilityResult {
@@ -185,6 +284,7 @@ export interface StabilityResult {
   stabilityLevel: "stable" | "moderate" | "unstable";
   recommendedSampleSize: number;
   elbowPoint: number | null;
+  _meta: StatValue;
 }
 
 export interface AnalysisResults {
@@ -224,14 +324,33 @@ export interface ValidationReport {
 // ---- AI Compressed Input (Result Reducer output) ----
 export interface AICompressedInput {
   alpha: number;
+  standardizedAlpha: number;
   lowItems: string[];
+  itemTotalCorrelations: { item: string; corr: number }[];
   kmo: number;
+  bartlettChiSquare: number;
+  bartlettDf: number;
+  bartlettPValue: number;
   problematicItems: string[];
   crossLoadingItems: string[];
   stabilityLevel: string;
   recommendedSampleSize: number;
   factorLoadings: { item: string; factor: number; loading: number }[];
+  eigenvalues: number[];
+  suggestedFactors: number;
+  kaiserFactors: number;
+  varianceExplained: number;
+  sampleSize: number;
+  itemCount: number;
+  missingRate: number;
+  reverseItemCount: number;
+  dimensionReliabilities: { name: string; alpha: number; items: number }[];
   researchGoal: string;
+  outcomeVariables: string[];
+  predictorVariables: string[];
+  theoreticalFramework: string;
+  hypotheses: string;
+  freeNotes: string;
 }
 
 // ---- AI Results ----
@@ -257,18 +376,37 @@ export interface AIResults {
   };
   apaResult: string;
   shortAPA: string;
+  /** Evidence sufficiency for AI interpretation (low/moderate/high) */
+  interpretationConfidence?: "low" | "moderate" | "high";
   /** Cache key to avoid re-running on same results */
   cachedAt?: number;
 }
 
 // ---- App State ----
+// ---- Repair Workflow ----
+
+export interface RepairState {
+  currentAction: "missing" | "reverse" | null;
+  appliedFixes: {
+    missing: boolean;
+    reverse: boolean;
+    weakItems: boolean;
+  };
+  dirty: boolean;
+}
+
 export interface AppState {
   // Data
   rawData: ParsedData | null;
+  /** Canonical version — increments on every data change. All derived state must match. */
+  datasetVersion: number;
+  codebook: CodebookSchema | null;
+  mappingFreeze: MappingFreeze | null;
   columns: ColumnInfo[];
   classification: ClassificationResult | null;
   likertColumns: string[];
   reverseItemWarnings: ReverseItemWarning[];
+  confirmedReverseItems: string[];
   dimensions: DimensionGroup[];
 
   // Research info
@@ -285,11 +423,15 @@ export interface AppState {
 
   // AI
   aiMode: AIMode;
+  aiModel: string;
+  aiProvider: string;
+  aiStrictMode: boolean;
   aiStreamingStage: AIStreamingStage;
   aiError: string | null;
 
   // Results
   results: AnalysisResults | null;
+  previousResults: AnalysisResults | null;
   descriptiveResults: Record<string, unknown>[] | null;
   validationReport: ValidationReport | null;
   aiResults: AIResults | null;
@@ -297,6 +439,21 @@ export interface AppState {
   // Analysis mode + design lock
   analysisMode: AnalysisMode;
   designConfirmed: boolean;
+
+  // Repair workflow
+  repair: RepairState;
+
+  // Session
+  lastActivityAt: number;
+
+  // Data integrity warnings
+  dataWarnings: string[];
+
+  // Re-run signal
+  triggerReRun: number;
+
+  // UI
+  leftStep: string;
 
   // Config
   apiKey: string;

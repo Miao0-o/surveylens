@@ -15,10 +15,17 @@ export function useAI() {
 
   const runAI = useCallback(async () => {
     const state = useAppStore.getState();
-    const { apiKey, results, researchGoal, aiMode } = state;
+    const { apiKey, results, researchDesign, aiMode, aiModel, aiProvider, aiStrictMode } = state;
 
-    if (!apiKey?.startsWith("sk-ant")) {
-      setError("请先配置 API Key");
+    if (!apiKey || apiKey.length < 10) {
+      setError("Please configure an API key in Settings");
+      setStatus("error");
+      return;
+    }
+
+    // Post-audit: only allow AI if analysis passed basic validity
+    if (!results || results.meta.sampleSize < 2) {
+      setError("Analysis results are incomplete. Please re-run the analysis before using AI interpretation.");
       setStatus("error");
       return;
     }
@@ -50,19 +57,15 @@ export function useAI() {
     ];
 
     try {
-      const compressed = compressResults(results, researchGoal);
+      const compressed = compressResults(results, researchDesign);
 
-      // Simulate progressive stages (Claude API call is single-shot,
-      // but we give the user visual feedback)
-      for (const stage of streamStages) {
-        setStreaming(stage);
-        await new Promise((r) => setTimeout(r, 600));
-      }
+      // Show progress immediately (no artificial delays)
+      setStreaming("interpreting_reliability");
 
       const state = useAppStore.getState();
       const validation = state.validationReport;
       const lang = useAppStore.getState().reportLanguage;
-      const rawAIResults = await runAIInterpretation(apiKey, compressed, validation, lang);
+      const rawAIResults = await runAIInterpretation(apiKey, compressed, validation, lang, aiModel, aiProvider, aiStrictMode);
 
       // Run output guard (Layer 5 — non-AI final check)
       const postState = useAppStore.getState();

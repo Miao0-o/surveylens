@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { StoreHydrator } from "@/components/layout/store-hydrator";
+import { InactivityGuard } from "@/components/layout/inactivity-guard";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI信效度分析系统 | Reliability & Validity Analyzer",
+  title: "SurveyLens | Survey Reliability & Validity Analyzer",
   description:
-    "完全本地运行的 AI 问卷信效度分析工具。上传 CSV/Excel/Qualtrics，自动完成信度分析、效度检验、因子分析、样本稳定性评估与 APA 格式结果生成。",
+    "SurveyLens — 帮助研究者判断问卷数据是否准备好进入下一阶段分析。本地完成信度检验、效度分析、因子分析与稳定性评估，数据不出设备。",
 };
 
 export default function RootLayout({
@@ -31,6 +32,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <StoreHydrator>{children}</StoreHydrator>
+        <InactivityGuard />
       </body>
     </html>
   );

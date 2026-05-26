@@ -62,26 +62,25 @@ export function analyzeReverseItems(results: AnalysisResults): ReverseItemAnalys
     let verdict = "";
 
     if (corr < 0) {
-      // Strong evidence of coding problem
       risk = "high";
-      verdict = "该题项与量表总分呈负相关，很可能存在反向计分问题。";
+      verdict = "该题项与量表总分呈负相关，可能存在计分方向差异。";
       uncoded.push(item);
-      evidence.push(`${item}: item-total r = ${corr.toFixed(3)} (negative) — strong reverse-coding problem.`);
+      evidence.push(`${item}: item-total r = ${corr.toFixed(3)} (negative) — may indicate coding direction difference.`);
     } else if (corr < 0.2 && isDetected) {
       risk = "moderate";
-      verdict = "该题项与量表总分相关性较弱，建议核实计分方向。";
+      verdict = "该题项与量表总分相关性较弱，可进一步核实计分方向。";
       evidence.push(`${item}: item-total r = ${corr.toFixed(3)} (weak) — possible coding inconsistency.`);
     } else if (isDetected && alphaChange !== null && alphaChange > 0.05) {
       risk = "moderate";
-      verdict = `删除该题项后 α 上升 ${alphaChange.toFixed(3)}，建议检查题项质量。`;
+      verdict = `删除该题项后 α 上升 ${alphaChange.toFixed(3)}，题项与整体量表一致性较低。`;
       evidence.push(`${item}: α increases by ${alphaChange.toFixed(3)} if deleted.`);
     } else if (isDetected) {
       risk = "low";
-      verdict = "该题项可能为反向计分题，当前表现正常，无需调整。";
+      verdict = "该题项可能为反向计分题，当前统计表现正常。";
       evidence.push(`${item}: possible reverse-coded item, behaving normally (r = ${corr.toFixed(3)}).`);
     } else {
       risk = "none";
-      verdict = "该题项表现正常，无反向计分问题。";
+      verdict = "该题项统计表现正常。";
     }
 
     assessments[item] = {
@@ -103,12 +102,12 @@ export function analyzeReverseItems(results: AnalysisResults): ReverseItemAnalys
 
   const recommendations: string[] = [];
   if (hasHigh) {
-    recommendations.push(`发现 ${uncoded.length} 个题项存在显著反向计分问题，建议核实原始问卷的计分方向。`);
-    recommendations.push("确认反向计分后，重新编码并重新运行信度分析。");
+    recommendations.push(`发现 ${uncoded.length} 个题项与总分呈负相关，可能存在计分方向差异，可核实原始问卷的计分方向。`);
+    recommendations.push("核实计分方向后，可重新编码并重新运行信度分析。");
   }
   if (detected.length > 0 && !hasHigh) {
-    recommendations.push(`检测到 ${detected.length} 个可能为反向计分的题项，当前表现正常。`);
-    recommendations.push("如已确认反向计分正确，无需额外操作。");
+    recommendations.push(`检测到 ${detected.length} 个可能为反向计分的题项，当前统计表现正常。`);
+    recommendations.push("如计分方向确认无误，无需额外处理。");
   }
 
   return {

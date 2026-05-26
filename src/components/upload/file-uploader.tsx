@@ -3,10 +3,11 @@
 import { useCallback, useRef, useState } from "react";
 import { Upload, FileText, AlertCircle, Loader2 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
+import { applyMapping } from "@/lib/codebook/mapping-engine";
 import type { ParsedData } from "@/types";
 import Papa from "papaparse";
 import { parseSavFile } from "@/lib/parsers/sav-parser";
-
+import { parseDtaFile } from "@/lib/parsers/dta-parser";
 type SupportedFormat = "csv" | "xlsx" | "qualtrics" | "sav" | "dta";
 
 interface ParseResult {
@@ -157,6 +158,15 @@ export function FileUploader() {
         console.log("[upload] parsed:", result.data.rowCount, "rows ×", result.data.colCount, "cols, calling setRawData...");
         setRawData(result.data);
         console.log("[upload] setRawData called");
+
+        // If codebook already loaded, freeze the mapping now
+        const cb = useAppStore.getState().codebook;
+        if (cb && Object.keys(cb.questions).length > 0) {
+          console.log("[upload] codebook exists, applying mapping...");
+          const freeze = applyMapping(result.data.rows, cb, result.data.headers);
+          useAppStore.getState().setMappingFreeze(freeze);
+        }
+
         setWarnings(result.warnings);
         setPipelineState("idle" as never);
       } catch (err) {
@@ -287,8 +297,16 @@ async function parseSavFormat(file: File): Promise<ParseResult> {
   }
 }
 
-async function parseDtaFormat(_file: File): Promise<ParseResult> {
-  throw new Error("Stata .dta 文件暂不支持直接解析。请在 Stata 中使用 export delimited 命令导出为 CSV 后上传。");
+async function parseDtaFormat(file: File): Promise<ParseResult> {
+  try {
+    const data = await parseDtaFile(file);
+    return {
+      data,
+      warnings: data.rowCount > 50000 ? [`文件超过 50000 行 (${data.rowCount})，分析可能需要较长时间`] : [],
+    };
+  } catch (e) {
+    throw new Error(`Stata 文件解析失败: ${e instanceof Error ? e.message : "未知错误"}。请在 Stata 中使用 export delimited 命令导出为 CSV 后重新上传。`);
+  }
 }
 
 

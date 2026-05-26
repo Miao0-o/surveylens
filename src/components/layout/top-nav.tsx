@@ -41,7 +41,7 @@ export function TopNav() {
         <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
           <BarChart3 className="w-5 h-5 text-primary" strokeWidth={1.5} />
           <span className="text-sm font-semibold tracking-tight text-foreground">
-            AI 信效度分析系统
+            SurveyLens
           </span>
         </Link>
         <AIStatusLabel />

@@ -26,12 +26,15 @@ import type {
   MissingStrategy,
 } from "@/types";
 import type { ClassificationResult } from "@/lib/stats/data-classifier";
-import type { ResearchDesign, AnalysisMode } from "@/types";
+import type { CodebookSchema, MappingFreeze } from "@/lib/codebook/schema";
+import type { ResearchDesign, AnalysisMode, RepairState } from "@/types";
 
-const AI_KEY_STORAGE = "ai-reliability-key";
-const AI_RESULTS_CACHE = "ai-reliability-cache";
-const RAW_DATA_KEY = "ai-analysis-rawdata";
-const LIKERT_KEY = "ai-analysis-likert";
+const AI_KEY_STORAGE = "survey-lens-key";
+const AI_MODEL_STORAGE = "survey-lens-model";
+const AI_PROVIDER_STORAGE = "survey-lens-provider";
+const AI_RESULTS_CACHE = "survey-lens-cache";
+const RAW_DATA_KEY = "survey-lens-rawdata";
+const LIKERT_KEY = "survey-lens-likert";
 
 // sessionStorage: persists within tab session, cleared on browser close
 function loadApiKey(): string {
@@ -43,6 +46,16 @@ function saveApiKey(key: string): void {
   if (typeof window === "undefined") return;
   if (key) sessionStorage.setItem(AI_KEY_STORAGE, key);
   else sessionStorage.removeItem(AI_KEY_STORAGE);
+}
+
+function loadAIModel(): string {
+  if (typeof window === "undefined") return "";
+  return sessionStorage.getItem(AI_MODEL_STORAGE) ?? "";
+}
+
+function loadAIProvider(): string {
+  if (typeof window === "undefined") return "";
+  return sessionStorage.getItem(AI_PROVIDER_STORAGE) ?? "";
 }
 
 function loadCachedAIResults(): AIResults | null {
@@ -68,10 +81,13 @@ function saveCachedAIResults(results: AIResults | null): void {
 interface AppActions {
   // Data
   setRawData: (data: ParsedData) => void;
+  setCodebook: (cb: CodebookSchema) => void;
+  setMappingFreeze: (freeze: MappingFreeze | null) => void;
   setColumns: (columns: ColumnInfo[]) => void;
   setClassification: (result: ClassificationResult) => void;
   setLikertColumns: (cols: string[]) => void;
   setReverseItemWarnings: (warnings: ReverseItemWarning[]) => void;
+  setConfirmedReverseItems: (items: string[]) => void;
   setDimensions: (dims: DimensionGroup[]) => void;
 
   // Research info
@@ -91,16 +107,28 @@ interface AppActions {
 
   // AI
   setAIMode: (mode: AIMode) => void;
+  setAIModel: (model: string) => void;
+  setAIProvider: (provider: string) => void;
+  setAIStrictMode: (strict: boolean) => void;
   setAIStreamingStage: (stage: AIStreamingStage) => void;
   setAIError: (err: string | null) => void;
 
   // Results
   setResults: (results: AnalysisResults) => void;
+  setPreviousResults: (results: AnalysisResults | null) => void;
   setDescriptiveResults: (data: Record<string, unknown>[] | null) => void;
   setValidationReport: (report: ValidationReport) => void;
   setAIResults: (aiResults: AIResults | null) => void;
   checkAICache: () => AIResults | null;
   clearAICache: () => void;
+
+  // Repair workflow
+  setRepairAction: (action: RepairState["currentAction"]) => void;
+  applyFix: (fix: keyof RepairState["appliedFixes"]) => void;
+  resetRepair: () => void;
+
+  // UI
+  setLeftStep: (step: string) => void;
 
   // Config
   setAnalysisMode: (mode: AnalysisMode) => void;
@@ -108,6 +136,14 @@ interface AppActions {
   setMissingStrategy: (strategy: MissingStrategy) => void;
   setDesignConfirmed: (confirmed: boolean) => void;
   setReportLanguage: (lang: "zh" | "en") => void;
+
+  // Session
+  lastActivityAt: number;
+  touchActivity: () => void;
+  setDataWarnings: (w: string[]) => void;
+  triggerReRun: number;
+  requestReRun: () => void;
+  clearAnalysisSession: () => void;
 
   // Reset + Hydrate
   reset: () => void;
@@ -121,10 +157,14 @@ const initialMissingStrategy: MissingStrategy = {
 
 const initialState: AppState = {
   rawData: null,
+  datasetVersion: 0,
+  codebook: null,
+  mappingFreeze: null,
   columns: [],
   classification: null,
   likertColumns: [],
   reverseItemWarnings: [],
+  confirmedReverseItems: [],
   dimensions: [],
 
   researchDesign: null,
@@ -138,16 +178,34 @@ const initialState: AppState = {
   error: null,
 
   aiMode: "none",
+  aiModel: typeof window !== "undefined" ? loadAIModel() : "",
+  aiProvider: typeof window !== "undefined" ? loadAIProvider() : "",
+  aiStrictMode: false,
   aiStreamingStage: "idle",
   aiError: null,
 
   results: null,
+  previousResults: null,
   descriptiveResults: null,
   validationReport: null,
   aiResults: null,
 
   analysisMode: "quick",
   designConfirmed: false,
+
+  lastActivityAt: typeof window !== "undefined" ? Date.now() : 0,
+
+  dataWarnings: [],
+
+  triggerReRun: 0,
+
+  leftStep: "upload",
+
+  repair: {
+    currentAction: null,
+    appliedFixes: { missing: false, reverse: false, weakItems: false },
+    dirty: false,
+  },
 
   apiKey: "",
   missingStrategy: initialMissingStrategy,
@@ -160,14 +218,26 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
 
   // ---- Data ----
   setRawData: (data) => {
-    return set({ rawData: data, pipelineStep: "upload", analysisStage: "uploading", error: null });
+    return set((s) => ({
+      rawData: data,
+      datasetVersion: s.datasetVersion + 1,
+      mappingFreeze: null,
+      pipelineStep: "upload",
+      analysisStage: "uploading",
+      error: null,
+    }));
   },
+
+  setCodebook: (codebook) => set({ codebook }),
+
+  setMappingFreeze: (mappingFreeze) => set({ mappingFreeze }),
 
   setLikertColumns: (cols) => set({ likertColumns: cols }),
 
   setColumns: (columns) => set({ columns }),
   setClassification: (classification) => set({ classification }),
   setReverseItemWarnings: (warnings) => set({ reverseItemWarnings: warnings }),
+  setConfirmedReverseItems: (confirmedReverseItems) => set({ confirmedReverseItems }),
   setDimensions: (dims) => set({ dimensions: dims }),
 
   // ---- Research info ----
@@ -207,11 +277,22 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
 
   // ---- AI ----
   setAIMode: (aiMode) => set({ aiMode }),
+  setAIModel: (aiModel) => {
+    if (typeof window !== "undefined") sessionStorage.setItem(AI_MODEL_STORAGE, aiModel);
+    set({ aiModel });
+  },
+  setAIStrictMode: (aiStrictMode) => set({ aiStrictMode }),
+
+  setAIProvider: (aiProvider) => {
+    if (typeof window !== "undefined") sessionStorage.setItem(AI_PROVIDER_STORAGE, aiProvider);
+    set({ aiProvider });
+  },
   setAIStreamingStage: (aiStreamingStage) => set({ aiStreamingStage }),
   setAIError: (aiError) => set({ aiError }),
 
   // ---- Results ----
   setResults: (results) => set({ results }),
+  setPreviousResults: (previousResults) => set({ previousResults }),
   setDescriptiveResults: (descriptiveResults) => set({ descriptiveResults }),
   setValidationReport: (validationReport) => set({ validationReport }),
   setAIResults: (aiResults) => {
@@ -244,6 +325,71 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
   },
 
   setMissingStrategy: (strategy) => set({ missingStrategy: strategy }),
+
+  setLeftStep: (leftStep) => set({ leftStep }),
+
+  setDataWarnings: (dataWarnings) => set({ dataWarnings }),
+
+  requestReRun: () => set((s) => ({ triggerReRun: s.triggerReRun + 1 })),
+
+  touchActivity: () => {
+    const ts = Date.now();
+    if (typeof window !== "undefined") {
+      try { sessionStorage.setItem("ai-session-activity", String(ts)); } catch {}
+    }
+    set({ lastActivityAt: ts });
+  },
+
+  clearAnalysisSession: () => {
+    idbRemove(RAW_DATA_KEY);
+    idbRemove(LIKERT_KEY);
+    if (typeof window !== "undefined") {
+      try {
+        const keys = Object.keys(sessionStorage).filter(k => k.startsWith("survey-lens-"));
+        keys.forEach(k => sessionStorage.removeItem(k));
+      } catch {}
+    }
+    set({
+      rawData: null,
+      codebook: null,
+      mappingFreeze: null,
+      columns: [],
+      classification: null,
+      likertColumns: [],
+      reverseItemWarnings: [],
+      confirmedReverseItems: [],
+      dimensions: [],
+      researchDesign: null,
+      researchGoal: "",
+      theoreticalDimensions: "",
+      pipelineState: "idle",
+      pipelineStep: "upload",
+      analysisStage: "idle",
+      progress: 0,
+      error: null,
+      dataWarnings: [],
+      results: null,
+      previousResults: null,
+      descriptiveResults: null,
+      validationReport: null,
+      aiResults: null,
+      designConfirmed: false,
+      repair: { currentAction: null, appliedFixes: { missing: false, reverse: false, weakItems: false }, dirty: false },
+      leftStep: "upload",
+    });
+  },
+
+  setRepairAction: (currentAction) => set((s) => ({ repair: { ...s.repair, currentAction } })),
+  applyFix: (fix) => set((s) => ({
+    repair: {
+      ...s.repair,
+      appliedFixes: { ...s.repair.appliedFixes, [fix]: true },
+      dirty: true,
+    },
+  })),
+  resetRepair: () => set({
+    repair: { currentAction: null, appliedFixes: { missing: false, reverse: false, weakItems: false }, dirty: false },
+  }),
 
   // ---- Hydrate ----
   hydrate: () => {
