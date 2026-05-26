@@ -81,7 +81,6 @@
         if k < 2:
             results.append({"name": name, "items": indices, "cronbachsAlpha": 0.0, "standardizedAlpha": 0.0, "itemTotalCorrelation": {}, "alphaIfItemDeleted": {}})
             continue
-        # Use complete rows for this subscale
         cm = ~np.isnan(sub).any(axis=1)
         if np.sum(cm) >= 3:
             sub = sub[cm]
@@ -121,7 +120,7 @@
             else:
                 aid = None
             alpha_if_del[str(indices[i])] = aid
-        results.append({"name": name, "cronbachsAlpha": alpha, "standardizedAlpha": std_alpha, "itemTotalCorrelation": item_total, "alphaIfItemDeleted": alpha_if_del})
+        results.append({"name": name, "items": indices, "cronbachsAlpha": alpha, "standardizedAlpha": std_alpha, "itemTotalCorrelation": item_total, "alphaIfItemDeleted": alpha_if_del})
     return json.dumps(results)`},{id:"validity",fn:`def run_validity(data_json):
     import json, numpy as np
     from scipy import linalg
