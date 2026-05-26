@@ -260,11 +260,17 @@ export function RightSidebar() {
           {aiCallError && (
             <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
               <p className="font-medium">{en ? "Request failed" : "请求失败"}</p>
-              <p className="text-red-500/80 mt-0.5">{aiCallError.includes("Insufficient") || aiCallError.includes("credits")
-                ? (en ? "Insufficient API credits. Please add funds to your account." : "API 余额不足，请充值后重试。")
-                : aiCallError.includes("Invalid") || aiCallError.includes("401")
+              <p className="text-red-500/80 mt-0.5">{
+                aiCallError.includes("Insufficient") || aiCallError.includes("credits")
+                  ? (en ? "Insufficient API credits. Please add funds to your account." : "API 余额不足，请充值后重试。")
+                : aiCallError.includes("Invalid") || aiCallError.includes("401") || aiCallError.includes("key")
                   ? (en ? "Invalid API key. Please check your key in Settings." : "API Key 无效，请在设置中检查。")
-                  : aiCallError}</p>
+                : aiCallError.includes("Rate limit") || aiCallError.includes("429") || aiCallError.includes("rate")
+                  ? (en ? "Rate limit exceeded. Please wait a moment and try again." : "请求过于频繁，请稍等片刻后重试。")
+                : aiCallError.includes("Failed to fetch") || aiCallError.includes("Network")
+                  ? (en ? "Network error. Please check your connection and try again." : "网络错误，请检查网络连接后重试。")
+                : aiCallError
+              }</p>
             </div>
           )}
         </div>
