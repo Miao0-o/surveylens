@@ -5,8 +5,9 @@ import { useState, useEffect } from "react";
 
 const T = {
   heroTitle: { zh: "您的问卷数据是否准备好进入下一阶段分析？", en: "Is your questionnaire data ready for the next stage of analysis?" },
-  heroSub: { zh: "上传数据，在浏览器中评估信度、效度与因子结构，并生成 APA 就绪结果。", en: "Upload data and evaluate reliability, validity, and factor structure — with APA-ready results — in your browser." },
-  heroNote: { zh: "所有计算均在本地完成，数据不会离开您的设备。", en: "All computation is local. Your data never leaves your device." },
+  heroSub: { zh: "SurveyLens 让答案变得很简单。", en: "SurveyLens makes the answer simple." },
+  heroDesc: { zh: "上传数据，即可在浏览器中自动评估信度、效度与因子结构，并生成 APA 就绪结果。", en: "Upload data and automatically evaluate reliability, validity, and factor structure — with APA-ready results — right in your browser." },
+  heroNote: { zh: "本地运行 · 数据不会离开设备", en: "Runs locally · Your data never leaves your device" },
   cta: { zh: "开始分析", en: "Open Analyzer" },
   ctaSub: { zh: "无需注册 · 免费使用 · 数据全程本地运行", en: "No login required · Free to use · Your data stays on your device" },
   features: {
@@ -83,15 +84,14 @@ export default function Home() {
         </button>
       </header>
 
-      <section className="flex flex-col items-center text-center px-6 pt-16 pb-8 max-w-2xl mx-auto">
-        <p className="text-sm font-semibold tracking-wide text-primary mb-4">SurveyLens</p>
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-4 leading-tight">{T.heroTitle[lang]}</h1>
-        <p className="text-base text-muted-foreground max-w-md mb-2 leading-relaxed">{T.heroSub[lang]}</p>
-        <p className="text-xs text-muted-foreground/60 mb-6">{T.heroNote[lang]}</p>
+      <section className="flex flex-col items-center text-center px-6 pt-16 pb-10 max-w-2xl mx-auto">
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-3 leading-tight">{T.heroTitle[lang]}</h1>
+        <p className="text-lg text-foreground/80 font-medium mb-4">{T.heroSub[lang]}</p>
+        <p className="text-base text-muted-foreground max-w-lg mb-8 leading-relaxed">{T.heroDesc[lang]}</p>
         <Link href="/analyze" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity">
           {T.cta[lang]}
         </Link>
-        <p className="text-xs text-muted-foreground/50 mt-4">{T.ctaSub[lang]}</p>
+        <p className="text-xs text-muted-foreground/50 mt-5">{T.heroNote[lang]}</p>
       </section>
 
       <section className="px-6 pb-12 max-w-2xl mx-auto w-full">
