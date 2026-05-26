@@ -254,6 +254,9 @@ export function RightSidebar() {
               {en ? "Generating..." : "生成中..."}
             </div>
           )}
+          <p className="text-[9px] text-muted-foreground/50 text-center mt-2">
+            {en ? "AI interpretation uses your own API key and may incur a small cost (~$0.01–0.05 per request)." : "AI 解读使用您自己的 API Key，可能产生少量费用（每次约 ¥0.05–0.30）。"}
+          </p>
           {aiCallError && <p className="text-xs text-red-500">{aiCallError}</p>}
         </div>
       );
