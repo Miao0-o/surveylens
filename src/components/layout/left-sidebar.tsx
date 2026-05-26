@@ -20,13 +20,38 @@ import { PipelineControl } from "@/components/analysis/pipeline-control";
 
 type LeftStep = "upload" | "preprocess" | "dimensions";
 
-const STEPS: { id: LeftStep; label: string; icon: typeof Upload }[] = [
-  { id: "upload", label: "上传数据", icon: Upload },
-  { id: "preprocess", label: "数据清洗", icon: Wrench },
-  { id: "dimensions", label: "维度管理", icon: Layers },
+interface StepDef { id: LeftStep; labelZh: string; labelEn: string; icon: typeof Upload }
+
+const STEPS: StepDef[] = [
+  { id: "upload", labelZh: "上传数据", labelEn: "Upload", icon: Upload },
+  { id: "preprocess", labelZh: "数据清洗", labelEn: "Cleaning", icon: Wrench },
+  { id: "dimensions", labelZh: "维度管理", labelEn: "Dimensions", icon: Layers },
 ];
 
+const L = {
+  quick: { zh: "快速", en: "Quick" },
+  custom: { zh: "自定义", en: "Custom" },
+  quickDesc: { zh: "上传即分析，AI 自动识别变量与模型", en: "Upload and analyze — AI auto-detects variables" },
+  customDesc: { zh: "可选填研究设计，获得理论对齐解读", en: "Optionally define research design for theory-aligned interpretation" },
+  uploadPrompt: { zh: "请上传 .csv / .xlsx / .sav / Qualtrics 文件", en: "Upload .csv / .xlsx / .sav / Qualtrics file" },
+  analysisDone: { zh: "分析完成", en: "Analysis complete" },
+  analysisError: { zh: "分析出错，请重试", en: "Analysis error — retry" },
+  quickFlow: { zh: "上传 → 分析 → 出结果", en: "Upload → Analyze → Results" },
+  noDesign: { zh: "请完成研究设计设置", en: "Complete research design setup" },
+  confirmDesign: { zh: "请在「研究设计确认」中点击确认", en: "Confirm your research design below" },
+  continueSetup: { zh: "继续配置数据清洗与维度", en: "Continue to data cleaning & dimensions" },
+  ready: { zh: "就绪，点击开始分析", en: "Ready — click to start analysis" },
+  autoExcluded: { zh: "已自动排除", en: "Auto-excluded" },
+  nonScale: { zh: "个非量表列", en: "non-scale columns" },
+  autoDetect: { zh: "自动检测结果", en: "Auto-detected" },
+  likertFound: { zh: "已识别", en: "Identified" },
+  likertSuffix: { zh: "个 Likert 题项，将自动进行分析", en: "Likert items — ready for analysis" },
+  nonScaleExcluded: { zh: "已排除", en: "Excluded" },
+  nonScaleSuffix: { zh: "个非量表列", en: "non-scale columns" },
+};
+
 export function LeftSidebar() {
+  const lang = useAppStore((s) => s.reportLanguage);
   const pipelineState = useAppStore((s) => s.pipelineState);
   const hasData = useAppStore((s) => s.rawData !== null);
   const codebook = useAppStore((s) => s.codebook);
@@ -38,6 +63,8 @@ export function LeftSidebar() {
   const setAnalysisMode = useAppStore((s) => s.setAnalysisMode);
   const activeStep = useAppStore((s) => s.leftStep) as LeftStep;
   const setActiveStep = useAppStore((s) => s.setLeftStep);
+  const en = lang === "en";
+  const t = (v: { zh: string; en: string }) => en ? v.en : v.zh;
 
   return (
     <div className="flex flex-col h-full gap-5">
@@ -50,7 +77,7 @@ export function LeftSidebar() {
           }`}
         >
           <Zap className="w-3.5 h-3.5" strokeWidth={1.5} />
-          快速
+          {t(L.quick)}
         </button>
         <button
           onClick={() => setAnalysisMode("custom")}
@@ -59,18 +86,17 @@ export function LeftSidebar() {
           }`}
         >
           <Wrench className="w-3.5 h-3.5" strokeWidth={1.5} />
-          自定义
+          {t(L.custom)}
         </button>
       </div>
       <p className="text-[10px] text-muted-foreground/60 -mt-4 px-1">
-        {analysisMode === "quick"
-          ? "上传即分析，AI 自动识别变量与模型"
-          : "可选填研究设计，获得理论对齐解读"}
+        {analysisMode === "quick" ? t(L.quickDesc) : t(L.customDesc)}
       </p>
 
       {/* Step navigation */}
       <nav className="flex gap-1 p-0.5 rounded-lg bg-secondary/50">
-        {STEPS.map(({ id, label, icon: Icon }) => {
+        {STEPS.map(({ id, labelZh, labelEn, icon: Icon }) => {
+          const label = en ? labelEn : labelZh;
           const isActive = activeStep === id;
           const isDone =
             (id === "upload" && hasData) ||
@@ -143,20 +169,20 @@ export function LeftSidebar() {
         <PipelineControl />
         <p className="text-xs text-muted-foreground text-center">
           {!hasData
-            ? "请上传 .csv / .xlsx / .sav / Qualtrics 文件"
+            ? t(L.uploadPrompt)
             : pipelineState === "completed"
-              ? "分析完成"
+              ? t(L.analysisDone)
               : pipelineState === "error"
-                ? "分析出错，请重试"
+                ? t(L.analysisError)
               : analysisMode === "quick"
-                ? "上传 → 分析 → 出结果"
+                ? t(L.quickFlow)
                 : !design?.outcomeVariables?.length
-                  ? "请完成研究设计设置"
+                  ? t(L.noDesign)
                   : !designConfirmed
-                    ? "请在「研究设计确认」中点击确认"
+                    ? t(L.confirmDesign)
                     : activeStep === "upload"
-                      ? "继续配置数据清洗与维度"
-                      : "就绪，点击开始分析"}
+                      ? t(L.continueSetup)
+                      : t(L.ready)}
         </p>
       </div>
     </div>
@@ -165,6 +191,7 @@ export function LeftSidebar() {
 
 function DataClassificationWarnings() {
   const classification = useAppStore((s) => s.classification);
+  const en = useAppStore((s) => s.reportLanguage) === "en";
   if (!classification || classification.warnings.length === 0) return null;
 
   const isMetadataOnly = classification.datasetType === "metadata_only";
@@ -186,7 +213,9 @@ function DataClassificationWarnings() {
       ))}
       {classification.metadataColumns.length > 0 && classification.itemColumns.length > 0 && (
         <p className="text-[10px] text-muted-foreground px-1">
-          已自动排除 {classification.metadataColumns.length} 个非量表列：
+          {en ? "Auto-excluded " : "已自动排除 "}
+          {classification.metadataColumns.length}
+          {en ? " non-scale columns: " : " 个非量表列："}
           {classification.metadataColumns.slice(0, 3).join(", ")}
           {classification.metadataColumns.length > 3 ? " ..." : ""}
         </p>
@@ -198,6 +227,7 @@ function DataClassificationWarnings() {
 function QuickModeSummary() {
   const likertColumns = useAppStore((s) => s.likertColumns);
   const classification = useAppStore((s) => s.classification);
+  const en = useAppStore((s) => s.reportLanguage) === "en";
 
   if (likertColumns.length === 0) return null;
 
@@ -205,14 +235,20 @@ function QuickModeSummary() {
     <div className="px-3 py-2.5 rounded-lg bg-emerald-50/50 border border-emerald-100">
       <div className="flex items-center gap-1.5 mb-1.5">
         <Zap className="w-3.5 h-3.5 text-emerald-500" strokeWidth={1.5} />
-        <span className="text-xs font-medium text-emerald-700">自动检测结果</span>
+        <span className="text-xs font-medium text-emerald-700">
+          {en ? "Auto-detected" : "自动检测结果"}
+        </span>
       </div>
       <p className="text-[11px] text-emerald-600/80">
-        已识别 {likertColumns.length} 个 Likert 题项，将自动进行分析
+        {en
+          ? `Identified ${likertColumns.length} Likert items — ready for analysis`
+          : `已识别 ${likertColumns.length} 个 Likert 题项，将自动进行分析`}
       </p>
       {classification && classification.metadataColumns.length > 0 && (
         <p className="text-[10px] text-emerald-500/60 mt-1">
-          已排除 {classification.metadataColumns.length} 个非量表列
+          {en
+            ? `Excluded ${classification.metadataColumns.length} non-scale columns`
+            : `已排除 ${classification.metadataColumns.length} 个非量表列`}
         </p>
       )}
     </div>

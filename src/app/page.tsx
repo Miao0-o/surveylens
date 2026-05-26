@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useAppStore } from "@/lib/store";
 
 const T = {
   heroTitle: { zh: "您的问卷数据是否准备好进入下一阶段分析？", en: "Is your questionnaire data ready for the next stage of analysis?" },
@@ -63,17 +64,22 @@ const CheckCircle = () => (
 );
 
 export default function Home() {
-  const [lang, setLang] = useState<"zh" | "en">("zh");
+  const lang = useAppStore((s) => s.reportLanguage);
+  const setLang = useAppStore((s) => s.setReportLanguage);
 
   useEffect(() => {
-    const navLang = navigator.language || "";
-    setLang(navLang.startsWith("zh") ? "zh" : "en");
-  }, []);
+    // Auto-detect on first visit only if not already set
+    const stored = sessionStorage.getItem("survey-lens-lang");
+    if (!stored) {
+      const navLang = navigator.language || "";
+      setLang(navLang.startsWith("zh") ? "zh" : "en");
+    }
+  }, [setLang]);
 
   const en = lang === "en";
-  const feat = T.features[lang];
-  const caps = T.capabilities[lang];
-  const why = T.whyCards[lang];
+  const feat = T.features[lang] as typeof T.features.zh;
+  const caps = T.capabilities[lang] as typeof T.capabilities.zh;
+  const why = T.whyCards[lang] as typeof T.whyCards.zh;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAFAF9]">

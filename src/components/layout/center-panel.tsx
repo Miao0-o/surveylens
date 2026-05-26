@@ -2,7 +2,24 @@
 
 import { useState, useMemo } from "react";
 import { useAppStore } from "@/lib/store";
-import { STAGE_LABELS } from "@/types";
+import { STAGE_LABELS, type AnalysisStage } from "@/types";
+
+const STAGE_LABELS_EN: Record<AnalysisStage, string> = {
+  idle: "",
+  uploading: "Reading file...",
+  parsing: "Parsing data...",
+  cleaning: "Detecting missing values & reverse items...",
+  grouping: "Building dimension groups...",
+  reliability: "Computing Cronbach's α...",
+  validity: "Running Bartlett's test...",
+  efa: "Generating factor structure...",
+  descriptive: "Computing descriptive statistics...",
+  correlation: "Computing correlation matrix...",
+  stability: "Running bootstrap stability...",
+  ai: "AI interpreting...",
+  completed: "Complete",
+  error: "Error",
+};
 import { getActiveModules, getOneLineAPA } from "@/lib/analysis/registry";
 import { DataPreview } from "@/components/preprocessing/data-preview";
 import { OverviewDashboard } from "@/components/analysis/overview-dashboard";
@@ -45,8 +62,8 @@ export function CenterPanel() {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3">
         <FileSpreadsheet className="w-16 h-16" strokeWidth={1} />
-        <p className="text-base font-medium">上传数据后将在此处显示数据预览与分析结果</p>
-        <p className="text-sm text-muted-foreground/60">支持 .csv · .xlsx · .xls · Qualtrics 导出</p>
+        <p className="text-base font-medium">{en ? "Upload data to preview and analyze here" : "上传数据后将在此处显示数据预览与分析结果"}</p>
+        <p className="text-sm text-muted-foreground/60">{en ? "Supports .csv · .xlsx · .xls · Qualtrics exports" : "支持 .csv · .xlsx · .xls · Qualtrics 导出"}</p>
       </div>
     );
   }
@@ -58,7 +75,11 @@ export function CenterPanel() {
       <div className="flex flex-col items-center justify-center h-full gap-4">
         <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
         <p className="text-sm text-foreground font-medium text-center">
-          {pipelineState === "ai_processing" ? "AI 解读中" : STAGE_LABELS[analysisStage] ?? "处理中..."}
+          {pipelineState === "ai_processing"
+            ? (en ? "AI Interpreting..." : "AI 解读中")
+            : en
+              ? (STAGE_LABELS_EN[analysisStage] ?? "Processing...")
+              : STAGE_LABELS[analysisStage] ?? "处理中..."}
         </p>
       </div>
     );
@@ -70,8 +91,8 @@ export function CenterPanel() {
         <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
           <BarChart3 className="w-5 h-5 text-red-400" strokeWidth={1.5} />
         </div>
-        <p className="text-sm text-destructive">分析过程出现错误</p>
-        <p className="text-xs text-muted-foreground">请检查数据格式后重试</p>
+        <p className="text-sm text-destructive">{en ? "Analysis error occurred" : "分析过程出现错误"}</p>
+        <p className="text-xs text-muted-foreground">{en ? "Check your data format and retry" : "请检查数据格式后重试"}</p>
       </div>
     );
   }

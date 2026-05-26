@@ -32,6 +32,7 @@ import type { ResearchDesign, AnalysisMode, RepairState } from "@/types";
 const AI_KEY_STORAGE = "survey-lens-key";
 const AI_MODEL_STORAGE = "survey-lens-model";
 const AI_PROVIDER_STORAGE = "survey-lens-provider";
+const LANG_STORAGE = "survey-lens-lang";
 const AI_RESULTS_CACHE = "survey-lens-cache";
 const RAW_DATA_KEY = "survey-lens-rawdata";
 const LIKERT_KEY = "survey-lens-likert";
@@ -66,6 +67,17 @@ function loadCachedAIResults(): AIResults | null {
   } catch {
     return null;
   }
+}
+
+function loadReportLanguage(): "zh" | "en" {
+  if (typeof window === "undefined") return "zh";
+  const v = sessionStorage.getItem(LANG_STORAGE);
+  return v === "en" ? "en" : "zh";
+}
+
+function saveReportLanguage(lang: "zh" | "en"): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(LANG_STORAGE, lang);
 }
 
 function saveCachedAIResults(results: AIResults | null): void {
@@ -215,6 +227,7 @@ const initialState: AppState = {
 export const useAppStore = create<AppState & AppActions>()((set) => ({
   ...initialState,
   apiKey: loadApiKey(),
+  reportLanguage: loadReportLanguage(),
 
   // ---- Data ----
   setRawData: (data) => {
@@ -316,7 +329,10 @@ export const useAppStore = create<AppState & AppActions>()((set) => ({
   // ---- Config ----
   setAnalysisMode: (analysisMode) => set({ analysisMode }),
   setDesignConfirmed: (designConfirmed) => set({ designConfirmed }),
-  setReportLanguage: (reportLanguage) => set({ reportLanguage }),
+  setReportLanguage: (reportLanguage) => {
+    saveReportLanguage(reportLanguage);
+    set({ reportLanguage });
+  },
 
   // ---- Reset + Hydrate ----
   setApiKey: (key) => {

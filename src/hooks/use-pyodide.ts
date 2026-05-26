@@ -26,13 +26,13 @@ const STAGE_MAP: Record<string, AnalysisStage> = {
   stability: "stability",
 };
 
-const STAGE_LABELS: Record<string, string> = {
-  reliability: "计算 Cronbach's α",
-  validity: "Bartlett 球形检验 + KMO",
-  efa: "生成因子结构",
-  descriptive: "描述性统计",
-  correlation: "相关性分析",
-  stability: "Bootstrap 稳定性评估",
+const STAGE_LABELS: Record<string, { zh: string; en: string }> = {
+  reliability: { zh: "计算 Cronbach's α", en: "Computing Cronbach's α" },
+  validity: { zh: "Bartlett 球形检验 + KMO", en: "Bartlett's test + KMO" },
+  efa: { zh: "生成因子结构", en: "Generating factor structure" },
+  descriptive: { zh: "描述性统计", en: "Descriptive statistics" },
+  correlation: { zh: "相关性分析", en: "Correlation analysis" },
+  stability: { zh: "Bootstrap 稳定性评估", en: "Bootstrap stability" },
 };
 
 // Embedded Python — same as worker.ts, adapted for direct execution
@@ -420,7 +420,8 @@ export function usePyodide() {
   const initEngine = useCallback(async () => {
     if (pyRef.current) return pyRef.current;
     setStatus("loading");
-    setLoadingMessage("加载统计引擎...");
+    const en = useAppStore.getState().reportLanguage === "en";
+    setLoadingMessage(en ? "Loading engine..." : "加载统计引擎...");
 
     try {
       // Load Pyodide via script tag
@@ -437,7 +438,8 @@ export function usePyodide() {
 
       if (!loadPyodide) throw new Error("Pyodide not available");
 
-      setLoadingMessage("安装统计包...");
+      const en2 = useAppStore.getState().reportLanguage === "en";
+      setLoadingMessage(en2 ? "Installing packages..." : "安装统计包...");
       const py = await loadPyodide({
         indexURL: "https://cdn.jsdelivr.net/pyodide/v0.27.5/full/",
       });
@@ -574,9 +576,10 @@ export function usePyodide() {
       // Skip per-dim step — it requires a second argument and is called separately below
       if (step.id === "reliability_per_dim") continue;
 
-      const stageLabel = STAGE_LABELS[step.id] ?? step.id;
+      const stageLabel = STAGE_LABELS[step.id];
       useAppStore.getState().setAnalysisStage(STAGE_MAP[step.id] ?? "idle");
-      setLoadingMessage(stageLabel);
+      const en3 = useAppStore.getState().reportLanguage === "en";
+      setLoadingMessage(stageLabel ? (en3 ? stageLabel.en : stageLabel.zh) : step.id);
 
       // Register the function
       await py.runPythonAsync(step.fn);

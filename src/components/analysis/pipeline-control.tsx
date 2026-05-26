@@ -87,7 +87,7 @@ export function PipelineControl() {
         {isRunning || isWorkerLoading ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            {isWorkerLoading ? loadingMessage : "分析中..."}
+            {isWorkerLoading ? loadingMessage : (lang === "en" ? "Analyzing..." : "分析中...")}
           </>
         ) : (
           <>
