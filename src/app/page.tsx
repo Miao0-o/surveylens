@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Cpu, Shield, FileText, CheckCircle2 } from "lucide-react";
 
 export default function Home() {
   return (
@@ -22,9 +23,9 @@ export default function Home() {
         </p>
 
         <div className="grid grid-cols-3 gap-4 mb-10 w-full max-w-lg">
-          <Feature icon="&#x1F4E6;" title="本地计算" desc="基于 Pyodide (WASM) 引擎，数据全程不离开浏览器" />
-          <Feature icon="&#x1F512;" title="零数据上传" desc="问卷数据不上传服务器，保护受访者隐私" />
-          <Feature icon="&#x1F4DD;" title="APA 学术格式" desc="自动生成 APA 7 格式结果段落，可复制至论文" />
+          <Feature icon={<Cpu className="w-5 h-5" strokeWidth={1.5} />} title="本地计算" desc="基于 Pyodide (WASM) 引擎，数据全程不离开浏览器" />
+          <Feature icon={<Shield className="w-5 h-5" strokeWidth={1.5} />} title="零数据上传" desc="问卷数据不上传服务器，保护受访者隐私" />
+          <Feature icon={<FileText className="w-5 h-5" strokeWidth={1.5} />} title="APA 学术格式" desc="自动生成 APA 7 格式结果段落，可复制至论文" />
         </div>
 
         <div className="grid grid-cols-2 gap-3 mb-10 w-full max-w-lg text-left">
@@ -49,10 +50,10 @@ export default function Home() {
   );
 }
 
-function Feature({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
     <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-card border border-border/50">
-      <span className="text-2xl">{icon}</span>
+      <span className="text-muted-foreground">{icon}</span>
       <p className="text-xs font-medium text-foreground">{title}</p>
       <p className="text-[10px] text-muted-foreground/60 leading-relaxed">{desc}</p>
     </div>
@@ -66,7 +67,8 @@ function Capability({ title, items }: { title: string; items: string[] }) {
       <ul className="text-[10px] text-muted-foreground space-y-0.5">
         {items.map((item, i) => (
           <li key={i} className="flex items-center gap-1">
-            <span className="text-emerald-400">&#x2713;</span> {item}
+            <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" strokeWidth={1.5} />
+            {item}
           </li>
         ))}
       </ul>
