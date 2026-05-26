@@ -4,7 +4,7 @@
 </p>
 
 <p align="center">
-  <a href="https://miao0-o.github.io/surveylens/">Open App</a>
+  <a href="https://miao0-o.github.io/surveylens/">Try it online</a>
   &nbsp;·&nbsp;
   <a href="#getting-started">Getting Started</a>
   &nbsp;·&nbsp;
