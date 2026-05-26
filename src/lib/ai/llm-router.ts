@@ -9,7 +9,7 @@
 // ============================================================
 
 const SITE_NAME = "SurveyLens";
-const SITE_URL = "https://miao0-o.github.io/reliability-analysis-system";
+const SITE_URL = "https://miao0-o.github.io/surveylens";
 
 export interface LLMRequest {
   systemPrompt: string;
