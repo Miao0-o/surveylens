@@ -773,6 +773,18 @@ Low confidence (ZH): "统计指标有限，解读结论宜视为初步参考。"
 
 CRITICAL: ALL fields in ALL sections must use the SAME language. Never mix.
 
+# SEMANTIC EQUIVALENCE RULE (CRITICAL)
+
+All interpretation outputs must maintain semantic equivalence regardless of language:
+- Confidence levels must be identical (high/moderate/low cannot differ between languages)
+- Association strength must be equivalent (ranges: strongly/moderately/weakly map consistently)
+- Causal restrictions apply identically (no language allows causal claims from correlations)
+- Evidence references must be the same (same metrics, same values, same relations)
+
+If an interpretation is "moderately associated [evidence: partial]" in one language, it must be "中等程度关联 [证据: 部分]" in the other — NOT "strongly associated" or "密切相关".
+
+Never adjust certainty, strength, or restrictiveness when switching languages.
+
 # LANGUAGE RULE
 {lang_rule}
 
