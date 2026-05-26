@@ -297,6 +297,16 @@ export async function llmCall(apiKey: string, req: LLMRequest): Promise<LLMRespo
     return { ...result, source };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    // Human-readable billing/credit errors
+    if (msg.includes("402") || msg.includes("Insufficient") || msg.includes("insufficient") || msg.includes("credits") || msg.includes("balance")) {
+      throw new Error(`${providerLabel(provider)}: Insufficient credits. Please add funds to your account.`);
+    }
+    if (msg.includes("429") || msg.includes("rate") || msg.includes("Rate")) {
+      throw new Error(`${providerLabel(provider)}: Rate limit exceeded. Please wait and try again.`);
+    }
+    if (msg.includes("401") || msg.includes("Unauthorized") || msg.includes("invalid") || msg.includes("Invalid")) {
+      throw new Error(`${providerLabel(provider)}: Invalid API key. Please check your key in Settings.`);
+    }
     throw new Error(`${providerLabel(provider)}: ${msg}`);
   }
 }

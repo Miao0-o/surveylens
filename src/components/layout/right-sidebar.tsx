@@ -257,7 +257,16 @@ export function RightSidebar() {
           <p className="text-[9px] text-muted-foreground/50 text-center mt-2">
             {en ? "AI interpretation uses your own API key and may incur a small cost (~$0.01–0.05 per request)." : "AI 解读使用您自己的 API Key，可能产生少量费用（每次约 ¥0.05–0.30）。"}
           </p>
-          {aiCallError && <p className="text-xs text-red-500">{aiCallError}</p>}
+          {aiCallError && (
+            <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              <p className="font-medium">{en ? "Request failed" : "请求失败"}</p>
+              <p className="text-red-500/80 mt-0.5">{aiCallError.includes("Insufficient") || aiCallError.includes("credits")
+                ? (en ? "Insufficient API credits. Please add funds to your account." : "API 余额不足，请充值后重试。")
+                : aiCallError.includes("Invalid") || aiCallError.includes("401")
+                  ? (en ? "Invalid API key. Please check your key in Settings." : "API Key 无效，请在设置中检查。")
+                  : aiCallError}</p>
+            </div>
+          )}
         </div>
       );
     }
