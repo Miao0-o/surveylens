@@ -57,7 +57,7 @@ npm install
 npm run dev
 ```
 
-No environment variables or API keys required. For AI interpretation, bring a key from OpenRouter, Anthropic, OpenAI, or DeepSeek.
+Core analysis runs with no configuration. AI interpretation requires an API key from OpenRouter, Anthropic, OpenAI, or DeepSeek.
 
 ---
 
