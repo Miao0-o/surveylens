@@ -3,9 +3,16 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -13,11 +20,8 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npm run build
-      - run: |
-          cd out
-          git init
-          git config user.name "actions"
-          git config user.email "actions@github.com"
-          git add -A
-          git commit -m "deploy"
-          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:gh-pages
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+      - uses: actions/deploy-pages@v4
+        id: deployment
