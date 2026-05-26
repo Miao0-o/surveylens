@@ -83,7 +83,8 @@ export default function Home() {
         </button>
       </header>
 
-      <section className="flex flex-col items-center text-center px-6 pt-20 pb-8 max-w-2xl mx-auto">
+      <section className="flex flex-col items-center text-center px-6 pt-16 pb-8 max-w-2xl mx-auto">
+        <p className="text-sm font-semibold tracking-wide text-primary mb-4">SurveyLens</p>
         <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-4 leading-tight">{T.heroTitle[lang]}</h1>
         <p className="text-base text-muted-foreground max-w-md mb-2 leading-relaxed">{T.heroSub[lang]}</p>
         <p className="text-xs text-muted-foreground/60 mb-6">{T.heroNote[lang]}</p>
