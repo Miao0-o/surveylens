@@ -1,71 +1,116 @@
 # SurveyLens
 
-**帮助研究者判断问卷数据是否准备好进入下一阶段分析。**
+**Is your questionnaire data ready for the next stage of analysis?** SurveyLens gives you the answer — with no setup, no data upload, and APA-ready output.
 
-👉 [在线体验](https://miao0-o.github.io/reliability-analysis-system/)
-
----
-
-## 这是什么
-
-SurveyLens 是一个完全在浏览器中运行的问卷分析工具。上传数据 → 自动完成信效度检验 → AI 辅助解读 → APA 格式报告。所有计算在本地完成，数据不会离开你的设备。
+[Open Analyzer](https://miao0-o.github.io/surveylens/) · [Getting Started](#getting-started) · [License](#license)
 
 ---
 
-## 为什么用 SurveyLens
+## The problem
 
-| | SPSS / Jamovi | SurveyLens |
-|---|---|---|
-| 安装 | 需要下载安装 | 浏览器打开即用 |
-| 数据隐私 | 本地 | 本地（零上传） |
-| AI 解读 | 无 | 证据可追溯的 AI 学术解读 |
-| APA 报告 | 手动整理 | 一键生成 |
-| 编码簿 | 手动编码 | CSV/XLSX/PDF/MD 自动映射 |
+Before you can run regressions, SEM, or hypothesis tests, you need to know your scale actually works. Existing tools either require installation (SPSS, Jamovi), upload your data to a server, or leave you to manually format results for publication. SurveyLens solves all three.
 
 ---
 
-## 核心能力
+## Features
 
-- **数据准备度评估** — 判断问卷数据是否可以进入信效度分析
-- **信度分析** — Cronbach's α、分维度信度、题总相关
-- **效度与因子分析** — KMO、Bartlett、EFA、碎石图、载荷矩阵
-- **样本稳定性** — Bootstrap 评估、推荐样本量
-- **AI 学术解读** — 证据可追溯的统计解释 + 诊断考量 + APA 7 格式输出
-- **编码簿映射** — CSV / Excel / SPSS / PDF / Markdown 自动文本→数值映射
+### Core analysis
+- **Reliability** — Cronbach's α, per-dimension consistency, item-total correlations, α-if-deleted diagnostics
+- **Validity** — KMO measure, Bartlett's test of sphericity, sampling adequacy
+- **Factor structure** — Exploratory Factor Analysis with scree plots and loading matrices
+- **Sample stability** — Bootstrap confidence intervals, minimum sample size recommendations
+
+### Data management
+- **Codebook mapping** — Upload a codebook (CSV/XLSX/SPSS/PDF/Markdown) and SurveyLens automatically maps text responses to numeric values
+- **Reverse-item detection** — Automatic flagging with confirmation workflow
+- **Missing value handling** — Configurable strategies (listwise, mean imputation)
+
+### AI interpretation
+- **Evidence-traceable** — Every claim links back to a specific statistical result
+- **Research-oriented** — Interpretation framed around your research questions, not generic templates
+- **APA 7th edition** — Ready-to-copy results paragraphs
+- **Bilingual** — Full Chinese and English support
+
+### Privacy-first design
+- All computation runs locally via WebAssembly. No data ever leaves your browser.
+- API keys stored in sessionStorage only; auto-cleared after 15 minutes of inactivity.
+- No accounts, no tracking, no backend.
 
 ---
 
-## 技术栈
+## How it works
 
-| 层 | 技术 |
-|---|---|
-| 前端 | Next.js 16 + TypeScript + Tailwind CSS + Recharts |
-| 统计引擎 | Pyodide (WASM) + NumPy + SciPy |
-| AI 层 | OpenRouter / Anthropic / OpenAI / DeepSeek 直连（用户自备 Key） |
-| 部署 | GitHub Pages 静态托管 |
-
----
-
-## 本地开发
-
-```bash
-git clone https://github.com/Miao0-o/reliability-analysis-system.git
-cd reliability-analysis-system
-npm install
-npm run dev    # http://localhost:3000
+```
+Upload data → Upload codebook (optional) → Automatic mapping → Run analysis → AI interpretation → APA output
 ```
 
+Every step happens in your browser. The statistical engine (NumPy + SciPy) runs inside Pyodide, a Python runtime compiled to WebAssembly.
+
 ---
 
-## 数据隐私
+## Supported formats
 
-- 所有统计计算在浏览器 Pyodide (WASM) 引擎中完成
-- AI 仅接收统计摘要（~500 字符），不含原始数据
-- API Key 仅存储于 sessionStorage，15 分钟无操作自动清除
-- 无需注册、无后端、零数据上传
+| Category | Formats |
+|----------|---------|
+| Data files | CSV, XLSX, SAV (SPSS), DTA (Stata), Qualtrics exports |
+| Codebooks | CSV, XLSX, SPSS syntax, PDF, Markdown |
+
+---
+
+## Tech stack
+
+| Layer | Stack |
+|-------|-------|
+| Frontend | Next.js 16 (App Router) · TypeScript · Tailwind CSS |
+| Visualization | Recharts |
+| Statistics | Pyodide (WASM) · NumPy · SciPy |
+| AI routing | Multi-provider (OpenRouter / Anthropic / OpenAI / DeepSeek) |
+| Deployment | GitHub Pages · GitHub Actions · Static export |
+
+---
+
+## Getting started
+
+```bash
+git clone https://github.com/Miao0-o/surveylens.git
+cd surveylens
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000` — no API keys or environment variables required.
+
+For AI interpretation, bring your own API key from any supported provider (OpenRouter, Anthropic, OpenAI, or DeepSeek).
+
+---
+
+## Privacy
+
+SurveyLens is designed so that **you never have to trust us with your data:**
+
+- Statistical computation runs entirely in your browser via Pyodide (Python → WebAssembly)
+- AI interpretation receives only aggregated statistical summaries (~500 characters), never raw data
+- API keys are stored in ephemeral session storage and wiped after inactivity
+- The app is a fully static site — no server, no database, no analytics
+
+---
+
+## Use cases
+
+- Pre-registered scale validation
+- Pilot study instrument evaluation
+- Thesis/dissertation measurement chapters
+- Teaching psychometrics in graduate methods courses
+- Quick diagnostic checks before submitting to a supervisor
+
+---
+
+## Screenshots
+
+*[Screenshots placeholder — add analysis dashboard, codebook mapping, APA output]*
 
 ---
 
 ## License
 
-MIT License © 2026
+MIT © 2026
