@@ -4,10 +4,9 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 
 const T = {
-  tagline: { zh: "帮助您判断问卷数据是否准备好进入下一阶段分析", en: "We help you decide whether your survey data is ready for analysis." },
-  heroTitle: { zh: "您的问卷数据是否准备好进入下一阶段分析？", en: "Know whether your questionnaire data is ready for analysis." },
-  heroSub: { zh: "上传问卷数据，在浏览器中直接评估信度、效度、因子结构与 APA 就绪结果。", en: "Upload survey data and evaluate reliability, validity, factor structure, and APA-ready results directly in your browser." },
-  heroDesc: { zh: "SurveyLens 在浏览器本地完成信度检验、效度分析、因子分析与稳定性评估，帮助研究者判断当前数据是否具备足够的统计质量以支持后续建模与学术报告。所有计算均在本地完成，数据不会离开您的设备。", en: "SurveyLens performs reliability analysis, validity testing, factor analysis, and stability assessment entirely in your browser — helping you determine whether your data has sufficient statistical quality for further modeling and academic reporting. Your data never leaves your device." },
+  heroTitle: { zh: "您的问卷数据是否准备好进入下一阶段分析？", en: "Is your questionnaire data ready for the next stage of analysis?" },
+  heroSub: { zh: "上传数据，在浏览器中评估信度、效度与因子结构，并生成 APA 就绪结果。", en: "Upload data and evaluate reliability, validity, and factor structure — with APA-ready results — in your browser." },
+  heroNote: { zh: "所有计算均在本地完成，数据不会离开您的设备。", en: "All computation is local. Your data never leaves your device." },
   cta: { zh: "开始分析", en: "Open Analyzer" },
   ctaSub: { zh: "无需注册 · 免费使用 · 数据全程本地运行", en: "No login required · Free to use · Your data stays on your device" },
   features: {
@@ -87,8 +86,7 @@ export default function Home() {
       <section className="flex flex-col items-center text-center px-6 pt-20 pb-8 max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold tracking-tight text-foreground mb-3 leading-snug">{T.heroTitle[lang]}</h1>
         <p className="text-sm text-muted-foreground max-w-md mb-2 leading-relaxed">{T.heroSub[lang]}</p>
-        <p className="text-xs text-muted-foreground/60 mb-6">{T.tagline[lang]}</p>
-        <p className="text-sm text-muted-foreground/70 max-w-md mb-8 leading-relaxed">{T.heroDesc[lang]}</p>
+        <p className="text-xs text-muted-foreground/60 mb-6">{T.heroNote[lang]}</p>
         <Link href="/analyze" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity">
           {T.cta[lang]}
         </Link>
