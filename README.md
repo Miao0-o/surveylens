@@ -66,7 +66,7 @@ AI interpretation is optional and supports **OpenRouter**, **Anthropic**, **Open
 
 ## Tech Stack
 
-Next.js · TypeScript · Tailwind CSS · GitHub Pages · GitHub Actions
+Next.js · TypeScript · Tailwind CSS · Vercel · Cloudflare
 
 ---
 
