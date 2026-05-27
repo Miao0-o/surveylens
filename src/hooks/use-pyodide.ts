@@ -765,6 +765,15 @@ export function usePyodide() {
         };
       }
     }
+    // Fallback: derive sampleSize from descriptive results if reliability didn't set it
+    if (finalResults.meta.sampleSize === 0 && results.descriptive) {
+      const descArr = results.descriptive as unknown as Array<{ n: number }>;
+      if (descArr.length > 0) {
+        finalResults.meta.sampleSize = descArr[0].n ?? rawData!.rowCount;
+      } else {
+        finalResults.meta.sampleSize = rawData!.rowCount;
+      }
+    }
     finalResults.meta.datasetVersion = datasetVersion;
     finalResults.meta.inputSnapshot = inputSnapshot;
     // Attach composite diagnostics for AI interpretation and UI

@@ -16,7 +16,7 @@ export const analysisModules: AnalysisModule[] = [
     label: "描述",
     intents: ["explore", "validate"],
     sourceStep: "descriptive",
-    isAvailable: (r) => r.meta.sampleSize > 0,
+    isAvailable: (_r) => true, // Always available — descriptive stats require no prerequisites
     apaInsight: (r, lang) => {
       const a = r.reliability.cronbachsAlpha;
       if (lang === "zh") {
