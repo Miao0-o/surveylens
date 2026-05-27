@@ -1,66 +1,55 @@
 # Surveylens
 
-Browser-based survey data analysis for reliability, validity, and factor structure — fully local-first and privacy-preserving.
+Browser-based survey data analysis — reliability, validity, factor structure — fully local-first and privacy-preserving.
 
 ## Live Demo
 
-https://miao0-o.github.io/surveylens/
+**[miao0-o.github.io/surveylens](https://miao0-o.github.io/surveylens/)**
 
 ---
 
 ## Overview
 
-Surveylens helps researchers quickly evaluate whether survey data is ready for statistical analysis and academic reporting.
-
-Run reliability analysis, validity checks, factor exploration, and APA-ready interpretation directly in the browser — with no backend or data upload required.
+Surveylens helps researchers evaluate whether survey data is ready for the next stage of analysis. Reliability diagnostics, validity checks, factor exploration, and APA-ready interpretation — all in the browser, with no install and no data upload.
 
 ---
 
 ## Features
 
-- Reliability analysis (Cronbach's alpha)
-- Validity diagnostics
-- Exploratory factor analysis
-- APA-ready statistical summaries
-- Local-first architecture
-- Browser-only execution
-- Privacy-preserving workflow
-- AI-assisted interpretation (optional)
+- **Reliability analysis** — Cronbach's alpha, item-total correlations, per-dimension diagnostics
+- **Validity diagnostics** — KMO measure, Bartlett's test, sampling adequacy
+- **Factor exploration** — EFA with scree plots and loading matrices
+- **APA-ready output** — Statistical summaries formatted for publication
+- **Codebook-aware** — Auto-map text responses to numeric values
+- **Local-first** — No server, no data upload, no tracking
+- **AI interpretation** — Optional, evidence-traceable, bilingual (EN/ZH)
 
 ---
 
-## Supported Data Formats
+## Supported Formats
 
-- CSV
-- XLSX / XLS
-- SPSS (.sav)
-- Qualtrics exports
+| Data Files | Codebooks |
+|------------|-----------|
+| CSV, XLSX, SPSS (.sav), DTA, Qualtrics | CSV, XLSX, SPSS, PDF, Markdown |
 
 ---
 
 ## How It Works
 
-1. Upload survey data
-2. Run statistical diagnostics
-3. Review reliability and factor results
-4. Generate APA-ready interpretation
+1. **Upload** survey data and optionally a codebook
+2. **Run** reliability, validity, and factor diagnostics
+3. **Review** results with APA-ready summaries
+4. **Export** for your manuscript
 
 ---
 
 ## Privacy
 
-Surveylens is fully local-first.
-
-All statistical computation runs directly in the browser.  
-No dataset is uploaded, stored, or transmitted to external servers.
-
-AI interpretation is optional and requires your own API key.
+Surveylens is fully local-first. All statistical computation runs directly in your browser via WebAssembly — no dataset is uploaded, stored, or transmitted. AI interpretation is opt-in and sends only aggregated statistical summaries, never raw responses.
 
 ---
 
 ## Getting Started
-
-Clone the repository and run locally:
 
 ```bash
 git clone https://github.com/Miao0-o/surveylens.git
@@ -69,44 +58,21 @@ npm install
 npm run dev
 ```
 
-No backend setup required.
+No backend required. Core analysis works out of the box.
 
-Core reliability, validity, and factor analysis workflows work out of the box.
-
-Optional AI interpretation supports:
-
-- OpenRouter
-- Anthropic
-- OpenAI
-- DeepSeek
+AI interpretation is optional and supports **OpenRouter**, **Anthropic**, **OpenAI**, and **DeepSeek**.
 
 ---
 
 ## Tech Stack
 
-- Next.js
-- TypeScript
-- Tailwind CSS
-- GitHub Pages
-- GitHub Actions
-
----
-
-## Deployment
-
-Surveylens is deployed as a static site via GitHub Pages.
-
-CI/CD is handled through GitHub Actions.
+Next.js · TypeScript · Tailwind CSS · GitHub Pages · GitHub Actions
 
 ---
 
 ## Use Cases
 
-- Psychology research
-- Social science surveys
-- Scale validation
-- Academic thesis analysis
-- Questionnaire diagnostics
+Psychology research · Social science surveys · Scale validation · Thesis analysis · Questionnaire diagnostics
 
 ---
 
@@ -121,4 +87,4 @@ CI/CD is handled through GitHub Actions.
 
 ## License
 
-MIT License
+MIT
