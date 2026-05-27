@@ -559,10 +559,21 @@ function buildUserMessage(input: AICompressedInput, validation?: ValidationRepor
       }
       if (cd.loadings && Object.keys(cd.loadings).length > 0) {
         const loadingStr = Object.entries(cd.loadings).map(([item, l]) => `${item}=${l.toFixed(2)}`).join(", ");
-        lines.push(`  Loadings: ${loadingStr}`);
+        lines.push(`  Loadings (interpretation only, NOT scoring weights): ${loadingStr}`);
+      }
+      if (cd.weights && Object.keys(cd.weights).length > 0) {
+        const weightStr = Object.entries(cd.weights).map(([item, w]) => `${item}=${w.toFixed(3)}`).join(", ");
+        lines.push(`  Scoring weights (normalized): ${weightStr}`);
       }
       if (cd.varianceExplained !== undefined) {
         lines.push(`  Variance explained by PC1: ${(cd.varianceExplained * 100).toFixed(0)}%`);
+      }
+      if (cd.loadings) {
+        // Note weak items but don't recommend deletion
+        const weakItems = Object.entries(cd.loadings).filter(([, l]) => Math.abs(l) < 0.40);
+        if (weakItems.length > 0) {
+          lines.push(`  Items with weaker construct alignment (loading < |.40|): ${weakItems.map(([item]) => item).join(", ")}. Researchers may wish to review the conceptual alignment of these items. Do NOT recommend deleting items — note only that review may be warranted.`);
+        }
       }
     }
   }

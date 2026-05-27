@@ -358,6 +358,7 @@ export interface AICompressedInput {
     methodUsed: string;
     varianceExplained?: number;
     loadings?: Record<string, number>;
+    weights?: Record<string, number>;
     fallbackTriggered: boolean;
     warnings: string[];
   }>;

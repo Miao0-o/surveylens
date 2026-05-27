@@ -40,8 +40,10 @@ export interface CompositeDiagnostics {
   methodUsed: CompositeMethod;
   /** PCA-specific: variance explained by first component */
   varianceExplained?: number;
-  /** PCA-specific: item loadings on first component */
+  /** PCA-specific: item loadings on first component (for interpretation only, NOT scoring weights) */
   loadings?: Record<string, number>;
+  /** PCA-specific: normalized scoring weights w_i = v_i / Σ|v_i| */
+  weights?: Record<string, number>;
   /** Whether PCA fell back to mean */
   fallbackTriggered: boolean;
   /** Human-readable warnings */
@@ -311,15 +313,61 @@ function powerIteration(
 }
 
 /**
+ * Compute the determinant of a symmetric matrix via LU decomposition with partial pivoting.
+ * Returns NaN if the matrix is singular or computation fails.
+ */
+function matrixDeterminant(R: number[][]): number {
+  const n = R.length;
+  if (n === 0) return 1;
+  // Copy matrix
+  const A = R.map(row => [...row]);
+
+  let det = 1;
+  for (let k = 0; k < n; k++) {
+    // Partial pivot: find max in column k
+    let maxRow = k;
+    let maxVal = Math.abs(A[k][k]);
+    for (let i = k + 1; i < n; i++) {
+      if (Math.abs(A[i][k]) > maxVal) {
+        maxVal = Math.abs(A[i][k]);
+        maxRow = i;
+      }
+    }
+    if (maxVal < 1e-12) return 0; // singular
+
+    if (maxRow !== k) {
+      [A[k], A[maxRow]] = [A[maxRow], A[k]];
+      det = -det;
+    }
+
+    det *= A[k][k];
+
+    // Eliminate below
+    for (let i = k + 1; i < n; i++) {
+      const factor = A[i][k] / A[k][k];
+      for (let j = k + 1; j < n; j++) {
+        A[i][j] -= factor * A[k][j];
+      }
+      A[i][k] = 0;
+    }
+  }
+  return det;
+}
+
+/**
  * Compute PCA-weighted composite scores.
  *
  * SAFETY RULES:
  * - n items >= 3
+ * - mean inter-item |r| > 0.15 (not just a single pair)
+ * - correlation matrix not singular (determinant + pairwise check)
  * - first component variance explained >= 50%
- * - correlation matrix not singular
- * - inter-item correlations sufficient (at least one r > 0.2)
  *
  * Falls back to mean if any rule fails.
+ *
+ * Weight calculation: w_i = v_i / Σ|v_i|   (normalized eigenvector)
+ * Score: Σ(w_i × z_i)                      (standardized items)
+ * Loadings are returned for interpretation only — NOT used as scoring weights.
  */
 function computePCAScore(
   itemMatrix: number[][],
@@ -328,6 +376,7 @@ function computePCAScore(
   scores: number[];
   varianceExplained: number;
   loadings: number[];
+  weights: number[];
   fallback: boolean;
   warnings: string[];
 } {
@@ -337,9 +386,7 @@ function computePCAScore(
   // Rule 1: minimum 3 items
   if (n < 3) {
     return {
-      scores: [],
-      varianceExplained: 0,
-      loadings: [],
+      scores: [], varianceExplained: 0, loadings: [], weights: [],
       fallback: true,
       warnings: ["PCA requires ≥ 3 items — fallback to mean aggregation."],
     };
@@ -348,53 +395,58 @@ function computePCAScore(
   // Compute correlation matrix
   const R = correlationMatrix(itemMatrix, colIndices);
 
-  // Rule 2: Check for sufficient inter-item correlations
-  let maxR = 0;
+  // Rule 2: mean inter-item |r| > 0.15
+  let sumAbsR = 0;
+  let pairCount = 0;
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      if (Math.abs(R[i][j]) > maxR) maxR = Math.abs(R[i][j]);
+      sumAbsR += Math.abs(R[i][j]);
+      pairCount++;
     }
   }
-  if (maxR < 0.2) {
+  const meanAbsR = pairCount > 0 ? sumAbsR / pairCount : 0;
+  if (meanAbsR < 0.15) {
     return {
-      scores: [],
-      varianceExplained: 0,
-      loadings: [],
+      scores: [], varianceExplained: 0, loadings: [], weights: [],
       fallback: true,
-      warnings: ["Inter-item correlations too weak (max |r| < 0.2) — fallback to mean aggregation."],
+      warnings: [`Mean inter-item |r| = ${meanAbsR.toFixed(3)} (< 0.15) — fallback to mean aggregation.`],
     };
   }
 
-  // Rule 3: Check for singular matrix (determinant ≈ 0)
-  // Simple check: any two rows too highly correlated (|r| > 0.999)
+  // Rule 3: Singular matrix detection
+  // 3a: Pairwise near-perfect correlation check
   let nearlySingular = false;
   for (let i = 0; i < n && !nearlySingular; i++) {
     for (let j = i + 1; j < n && !nearlySingular; j++) {
       if (Math.abs(R[i][j]) > 0.999) nearlySingular = true;
     }
   }
-  if (nearlySingular) {
+
+  // 3b: Determinant check — if det ≈ 0, matrix is singular
+  const det = matrixDeterminant(R);
+  const detSingular = Math.abs(det) < 1e-10;
+
+  if (nearlySingular || detSingular) {
     return {
-      scores: [],
-      varianceExplained: 0,
-      loadings: [],
+      scores: [], varianceExplained: 0, loadings: [], weights: [],
       fallback: true,
-      warnings: ["Correlation matrix nearly singular — fallback to mean aggregation."],
+      warnings: ["Correlation matrix is unstable. Falling back to mean composite."],
     };
   }
 
   // First principal component via power iteration
   const { eigenvalue, eigenvector } = powerIteration(R);
 
-  // Variance explained: eigenvalue / n (since total variance = trace(R) = n for correlation matrix)
+  // Variance explained: eigenvalue / n (trace(R) = n for correlation matrix)
   const varianceExplained = eigenvalue / n;
+
+  // Round for output
+  const loadings = eigenvector.map(v => Math.round(v * 1000) / 1000);
 
   // Rule 4: variance explained >= 50%
   if (varianceExplained < 0.50) {
     return {
-      scores: [],
-      varianceExplained,
-      loadings: eigenvector.map(v => Math.round(v * 1000) / 1000),
+      scores: [], varianceExplained, loadings, weights: [],
       fallback: true,
       warnings: [
         `First component explains only ${(varianceExplained * 100).toFixed(0)}% of variance (< 50%) — fallback to mean aggregation.`,
@@ -403,37 +455,33 @@ function computePCAScore(
     };
   }
 
-  // Compute PCA scores: standardized items weighted by loadings
+  // Normalize eigenvector to scoring weights: w_i = v_i / Σ|v_i|
+  const absSum = eigenvector.reduce((s, v) => s + Math.abs(v), 0);
+  const weights = absSum > 0 ? eigenvector.map(v => Math.round(v / absSum * 1000) / 1000) : eigenvector.map(() => 1 / n);
+
+  // Compute standardized PCA scores: score = Σ(w_i × z_i)
   const { standardized } = standardizeColumns(itemMatrix, colIndices);
   const nRows = itemMatrix.length;
   const scores: number[] = [];
 
   for (let r = 0; r < nRows; r++) {
     let score = 0;
-    let totalWeight = 0;
     for (let i = 0; i < n; i++) {
       const ci = colIndices[i];
-      const w = Math.abs(eigenvector[i]); // use absolute loading as weight
-      if (!isNaN(standardized[r][ci])) {
-        score += w * standardized[r][ci];
-        totalWeight += w;
-      }
+      score += weights[i] * (isNaN(standardized[r][ci]) ? 0 : standardized[r][ci]);
     }
-    scores.push(totalWeight > 0 ? score / totalWeight : 0);
+    scores.push(score);
   }
 
-  // Normalize scores to approximate the original item scale
-  // Map z-scores back to original metric using mean of item means/stds
-  const origMeans = columnMeans(itemMatrix).filter((_, i) => colIndices.includes(i));
-  const origStds = columnStds(itemMatrix, columnMeans(itemMatrix)).filter((_, i) => colIndices.includes(i));
-  const avgMean = origMeans.reduce((a, b) => a + b, 0) / origMeans.length;
-  const avgStd = origStds.reduce((a, b) => a + b, 0) / origStds.length;
-  const normalized = scores.map(s => avgMean + s * avgStd);
+  // Lightly center: ensure mean ≈ 0 for standardized scores
+  const scoreMean = scores.reduce((a, b) => a + b, 0) / scores.length;
+  const centered = scores.map(s => Math.round((s - scoreMean) * 1000) / 1000);
 
   return {
-    scores: normalized,
+    scores: centered,
     varianceExplained: Math.round(varianceExplained * 1000) / 1000,
-    loadings: eigenvector.map(v => Math.round(v * 1000) / 1000),
+    loadings,
+    weights,
     fallback: false,
     warnings: [],
   };
@@ -509,8 +557,10 @@ export function aggregateToScaleMatrix(
       } else {
         diag.varianceExplained = pcaResult.varianceExplained;
         diag.loadings = {};
+        diag.weights = {};
         c.sourceItems.forEach((item, i) => {
           diag.loadings![item] = pcaResult.loadings[i] ?? 0;
+          diag.weights![item] = pcaResult.weights[i] ?? 0;
         });
         for (let r = 0; r < nRows; r++) {
           scaleMatrix[r][colIdx] = pcaResult.scores[r];
