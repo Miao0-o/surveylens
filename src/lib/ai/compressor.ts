@@ -15,7 +15,7 @@ import { parseCompositeLabel } from "@/lib/stats/composite";
  */
 function resolveVarName(v: string): string {
   const parsed = parseCompositeLabel(v);
-  return parsed ? parsed.name : v;
+  return parsed ? parsed.label : v;
 }
 
 export function compressResults(

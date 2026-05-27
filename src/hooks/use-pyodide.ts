@@ -3,7 +3,12 @@
 import { useRef, useState, useCallback } from "react";
 import { useAppStore } from "@/lib/store";
 import { compressResults } from "@/lib/ai/compressor";
-import { computeCompositeScores } from "@/lib/stats/composite";
+import {
+  resolveSelectedVars,
+  collectItemHeaders,
+  buildItemMatrix,
+  aggregateToScaleMatrix,
+} from "@/lib/stats/composite";
 import { validateResults } from "@/lib/stats/validation-engine";
 import { sanitizeForStorage } from "@/lib/stats/sanitize";
 import { extractLikertFromFreeze } from "@/lib/codebook/mapping-engine";
@@ -487,59 +492,54 @@ export function usePyodide() {
     });
     const analysisColumns = likertColumns.length > 0 ? likertColumns : numericCols.length > 0 ? numericCols : analyzableHeaders;
 
-    // === SCALE-LEVEL ANALYSIS: respect user-selected variables ===
+    // === THREE-LAYER ARCHITECTURE ===
+    // Layer 1 (Raw) → Layer 2 (Measurement/itemMatrix) → Layer 3 (Construct/scaleMatrix)
     const design = state.researchDesign;
     const allUserVars = [...(design?.outcomeVariables ?? []), ...(design?.predictorVariables ?? [])];
     const hasUserSelection = allUserVars.length > 0;
 
     let itemHeaders: string[] = analysisColumns;
     let scaleHeaders: string[] = analysisColumns;
-    let itemMatrix: number[][] | null = null;
-    let scaleMatrix: number[][] | null = null;
+    let userComposites: ReturnType<typeof resolveSelectedVars>["composites"] = [];
+    let userRawVars: string[] = [];
 
     if (hasUserSelection) {
-      console.log("[analysis] User-selected variables detected:", allUserVars);
-      const computed = computeCompositeScores(rawData!.headers, rawData!.rows, allUserVars);
-      itemHeaders = computed.itemHeaders;
-      scaleHeaders = computed.scaleHeaders;
-      itemMatrix = computed.itemMatrix;
-      scaleMatrix = computed.scaleMatrix;
-      console.log("[analysis] Scale-level:", scaleHeaders, "Item-level:", itemHeaders);
+      const resolved = resolveSelectedVars(allUserVars);
+      userComposites = resolved.composites;
+      userRawVars = resolved.rawVars;
+      itemHeaders = collectItemHeaders(userComposites, userRawVars);
+      console.log("[analysis] User-selected:", { composites: userComposites.map(c => c.id), rawVars: userRawVars, itemHeaders });
     }
 
-    // Input snapshot for audit
+    // Input snapshot
     const inputSnapshot = `${analysisColumns.slice(0, 5).join(",")}_n${rawData!.rowCount}_v${datasetVersion}`;
 
-    // Build raw data matrix for existing pipeline (used when no user selection)
+    // --- Build raw matrix for existing pipeline (used when no user selection) ---
     let data: number[][];
     const { mappingFreeze, confirmedReverseItems } = state;
 
-    // Canonical version check — discard stale freeze before use
     if (mappingFreeze) {
       const rowMatch = mappingFreeze.matrix.length === rawData!.rows.length;
       const colMatch = mappingFreeze.headers.length === rawData!.headers.length;
       if (!rowMatch || !colMatch) {
-        console.warn("[analysis] Freeze version v" + (mappingFreeze.appliedAt) + " stale vs dataset v" + datasetVersion + " — discarding");
+        console.warn("[analysis] Freeze stale — discarding");
         useAppStore.getState().setMappingFreeze(null);
       }
     }
 
-    // Staleness check: freeze must match current rawData
     const freezeValid = mappingFreeze && mappingFreeze.headers.length === rawData!.headers.length
       && mappingFreeze.appliedAt > 0
       && mappingFreeze.matrix.length === rawData!.rows.length;
 
     if (freezeValid) {
-      console.log("[analysis] Reading from frozen matrix:", mappingFreeze!.stats);
       data = extractLikertFromFreeze(mappingFreeze!, analysisColumns);
     } else {
       if (mappingFreeze && !freezeValid) {
-        console.warn("[analysis] Freeze is stale — falling back to raw data");
         const lang = state.reportLanguage;
         useAppStore.getState().setDataWarnings([
           lang === "en"
-            ? "The codebook may no longer match the current dataset — some variables may not be correctly mapped. Re-upload the codebook to ensure accurate mapping."
-            : "检测到编码簿与当前数据可能不一致，部分变量可能未正确映射。建议重新上传编码簿以确保映射准确。"
+            ? "The codebook may no longer match the current dataset."
+            : "检测到编码簿与当前数据可能不一致。"
         ]);
       }
       data = rawData!.rows.map((row) =>
@@ -550,64 +550,71 @@ export function usePyodide() {
       );
     }
 
-    // Build item-level and scale-level matrices from the main data matrix
-    // If user-selected vars, map them from computed matrices
-    let itemData: number[][] = data;
-    let scaleData: number[][] = data;
-
-    if (hasUserSelection && itemMatrix && scaleMatrix) {
-      itemData = itemMatrix;
-      scaleData = scaleMatrix;
+    // --- Layer 2: Build itemMatrix from raw data ---
+    let itemData: number[][];
+    if (hasUserSelection) {
+      itemData = buildItemMatrix(rawData!.headers, rawData!.rows, itemHeaders);
+    } else {
+      itemData = data;
     }
 
-    // Repair pipeline: mapping(freeze) → reverse → missing → analysis
-    // Apply to item-level data (for reliability) and scale-level data (for everything else)
-
-    // Helper to apply repairs to a matrix
-    const applyRepairs = (matrix: number[][], headers: string[]) => {
-      // Step A: Reverse transform
-      if (!mappingFreeze && confirmedReverseItems.length > 0) {
-        for (const col of confirmedReverseItems) {
-          const colIdx = headers.indexOf(col);
-          if (colIdx < 0) continue;
-          const colVals = matrix.map((row) => row[colIdx]).filter((v) => !isNaN(v));
-          if (colVals.length === 0) continue;
-          const maxVal = Math.max(...colVals);
-          const minVal = Math.min(...colVals);
-          for (let r = 0; r < matrix.length; r++) {
-            if (!isNaN(matrix[r][colIdx])) {
-              matrix[r][colIdx] = maxVal + minVal - matrix[r][colIdx];
-            }
-          }
-        }
-      }
-      // Step B: Missing value imputation
-      if (!mappingFreeze && missingStrategy.method === "mean_imputation") {
-        for (let c = 0; c < (matrix[0]?.length ?? 0); c++) {
-          const colVals = matrix.map((row) => row[c]).filter((v) => !isNaN(v));
-          if (colVals.length === 0) continue;
-          const colMean = colVals.reduce((a, b) => a + b, 0) / colVals.length;
-          for (let r = 0; r < matrix.length; r++) {
-            if (isNaN(matrix[r][c])) matrix[r][c] = colMean;
-          }
-        }
-      }
-    };
-
+    // --- REPAIR PIPELINE: raw → reverse → impute → itemMatrix (Layer 2) ---
     const { missingStrategy } = state;
-    applyRepairs(itemData, itemHeaders);
-    if (hasUserSelection) applyRepairs(scaleData, scaleHeaders);
 
+    // Step A: Reverse transform on item-level data
+    if (!mappingFreeze && confirmedReverseItems.length > 0) {
+      for (const col of confirmedReverseItems) {
+        const colIdx = itemHeaders.indexOf(col);
+        if (colIdx < 0) continue;
+        const colVals = itemData.map((row) => row[colIdx]).filter((v) => !isNaN(v));
+        if (colVals.length === 0) continue;
+        const maxVal = Math.max(...colVals);
+        const minVal = Math.min(...colVals);
+        for (let r = 0; r < itemData.length; r++) {
+          if (!isNaN(itemData[r][colIdx])) {
+            itemData[r][colIdx] = maxVal + minVal - itemData[r][colIdx];
+          }
+        }
+      }
+    }
+
+    // Step B: Missing value imputation on item-level data
+    if (!mappingFreeze && missingStrategy.method === "mean_imputation") {
+      for (let c = 0; c < (itemData[0]?.length ?? 0); c++) {
+        const colVals = itemData.map((row) => row[c]).filter((v) => !isNaN(v));
+        if (colVals.length === 0) continue;
+        const colMean = colVals.reduce((a, b) => a + b, 0) / colVals.length;
+        for (let r = 0; r < itemData.length; r++) {
+          if (isNaN(itemData[r][c])) itemData[r][c] = colMean;
+        }
+      }
+    }
+
+    // --- Layer 3: Aggregate itemMatrix → scaleMatrix ---
+    let scaleData: number[][];
+    if (hasUserSelection) {
+      const aggregated = aggregateToScaleMatrix(itemHeaders, itemData, userComposites, userRawVars);
+      scaleHeaders = aggregated.scaleHeaders;
+      scaleData = aggregated.scaleMatrix;
+      console.log("[analysis] Scale-level:", scaleHeaders);
+    } else {
+      scaleData = itemData;
+    }
+
+    // --- RUN PYTHON STEPS ---
     const itemDataJson = JSON.stringify(itemData);
-    const scaleDataJson = hasUserSelection ? JSON.stringify(scaleData) : itemDataJson;
+    const scaleDataJson = JSON.stringify(scaleData);
 
     await py.runPythonAsync("import json");
 
-    // Run each step sequentially with progress
     const results = {} as Record<string, Record<string, unknown>>;
 
+    // Item-level steps: reliability, validity (KMO/Bartlett), EFA
+    const ITEM_LEVEL_STEPS = new Set(["reliability", "validity", "efa"]);
+    // Scale-level steps: correlation, descriptive, stability
+    // (reliability_per_dim is skipped and handled separately below)
+
     for (const step of PYTHON_STEPS) {
-      // Skip per-dim step — it requires a second argument and is called separately below
       if (step.id === "reliability_per_dim") continue;
 
       const stageLabel = STAGE_LABELS[step.id];
@@ -615,15 +622,12 @@ export function usePyodide() {
       const en3 = useAppStore.getState().reportLanguage === "en";
       setLoadingMessage(stageLabel ? (en3 ? stageLabel.en : stageLabel.zh) : step.id);
 
-      // Route: item-level steps use itemData, scale-level steps use scaleData
-      const isItemLevel = step.id === "reliability";
+      const isItemLevel = ITEM_LEVEL_STEPS.has(step.id);
       const dataJson = isItemLevel ? itemDataJson : scaleDataJson;
       await py.runPythonAsync(`__data_json__ = '''${dataJson}'''`);
 
-      // Register the function
       await py.runPythonAsync(step.fn);
 
-      // Execute
       const callCode = step.id === "stability"
         ? `run_stability(__data_json__, 200)`
         : `run_${step.id}(__data_json__)`;

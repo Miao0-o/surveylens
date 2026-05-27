@@ -1,13 +1,26 @@
 // ============================================================
-// Composite Scale Computation
-// Parses user-defined composite labels and computes actual
-// mean/sum scores from raw data for scale-level analysis.
+// Composite Scale Computation — Three-Layer Architecture
+//
+// Layer 1 (Raw)    → rawMatrix (from file parsing)
+// Layer 2 (Measurement) → itemMatrix (cleaned, reverse-coded, imputed)
+// Layer 3 (Construct)   → scaleMatrix (aggregated composites/factors)
+//
+// parseCompositeLabel: UI string → StructuredComposite
+// aggregateToScaleMatrix: itemMatrix → scaleMatrix
 // ============================================================
 
 export type ComputeMethod = "mean" | "sum" | "weighted_mean" | "factor_score";
 
 export interface ComputedVariable {
   name: string;
+  method: ComputeMethod;
+  sourceItems: string[];
+}
+
+/** Structured composite — internal representation, not UI-facing */
+export interface StructuredComposite {
+  id: string;          // e.g., "anxiety_mean_q1_q2"
+  label: string;       // e.g., "焦虑维度"
   method: ComputeMethod;
   sourceItems: string[];
 }
@@ -19,115 +32,152 @@ const METHOD_MAP: Record<string, ComputeMethod> = {
   "因子得分": "factor_score", "factor_score": "factor_score",
 };
 
+/** Generate a stable internal id from label + method + source items */
+function buildCompositeId(label: string, method: ComputeMethod, sourceItems: string[]): string {
+  const slug = label.replace(/[^a-zA-Z0-9一-鿿]/g, "_").toLowerCase();
+  return `${slug}_${method}_${sourceItems.map(s => s.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase()).join("_")}`;
+}
+
 /**
- * Parse a composite label string into a ComputedVariable.
+ * Parse a UI composite label into structured internal representation.
  * Format: "name (method of item1, item2, ...)"
  * Returns null if the string is a raw variable name (not a composite).
  */
-export function parseCompositeLabel(label: string): ComputedVariable | null {
+export function parseCompositeLabel(label: string): StructuredComposite | null {
   const match = label.match(/^(.+?)\s*\((.+?)\s+of\s+(.+)\)$/);
   if (!match) return null;
   const [, name, methodStr, itemsStr] = match;
+  const cleanLabel = name.trim();
+  const method = METHOD_MAP[methodStr.trim()] ?? "mean";
+  const sourceItems = itemsStr.split(",").map((s) => s.trim());
   return {
-    name: name.trim(),
-    method: METHOD_MAP[methodStr.trim()] ?? "mean",
-    sourceItems: itemsStr.split(",").map((s) => s.trim()),
+    id: buildCompositeId(cleanLabel, method, sourceItems),
+    label: cleanLabel,
+    method,
+    sourceItems,
   };
 }
 
 /**
  * Given all user-selected vars (mix of composite labels + raw column names),
- * compute actual numeric scores from raw data.
- *
- * Returns two matrices:
- * - scaleHeaders/scaleMatrix: composite scores + raw selected vars for scale-level analysis
- * - itemHeaders/itemMatrix: flattened source items for item-level reliability analysis
+ * parse them into a flat list: StructuredComposite[] for composites + string[] for raw vars.
  */
-export function computeCompositeScores(
-  headers: string[],
-  rows: Record<string, unknown>[],
-  selectedVars: string[]
+export function resolveSelectedVars(selectedVars: string[]): {
+  composites: StructuredComposite[];
+  rawVars: string[];
+} {
+  const composites: StructuredComposite[] = [];
+  const rawVars: string[] = [];
+  for (const v of selectedVars) {
+    const parsed = parseCompositeLabel(v);
+    if (parsed) {
+      composites.push(parsed);
+    } else {
+      rawVars.push(v);
+    }
+  }
+  return { composites, rawVars };
+}
+
+/**
+ * Collect all unique item-level headers needed:
+ * sourceItems from all composites + raw selected variables.
+ */
+export function collectItemHeaders(
+  composites: StructuredComposite[],
+  rawVars: string[]
+): string[] {
+  const headers: string[] = [];
+  for (const c of composites) {
+    for (const item of c.sourceItems) {
+      if (!headers.includes(item)) headers.push(item);
+    }
+  }
+  for (const v of rawVars) {
+    if (!headers.includes(v)) headers.push(v);
+  }
+  return headers;
+}
+
+/**
+ * Build itemMatrix from raw data for the specified item headers.
+ * Extracts numeric values from raw rows.
+ */
+export function buildItemMatrix(
+  rawHeaders: string[],
+  rawRows: Record<string, unknown>[],
+  itemHeaders: string[]
+): number[][] {
+  const nRows = rawRows.length;
+  const matrix: number[][] = Array.from({ length: nRows }, () =>
+    new Array(itemHeaders.length).fill(NaN)
+  );
+
+  for (let c = 0; c < itemHeaders.length; c++) {
+    const colIdx = rawHeaders.indexOf(itemHeaders[c]);
+    if (colIdx < 0) continue;
+    for (let r = 0; r < nRows; r++) {
+      const val = Number(rawRows[r][rawHeaders[colIdx]]);
+      matrix[r][c] = isNaN(val) ? NaN : val;
+    }
+  }
+
+  return matrix;
+}
+
+/**
+ * Aggregate from cleaned itemMatrix → scaleMatrix.
+ *
+ * Composites: mean or sum of their source items (looked up in itemHeaders).
+ * Raw vars: copied directly from the corresponding column in itemMatrix.
+ *
+ * Returns scaleHeaders (labels for display) + scaleMatrix (numeric values).
+ */
+export function aggregateToScaleMatrix(
+  itemHeaders: string[],
+  itemMatrix: number[][],
+  composites: StructuredComposite[],
+  rawVars: string[]
 ): {
   scaleHeaders: string[];
+  scaleIds: string[];
   scaleMatrix: number[][];
-  itemHeaders: string[];
-  itemMatrix: number[][];
 } {
-  const nRows = rows.length;
+  const nRows = itemMatrix.length;
   const scaleHeaders: string[] = [];
+  const scaleIds: string[] = [];
   const scaleMatrix: number[][] = Array.from({ length: nRows }, () => []);
-  const itemHeaders: string[] = [];
-  const itemMatrix: number[][] = Array.from({ length: nRows }, () => []);
 
-  for (const v of selectedVars) {
-    const composite = parseCompositeLabel(v);
-    if (composite) {
-      // Composite: compute mean or sum from source items
-      const itemIndices = composite.sourceItems.map((item) => headers.indexOf(item));
+  for (const c of composites) {
+    scaleHeaders.push(c.label);
+    scaleIds.push(c.id);
+    const colIdx = scaleHeaders.length - 1;
+    const sourceIndices = c.sourceItems.map((item) => itemHeaders.indexOf(item));
 
-      // Resolve scale-level column name
-      const scaleName = composite.name;
-      scaleHeaders.push(scaleName);
-      const scaleColIdx = scaleHeaders.length - 1;
-
-      // Add source items to item-level columns (dedup)
-      for (const item of composite.sourceItems) {
-        if (!itemHeaders.includes(item)) {
-          itemHeaders.push(item);
-          const itemColIdx = itemHeaders.length - 1;
-          for (let r = 0; r < nRows; r++) {
-            itemMatrix[r][itemColIdx] = NaN; // filled below
-          }
-        }
+    for (let r = 0; r < nRows; r++) {
+      const vals: number[] = [];
+      for (const idx of sourceIndices) {
+        if (idx >= 0 && !isNaN(itemMatrix[r][idx])) vals.push(itemMatrix[r][idx]);
       }
-
-      // Compute composite for each row
-      for (let r = 0; r < nRows; r++) {
-        const vals: number[] = [];
-        for (const idx of itemIndices) {
-          if (idx < 0) continue;
-          const rawVal = Number(rows[r][headers[idx]]);
-          if (!isNaN(rawVal)) vals.push(rawVal);
-        }
-        if (vals.length > 0) {
-          scaleMatrix[r][scaleColIdx] = composite.method === "sum"
-            ? vals.reduce((a, b) => a + b, 0)
-            : vals.reduce((a, b) => a + b, 0) / vals.length; // mean / weighted_mean / factor_score all default to mean
-        } else {
-          scaleMatrix[r][scaleColIdx] = NaN;
-        }
-      }
-    } else {
-      // Raw variable: extract directly
-      const colIdx = headers.indexOf(v);
-      if (colIdx < 0) continue; // column not found — skip
-
-      scaleHeaders.push(v);
-      const scaleColIdx = scaleHeaders.length - 1;
-
-      if (!itemHeaders.includes(v)) {
-        itemHeaders.push(v);
-        const itemColIdx = itemHeaders.length - 1;
-        for (let r = 0; r < nRows; r++) {
-          itemMatrix[r][itemColIdx] = NaN;
-        }
-      }
-
-      for (let r = 0; r < nRows; r++) {
-        const val = Number(rows[r][headers[colIdx]]);
-        scaleMatrix[r][scaleColIdx] = isNaN(val) ? NaN : val;
+      if (vals.length > 0) {
+        scaleMatrix[r][colIdx] = c.method === "sum"
+          ? vals.reduce((a, b) => a + b, 0)
+          : vals.reduce((a, b) => a + b, 0) / vals.length;
+      } else {
+        scaleMatrix[r][colIdx] = NaN;
       }
     }
   }
 
-  // Fill itemMatrix values from raw data
-  for (let r = 0; r < nRows; r++) {
-    for (let c = 0; c < itemHeaders.length; c++) {
-      const colIdx = headers.indexOf(itemHeaders[c]);
-      const val = Number(rows[r][headers[colIdx]]);
-      itemMatrix[r][c] = isNaN(val) ? NaN : val;
+  for (const v of rawVars) {
+    const itemIdx = itemHeaders.indexOf(v);
+    scaleHeaders.push(v);
+    scaleIds.push(v);
+    const colIdx = scaleHeaders.length - 1;
+    for (let r = 0; r < nRows; r++) {
+      scaleMatrix[r][colIdx] = itemIdx >= 0 ? itemMatrix[r][itemIdx] : NaN;
     }
   }
 
-  return { scaleHeaders, scaleMatrix, itemHeaders, itemMatrix };
+  return { scaleHeaders, scaleIds, scaleMatrix };
 }
