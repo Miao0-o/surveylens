@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BarChart3, HelpCircle, Sparkles } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { LanguageToggle } from "./language-toggle";
+import { GitHubStar } from "./github-star";
 
 export function AIStatusLabel() {
   const aiMode = useAppStore((s) => s.aiMode);
@@ -48,6 +49,7 @@ export function TopNav() {
         <LanguageToggle />
       </div>
       <nav className="flex items-center gap-1">
+        <GitHubStar />
         <Link
           href="/settings/ai"
           className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground rounded-lg px-2.5 py-1.5 transition-colors"

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useAppStore } from "@/lib/store";
+import { GitHubStar } from "@/components/layout/github-star";
 
 const T = {
   heroTitle: { zh: "您的问卷数据是否准备好进入下一阶段分析？", en: "Is your questionnaire data ready for the next stage of analysis?" },
@@ -85,9 +86,12 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-[#FAFAF9]">
       <header className="h-14 border-b border-border bg-card flex items-center justify-between px-6 shrink-0">
         <span className="text-sm font-semibold tracking-tight text-foreground">SurveyLens</span>
-        <button onClick={() => setLang(lang === "zh" ? "en" : "zh")} className="text-[11px] text-muted-foreground hover:text-foreground transition-colors">
-          {lang === "zh" ? "EN" : "中"}
-        </button>
+        <div className="flex items-center gap-2">
+          <GitHubStar />
+          <button onClick={() => setLang(lang === "zh" ? "en" : "zh")} className="text-[11px] text-muted-foreground hover:text-foreground transition-colors">
+            {lang === "zh" ? "EN" : "中"}
+          </button>
+        </div>
       </header>
 
       <section className="flex flex-col items-center text-center px-6 pt-16 pb-10 max-w-2xl mx-auto">
