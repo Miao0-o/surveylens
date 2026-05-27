@@ -611,20 +611,22 @@ export function usePyodide() {
 
     const results = {} as Record<string, Record<string, unknown>>;
 
-    // Item-level steps: reliability, validity (KMO/Bartlett), EFA
-    const ITEM_LEVEL_STEPS = new Set(["reliability", "validity", "efa"]);
-    // Scale-level steps: correlation, descriptive, stability
-    // (reliability_per_dim is skipped and handled separately below)
+    // Item-level steps: validity (KMO/Bartlett), EFA
+    // Reliability: routed per-composite when user-selected, globally otherwise
+    const ITEM_LEVEL_STEPS = new Set(["validity", "efa"]);
+    const skipGlobalReliability = hasUserSelection && userComposites.length > 0;
 
     for (const step of PYTHON_STEPS) {
       if (step.id === "reliability_per_dim") continue;
+      // Skip global reliability when we'll run per-composite
+      if (step.id === "reliability" && skipGlobalReliability) continue;
 
       const stageLabel = STAGE_LABELS[step.id];
       useAppStore.getState().setAnalysisStage(STAGE_MAP[step.id] ?? "idle");
       const en3 = useAppStore.getState().reportLanguage === "en";
       setLoadingMessage(stageLabel ? (en3 ? stageLabel.en : stageLabel.zh) : step.id);
 
-      const isItemLevel = ITEM_LEVEL_STEPS.has(step.id);
+      const isItemLevel = ITEM_LEVEL_STEPS.has(step.id) || step.id === "reliability";
       const dataJson = isItemLevel ? itemDataJson : scaleDataJson;
       await py.runPythonAsync(`__data_json__ = '''${dataJson}'''`);
 
@@ -646,10 +648,75 @@ export function usePyodide() {
       useAppStore.getState().setDescriptiveResults(results.descriptive as unknown as Record<string, unknown>[]);
     }
 
-    // Per-dimension reliability — compute subscale alpha when dimensions exist
-    // Uses item-level headers for index mapping
+    // === PER-COMPOSITE RELIABILITY (scale-level construct analysis) ===
+    // Each composite's source items form one latent construct → one Cronbach's α
+    if (hasUserSelection && userComposites.length > 0) {
+      const perDimStep = PYTHON_STEPS.find((s) => s.id === "reliability_per_dim");
+      if (perDimStep) {
+        // Build dim spec: each composite → one dimension
+        const compositeDimSpec = userComposites
+          .filter((c) => c.sourceItems.length >= 2)
+          .map((c) => ({
+            name: c.label,
+            indices: c.sourceItems.map((item) => itemHeaders.indexOf(item)).filter((i) => i >= 0),
+          }))
+          .filter((d) => d.indices.length >= 2);
+
+        if (compositeDimSpec.length > 0) {
+          try {
+            await py.runPythonAsync(`__data_json__ = '''${itemDataJson}'''`);
+            const dimSpecJson = JSON.stringify(compositeDimSpec);
+            await py.runPythonAsync(`__dim_spec__ = '''${dimSpecJson}'''`);
+            await py.runPythonAsync(perDimStep.fn);
+            const dimResultJson = await py.runPythonAsync(`run_reliability_per_dim(__data_json__, __dim_spec__)`) as string;
+            const dimResults = JSON.parse(dimResultJson);
+            // Initialize reliability results with per-composite data
+            results.reliability = {
+              cronbachsAlpha: null as unknown as number, // no global α — per-construct only
+              standardizedAlpha: null as unknown as number,
+              nSamples: 0,
+              nComplete: 0,
+              nItems: itemHeaders.length,
+              itemTotalCorrelation: {} as Record<string, number>,
+              alphaIfItemDeleted: {} as Record<string, number | null>,
+              dimensions: dimResults,
+            };
+          } catch (e) {
+            console.warn("[analysis] Per-composite reliability failed:", e instanceof Error ? e.message : e);
+          }
+        }
+      }
+
+      // No composites with ≥ 2 items → reliability unavailable
+      if (!results.reliability) {
+        results.reliability = {
+          cronbachsAlpha: null as unknown as number,
+          standardizedAlpha: null as unknown as number,
+          nSamples: 0,
+          nComplete: 0,
+          nItems: 0,
+          itemTotalCorrelation: {},
+          alphaIfItemDeleted: {},
+          _meta: { error: "No construct definitions found. Reliability analysis unavailable — each construct needs ≥ 2 items." },
+        } as unknown as Record<string, unknown>;
+      }
+    } else if (hasUserSelection && userComposites.length === 0) {
+      // User selected only raw vars, no constructs defined
+      results.reliability = {
+        cronbachsAlpha: null as unknown as number,
+        standardizedAlpha: null as unknown as number,
+        nSamples: 0,
+        nComplete: 0,
+        nItems: 0,
+        itemTotalCorrelation: {},
+        alphaIfItemDeleted: {},
+        _meta: { error: "No construct definitions found. Reliability analysis unavailable." },
+      } as unknown as Record<string, unknown>;
+    }
+
+    // Per-dimension reliability from user-defined dimensions (separate from composites)
     const dims = state.dimensions;
-    if (dims.length > 0 && results.reliability) {
+    if (dims.length > 0 && results.reliability && !(results.reliability as Record<string, unknown>).dimensions) {
       const lookupHeaders = hasUserSelection ? itemHeaders : analysisColumns;
       const dimSpec = dims.map((d) => ({
         name: d.name,
@@ -658,7 +725,6 @@ export function usePyodide() {
 
       if (dimSpec.length > 0) {
         try {
-          // Use item-level data for per-dimension reliability
           await py.runPythonAsync(`__data_json__ = '''${itemDataJson}'''`);
           const dimSpecJson = JSON.stringify(dimSpec);
           await py.runPythonAsync(`__dim_spec__ = '''${dimSpecJson}'''`);
@@ -681,15 +747,23 @@ export function usePyodide() {
     // The primary labels should be scaleHeaders (scale-level view)
     const resultLabels = hasUserSelection ? scaleHeaders : analysisColumns;
     const finalResults = sanitizeForStorage(buildResults(results, resultLabels));
-    // Override reliability labels to use itemHeaders when user-selected (item-level view)
-    if (hasUserSelection && itemHeaders.length > 0 && results.reliability) {
-      const r = results.reliability;
-      finalResults.reliability.itemTotalCorrelation = remapKeys(
-        (r.itemTotalCorrelation as Record<string, number>) ?? {}, itemHeaders
-      );
-      finalResults.reliability.alphaIfItemDeleted = remapKeys(
-        filterNulls((r.alphaIfItemDeleted as Record<string, number | null>) ?? {}), itemHeaders
-      );
+
+    // Per-composite reliability: promote dimensions as the primary reliability view
+    if (hasUserSelection && userComposites.length > 0) {
+      // No global α — set from per-composite dimensions
+      const dims = finalResults.reliability.dimensions ?? [];
+      finalResults.meta.itemCount = itemHeaders.length;
+      if (dims.length > 0) {
+        // Use mean of per-composite alphas as a summary indicator (or leave at 0)
+        const meanAlpha = dims.reduce((s, d) => s + (d.cronbachsAlpha ?? 0), 0) / dims.length;
+        finalResults.reliability.cronbachsAlpha = Math.round(meanAlpha * 1000) / 1000;
+        finalResults.reliability._meta = {
+          value: meanAlpha,
+          status: "ok" as const,
+          reason: `Per-construct reliability: ${dims.map(d => `${d.name} (α=${(d.cronbachsAlpha ?? 0).toFixed(2)})`).join(", ")}`,
+          confidence: 1.0,
+        };
+      }
     }
     finalResults.meta.datasetVersion = datasetVersion;
     finalResults.meta.inputSnapshot = inputSnapshot;
@@ -732,16 +806,21 @@ function buildResults(raw: Record<string, Record<string, unknown>>, labels: stri
 
   const r = raw.reliability;
   if (r && !r.error) {
+    const rMeta = (r as Record<string, unknown>)._meta as Record<string, unknown> | undefined;
+    // Per-composite reliability: no global α, each composite has its own
+    const dims = (r as Record<string, unknown>).dimensions as Array<Record<string, unknown>> | undefined;
     const itemCount = (r.nItems as number) ?? 0;
     const alpha = (r.cronbachsAlpha as number) ?? 0;
     const hasLikert = itemCount >= 2;
+    const hasPerComposite = dims && dims.length > 0;
+
     results.reliability = {
       cronbachsAlpha: alpha,
       standardizedAlpha: (r.standardizedAlpha as number) ?? 0,
       mcdonaldsOmega: 0,
       itemTotalCorrelation: remapKeys(r.itemTotalCorrelation as Record<string, number> ?? {}, labels),
       alphaIfItemDeleted: remapKeys(filterNulls(r.alphaIfItemDeleted as Record<string, number | null> ?? {}), labels),
-      dimensions: ((r as Record<string, unknown>).dimensions as Array<Record<string, unknown>>)?.map((d) => ({
+      dimensions: dims?.map((d) => ({
         name: d.name as string,
         items: (d.items as number[])?.map((i) => labels[i] ?? String(i)) ?? [],
         cronbachsAlpha: (d.cronbachsAlpha as number) ?? 0,
@@ -749,9 +828,13 @@ function buildResults(raw: Record<string, Record<string, unknown>>, labels: stri
         itemTotalCorrelation: remapKeys(d.itemTotalCorrelation as Record<string, number> ?? {}, labels),
         alphaIfItemDeleted: remapKeys(filterNulls(d.alphaIfItemDeleted as Record<string, number | null> ?? {}), labels),
       })),
-      _meta: hasLikert
-        ? { value: alpha, status: "ok" as const, reason: `Cronbach's α computed on ${itemCount} items`, confidence: 1.0 }
-        : { value: null, status: "not_applicable" as const, reason: "No Likert-scale items detected; reliability analysis requires ordinal variables", confidence: 1.0 },
+      _meta: rMeta?.error
+        ? { value: null, status: "not_applicable" as const, reason: rMeta.error as string, confidence: 1.0 }
+        : hasPerComposite
+          ? { value: dims!.reduce((s: number, d) => s + ((d.cronbachsAlpha as number) ?? 0), 0) / dims!.length, status: "ok" as const, reason: `Reliability computed per construct: ${dims!.map((d: Record<string, unknown>) => `${d.name} (α=${((d.cronbachsAlpha as number) ?? 0).toFixed(2)})`).join(", ")}`, confidence: 1.0 }
+          : hasLikert
+            ? { value: alpha, status: "ok" as const, reason: `Cronbach's α computed on ${itemCount} items`, confidence: 1.0 }
+            : { value: null, status: "not_applicable" as const, reason: "No Likert-scale items detected; reliability analysis requires ordinal variables", confidence: 1.0 },
     };
     results.meta.sampleSize = (r.nSamples as number) ?? 0;
     results.meta.itemCount = itemCount;
