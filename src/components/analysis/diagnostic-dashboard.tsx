@@ -204,8 +204,10 @@ export function DiagnosticDashboard() {
                              "text-muted-foreground bg-secondary/30 border-border";
             const isReverse = r.action.includes("核实") || r.action.includes("Verify");
             const isMissing = r.action.includes("处理缺失") || r.action.includes("Handle missing");
-            const isCorrelation = r.action.includes("检查") || r.action.includes("Review");
-            const isApplied = isReverse ? repair.appliedFixes.reverse : isMissing ? repair.appliedFixes.missing : repair.appliedFixes.weakItems;
+            const isItemReview = r.action === "检查题项" || r.action === "Review items";
+            const isCorrelationReview = r.action === "检查" || r.action === "Review";
+            const isBootstrap = r.action === "Bootstrap";
+            const isApplied = isReverse ? repair.appliedFixes.reverse : isMissing ? repair.appliedFixes.missing : false;
             return (
               <div key={`rec-${i}`} className="flex flex-col gap-1 text-[10px] ml-3.5 py-1">
                 <div className="flex items-center gap-2">
@@ -221,7 +223,11 @@ export function DiagnosticDashboard() {
                     onClick={() => {
                       if (isMissing) { setLeftStep("preprocess"); setRepairAction("missing"); }
                       else if (isReverse) { setLeftStep("preprocess"); setRepairAction("reverse"); }
-                      else if (isCorrelation) {
+                      else if (isItemReview) {
+                        document.getElementById("report-content")?.scrollIntoView({ behavior: "smooth" });
+                      } else if (isCorrelationReview) {
+                        document.getElementById("report-content")?.scrollIntoView({ behavior: "smooth" });
+                      } else if (isBootstrap) {
                         document.getElementById("report-content")?.scrollIntoView({ behavior: "smooth" });
                       } else { setLeftStep("preprocess"); setRepairAction(null); }
                     }}
