@@ -253,6 +253,12 @@ export function runDiagnostics(
   if (kmo > 0 && kmo < 0.60) riskFlags.push({ type: "error", source: "validity", message: en ? `KMO=${kmo.toFixed(2)} — factor analysis not appropriate.` : `KMO=${kmo.toFixed(2)} — 不适合因子分析。` });
   if (kmo > 0 && bartlettP >= 0.05) riskFlags.push({ type: "warning", source: "validity", message: en ? `Bartlett not significant — correlation matrix may be identity.` : `Bartlett 不显著 — 相关矩阵可能接近单位矩阵。` });
 
+  // Low-variability items detection
+  const lowVarItems = likertCols
+    .filter((c) => c.min !== undefined && c.max !== undefined && (c.max - c.min) <= 1)
+    .map((c) => c.name);
+  const lowVarRatio = likertCols.length > 0 ? lowVarItems.length / likertCols.length : 0;
+
   // Recommendations — simple, actionable, decision-focused
   const recs: DiagnosticReport["recommendations"] = [];
   if (missingRate >= 0.10) recs.push({ issue: en ? `Missing: ${(missingRate*100).toFixed(0)}%` : `缺失: ${(missingRate*100).toFixed(0)}%`, recommendation: en ? "Review missing data patterns and consider imputation" : "检查缺失数据模式，可考虑插补处理", impact: en ? "May improve analysis stability" : "可能提升分析稳定性", strength: "强推荐", action: en ? "Handle missing" : "处理缺失" });
@@ -260,6 +266,7 @@ export function runDiagnostics(
   if (alpha > 0 && alpha < 0.70) recs.push({ issue: en ? `Low α (${alpha.toFixed(2)})` : `α 偏低 (${alpha.toFixed(2)})`, recommendation: en ? "Review items with low item-total correlations" : "检查题总相关较低的题项", impact: en ? "Item review may help identify sources of low consistency" : "题项检查可能有助于发现一致性偏低的原因", strength: "强推荐", action: en ? "Review items" : "检查题项" });
   if (reverseRisks.length > 0) recs.push({ issue: en ? `${reverseRisks.length} items may need direction check` : `${reverseRisks.length} 个题项可能需要核实方向`, recommendation: en ? "Verify coding direction for potentially reverse-scored items" : "核实可能存在反向计分的题项方向", impact: en ? "Correct coding may improve scale consistency" : "正确计分可能提升量表一致性", strength: "建议", action: en ? "Verify items" : "核实题项" });
   if (kmo > 0 && kmo < 0.60) recs.push({ issue: en ? `KMO too low (${kmo.toFixed(2)})` : `KMO 过低 (${kmo.toFixed(2)})`, recommendation: en ? "Review inter-item correlation structure" : "检查题项间相关结构", impact: en ? "May help identify items with low shared variance" : "可能有助于发现共享方差较低的题项", strength: "可选", action: en ? "Review" : "检查" });
+  if (lowVarItems.length > 0) recs.push({ issue: en ? `${lowVarItems.length} items show low variability` : `${lowVarItems.length} 个题项变异性有限`, recommendation: en ? `${lowVarItems.slice(0, 5).join(", ")}${lowVarItems.length > 5 ? " ..." : ""} — review for straight-lining or ceiling effects` : `${lowVarItems.slice(0, 5).join(", ")}${lowVarItems.length > 5 ? " ..." : ""} — 检查是否存在直线作答或天花板效应`, impact: en ? (lowVarRatio > 0.3 ? "High proportion — may indicate response bias across the sample" : "May reflect restricted range in specific items") : (lowVarRatio > 0.3 ? "高比例 — 可能反映样本整体回答偏差" : "可能反映特定题项的回答范围受限"), strength: lowVarRatio > 0.3 ? "强推荐" : "建议", action: en ? "Review items" : "检查题项" });
 
   const bartlettLabel = kmo > 0
     ? (bartlettP < 0.001 ? "Significant, p < .001" : `p = ${bartlettP.toFixed(3)}`)
