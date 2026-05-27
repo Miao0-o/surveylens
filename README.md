@@ -50,6 +50,8 @@ SurveyLens is a fully static site. **No server, no database, no analytics.**
 
 ## Getting started
 
+Clone the repository and run locally:
+
 ```bash
 git clone https://github.com/Miao0-o/surveylens.git
 cd surveylens
@@ -57,7 +59,7 @@ npm install
 npm run dev
 ```
 
-Core analysis runs with no configuration. AI interpretation requires an API key from OpenRouter, Anthropic, OpenAI, or DeepSeek.
+Core reliability, validity, and factor analysis are fully functional without extra setup. If you want AI interpretation, you'll need your own API key from OpenRouter, Anthropic, OpenAI, or DeepSeek.
 
 ---
 
