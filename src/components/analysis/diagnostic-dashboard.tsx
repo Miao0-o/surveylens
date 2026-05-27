@@ -204,6 +204,7 @@ export function DiagnosticDashboard() {
                              "text-muted-foreground bg-secondary/30 border-border";
             const isReverse = r.action.includes("核实") || r.action.includes("Verify");
             const isMissing = r.action.includes("处理缺失") || r.action.includes("Handle missing");
+            const isCorrelation = r.action.includes("检查") || r.action.includes("Review");
             const isApplied = isReverse ? repair.appliedFixes.reverse : isMissing ? repair.appliedFixes.missing : repair.appliedFixes.weakItems;
             return (
               <div key={`rec-${i}`} className="flex flex-col gap-1 text-[10px] ml-3.5 py-1">
@@ -218,10 +219,11 @@ export function DiagnosticDashboard() {
                   </span>
                   <button
                     onClick={() => {
-                      setLeftStep("preprocess");
-                      if (isMissing) setRepairAction("missing");
-                      else if (isReverse) setRepairAction("reverse");
-                      else setRepairAction(null);
+                      if (isMissing) { setLeftStep("preprocess"); setRepairAction("missing"); }
+                      else if (isReverse) { setLeftStep("preprocess"); setRepairAction("reverse"); }
+                      else if (isCorrelation) {
+                        document.getElementById("report-content")?.scrollIntoView({ behavior: "smooth" });
+                      } else { setLeftStep("preprocess"); setRepairAction(null); }
                     }}
                     className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-medium transition-colors ${
                       isApplied
