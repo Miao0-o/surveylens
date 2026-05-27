@@ -7,14 +7,27 @@
 // ============================================================
 
 import type { AnalysisResults, AICompressedInput, ResearchDesign } from "@/types";
+import { parseCompositeLabel } from "@/lib/stats/composite";
+
+/**
+ * Resolve variable names: if a composite label like "Stress (mean of Q1, Q2)",
+ * return just the clean name "Stress". Otherwise return as-is.
+ */
+function resolveVarName(v: string): string {
+  const parsed = parseCompositeLabel(v);
+  return parsed ? parsed.name : v;
+}
 
 export function compressResults(
   results: AnalysisResults,
   design?: ResearchDesign | null
 ): AICompressedInput {
   const researchGoal = design?.researchGoal ?? "";
-  const outcomeVariables = design?.outcomeVariables ?? [];
-  const predictorVariables = design?.predictorVariables ?? [];
+  // Resolve composite labels to clean names for AI readability
+  const rawOutcome = design?.outcomeVariables ?? [];
+  const rawPredictor = design?.predictorVariables ?? [];
+  const outcomeVariables = rawOutcome.map(resolveVarName);
+  const predictorVariables = rawPredictor.map(resolveVarName);
   const theoreticalFramework = design?.theoreticalFramework ?? "";
   const hypotheses = design?.hypotheses ?? "";
   const freeNotes = design?.freeNotes ?? "";

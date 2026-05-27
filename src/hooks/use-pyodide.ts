@@ -3,6 +3,7 @@
 import { useRef, useState, useCallback } from "react";
 import { useAppStore } from "@/lib/store";
 import { compressResults } from "@/lib/ai/compressor";
+import { computeCompositeScores } from "@/lib/stats/composite";
 import { validateResults } from "@/lib/stats/validation-engine";
 import { sanitizeForStorage } from "@/lib/stats/sanitize";
 import { extractLikertFromFreeze } from "@/lib/codebook/mapping-engine";
@@ -486,10 +487,30 @@ export function usePyodide() {
     });
     const analysisColumns = likertColumns.length > 0 ? likertColumns : numericCols.length > 0 ? numericCols : analyzableHeaders;
 
+    // === SCALE-LEVEL ANALYSIS: respect user-selected variables ===
+    const design = state.researchDesign;
+    const allUserVars = [...(design?.outcomeVariables ?? []), ...(design?.predictorVariables ?? [])];
+    const hasUserSelection = allUserVars.length > 0;
+
+    let itemHeaders: string[] = analysisColumns;
+    let scaleHeaders: string[] = analysisColumns;
+    let itemMatrix: number[][] | null = null;
+    let scaleMatrix: number[][] | null = null;
+
+    if (hasUserSelection) {
+      console.log("[analysis] User-selected variables detected:", allUserVars);
+      const computed = computeCompositeScores(rawData!.headers, rawData!.rows, allUserVars);
+      itemHeaders = computed.itemHeaders;
+      scaleHeaders = computed.scaleHeaders;
+      itemMatrix = computed.itemMatrix;
+      scaleMatrix = computed.scaleMatrix;
+      console.log("[analysis] Scale-level:", scaleHeaders, "Item-level:", itemHeaders);
+    }
+
     // Input snapshot for audit
     const inputSnapshot = `${analysisColumns.slice(0, 5).join(",")}_n${rawData!.rowCount}_v${datasetVersion}`;
 
-    // Use frozen matrix if codebook was applied, otherwise raw numeric conversion
+    // Build raw data matrix for existing pipeline (used when no user selection)
     let data: number[][];
     const { mappingFreeze, confirmedReverseItems } = state;
 
@@ -529,49 +550,62 @@ export function usePyodide() {
       );
     }
 
+    // Build item-level and scale-level matrices from the main data matrix
+    // If user-selected vars, map them from computed matrices
+    let itemData: number[][] = data;
+    let scaleData: number[][] = data;
+
+    if (hasUserSelection && itemMatrix && scaleMatrix) {
+      itemData = itemMatrix;
+      scaleData = scaleMatrix;
+    }
+
     // Repair pipeline: mapping(freeze) → reverse → missing → analysis
-    // Step A: Reverse transform (before imputation for correct scale direction)
-    // Skip if mappingFreeze exists — freeze already applied reverse during mapping
-    if (!mappingFreeze && confirmedReverseItems.length > 0) {
-      console.log("[analysis] Step A: Applying reverse transform for:", confirmedReverseItems);
-      for (const col of confirmedReverseItems) {
-        const colIdx = analysisColumns.indexOf(col);
-        if (colIdx < 0) continue;
-        const colVals = data.map((row) => row[colIdx]).filter((v) => !isNaN(v));
-        if (colVals.length === 0) continue;
-        const maxVal = Math.max(...colVals);
-        const minVal = Math.min(...colVals);
-        for (let r = 0; r < data.length; r++) {
-          if (!isNaN(data[r][colIdx])) {
-            data[r][colIdx] = maxVal + minVal - data[r][colIdx];
+    // Apply to item-level data (for reliability) and scale-level data (for everything else)
+
+    // Helper to apply repairs to a matrix
+    const applyRepairs = (matrix: number[][], headers: string[]) => {
+      // Step A: Reverse transform
+      if (!mappingFreeze && confirmedReverseItems.length > 0) {
+        for (const col of confirmedReverseItems) {
+          const colIdx = headers.indexOf(col);
+          if (colIdx < 0) continue;
+          const colVals = matrix.map((row) => row[colIdx]).filter((v) => !isNaN(v));
+          if (colVals.length === 0) continue;
+          const maxVal = Math.max(...colVals);
+          const minVal = Math.min(...colVals);
+          for (let r = 0; r < matrix.length; r++) {
+            if (!isNaN(matrix[r][colIdx])) {
+              matrix[r][colIdx] = maxVal + minVal - matrix[r][colIdx];
+            }
           }
         }
       }
-    }
-
-    // Step B: Missing value imputation (after reverse for correct column means)
-    const { missingStrategy } = state;
-    if (!mappingFreeze && missingStrategy.method === "mean_imputation") {
-      console.log("[analysis] Step B: Applying mean imputation");
-      for (let c = 0; c < (data[0]?.length ?? 0); c++) {
-        const colVals = data.map((row) => row[c]).filter((v) => !isNaN(v));
-        if (colVals.length === 0) continue;
-        const colMean = colVals.reduce((a, b) => a + b, 0) / colVals.length;
-        for (let r = 0; r < data.length; r++) {
-          if (isNaN(data[r][c])) data[r][c] = colMean;
+      // Step B: Missing value imputation
+      if (!mappingFreeze && missingStrategy.method === "mean_imputation") {
+        for (let c = 0; c < (matrix[0]?.length ?? 0); c++) {
+          const colVals = matrix.map((row) => row[c]).filter((v) => !isNaN(v));
+          if (colVals.length === 0) continue;
+          const colMean = colVals.reduce((a, b) => a + b, 0) / colVals.length;
+          for (let r = 0; r < matrix.length; r++) {
+            if (isNaN(matrix[r][c])) matrix[r][c] = colMean;
+          }
         }
       }
-    }
+    };
 
-    const dataJson = JSON.stringify(data);
+    const { missingStrategy } = state;
+    applyRepairs(itemData, itemHeaders);
+    if (hasUserSelection) applyRepairs(scaleData, scaleHeaders);
 
-    // Store data as a Python global to avoid string interpolation issues
+    const itemDataJson = JSON.stringify(itemData);
+    const scaleDataJson = hasUserSelection ? JSON.stringify(scaleData) : itemDataJson;
+
     await py.runPythonAsync("import json");
-    await py.runPythonAsync(`__data_json__ = '''${dataJson}'''`);
-
-    const results = {} as Record<string, Record<string, unknown>>;
 
     // Run each step sequentially with progress
+    const results = {} as Record<string, Record<string, unknown>>;
+
     for (const step of PYTHON_STEPS) {
       // Skip per-dim step — it requires a second argument and is called separately below
       if (step.id === "reliability_per_dim") continue;
@@ -580,6 +614,11 @@ export function usePyodide() {
       useAppStore.getState().setAnalysisStage(STAGE_MAP[step.id] ?? "idle");
       const en3 = useAppStore.getState().reportLanguage === "en";
       setLoadingMessage(stageLabel ? (en3 ? stageLabel.en : stageLabel.zh) : step.id);
+
+      // Route: item-level steps use itemData, scale-level steps use scaleData
+      const isItemLevel = step.id === "reliability";
+      const dataJson = isItemLevel ? itemDataJson : scaleDataJson;
+      await py.runPythonAsync(`__data_json__ = '''${dataJson}'''`);
 
       // Register the function
       await py.runPythonAsync(step.fn);
@@ -602,15 +641,19 @@ export function usePyodide() {
     }
 
     // Per-dimension reliability — compute subscale alpha when dimensions exist
+    // Uses item-level headers for index mapping
     const dims = state.dimensions;
     if (dims.length > 0 && results.reliability) {
+      const lookupHeaders = hasUserSelection ? itemHeaders : analysisColumns;
       const dimSpec = dims.map((d) => ({
         name: d.name,
-        indices: d.items.map((item) => analysisColumns.indexOf(item)).filter((i) => i >= 0),
+        indices: d.items.map((item) => lookupHeaders.indexOf(item)).filter((i) => i >= 0),
       })).filter((d) => d.indices.length >= 2);
 
       if (dimSpec.length > 0) {
         try {
+          // Use item-level data for per-dimension reliability
+          await py.runPythonAsync(`__data_json__ = '''${itemDataJson}'''`);
           const dimSpecJson = JSON.stringify(dimSpec);
           await py.runPythonAsync(`__dim_spec__ = '''${dimSpecJson}'''`);
           const perDimStep = PYTHON_STEPS.find((s) => s.id === "reliability_per_dim");
@@ -627,7 +670,21 @@ export function usePyodide() {
     }
 
     // Build AnalysisResults from step results
-    const finalResults = sanitizeForStorage(buildResults(results, analysisColumns));
+    // Use scaleHeaders for labeling (validity, EFA, correlation, etc.) — when user-selected vars exist
+    // Use itemHeaders for reliability labeling
+    // The primary labels should be scaleHeaders (scale-level view)
+    const resultLabels = hasUserSelection ? scaleHeaders : analysisColumns;
+    const finalResults = sanitizeForStorage(buildResults(results, resultLabels));
+    // Override reliability labels to use itemHeaders when user-selected (item-level view)
+    if (hasUserSelection && itemHeaders.length > 0 && results.reliability) {
+      const r = results.reliability;
+      finalResults.reliability.itemTotalCorrelation = remapKeys(
+        (r.itemTotalCorrelation as Record<string, number>) ?? {}, itemHeaders
+      );
+      finalResults.reliability.alphaIfItemDeleted = remapKeys(
+        filterNulls((r.alphaIfItemDeleted as Record<string, number | null>) ?? {}), itemHeaders
+      );
+    }
     finalResults.meta.datasetVersion = datasetVersion;
     finalResults.meta.inputSnapshot = inputSnapshot;
     // Attach dimension info so the UI can reflect user's dimension grouping
