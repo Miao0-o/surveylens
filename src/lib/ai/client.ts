@@ -547,6 +547,26 @@ function buildUserMessage(input: AICompressedInput, validation?: ValidationRepor
     lines.push(`Factor Stability: ${validation.confidence.factorStability.toFixed(2)}`);
   }
 
+  // Composite diagnostics (PCA fallback, loadings, etc.)
+  if (input.compositeDiagnostics && input.compositeDiagnostics.length > 0) {
+    lines.push("");
+    lines.push("# COMPOSITE SCALE DIAGNOSTICS");
+    lines.push("The following composite scales were constructed. Use this for interpretation context.");
+    for (const cd of input.compositeDiagnostics) {
+      lines.push(`- ${cd.compositeLabel}: requested=${cd.methodRequested}, used=${cd.methodUsed}${cd.fallbackTriggered ? " (PCA fell back to mean)" : ""}`);
+      if (cd.warnings.length > 0) {
+        for (const w of cd.warnings) lines.push(`  ⚠ ${w}`);
+      }
+      if (cd.loadings && Object.keys(cd.loadings).length > 0) {
+        const loadingStr = Object.entries(cd.loadings).map(([item, l]) => `${item}=${l.toFixed(2)}`).join(", ");
+        lines.push(`  Loadings: ${loadingStr}`);
+      }
+      if (cd.varianceExplained !== undefined) {
+        lines.push(`  Variance explained by PC1: ${(cd.varianceExplained * 100).toFixed(0)}%`);
+      }
+    }
+  }
+
   // Research design context (hypothesis-aware interpretation)
   const hasDesign = input.researchGoal || input.outcomeVariables?.length || input.predictorVariables?.length
     || input.theoreticalFramework || input.hypotheses;

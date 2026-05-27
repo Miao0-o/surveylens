@@ -592,11 +592,13 @@ export function usePyodide() {
 
     // --- Layer 3: Aggregate itemMatrix → scaleMatrix ---
     let scaleData: number[][];
+    let compositeDiagnostics: import("@/lib/stats/composite").CompositeDiagnostics[] = [];
     if (hasUserSelection) {
       const aggregated = aggregateToScaleMatrix(itemHeaders, itemData, userComposites, userRawVars);
       scaleHeaders = aggregated.scaleHeaders;
       scaleData = aggregated.scaleMatrix;
-      console.log("[analysis] Scale-level:", scaleHeaders);
+      compositeDiagnostics = aggregated.diagnostics;
+      console.log("[analysis] Scale-level:", scaleHeaders, "Diagnostics:", compositeDiagnostics);
     } else {
       scaleData = itemData;
     }
@@ -691,6 +693,10 @@ export function usePyodide() {
     }
     finalResults.meta.datasetVersion = datasetVersion;
     finalResults.meta.inputSnapshot = inputSnapshot;
+    // Attach composite diagnostics for AI interpretation and UI
+    if (compositeDiagnostics.length > 0) {
+      (finalResults.meta as unknown as Record<string, unknown>).compositeDiagnostics = compositeDiagnostics;
+    }
     // Attach dimension info so the UI can reflect user's dimension grouping
     if (dims.length > 0) {
       finalResults.meta.dimensionCount = dims.length;

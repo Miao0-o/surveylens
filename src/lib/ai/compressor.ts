@@ -93,6 +93,10 @@ export function compressResults(
   // Reverse item count from item-total correlations (negative correlations)
   const reverseItemCount = Object.values(reliability.itemTotalCorrelation).filter((c) => c < 0).length;
 
+  // Composite diagnostics from meta (PCA fallback, loadings, etc.)
+  const compositeDiagnostics = (meta as unknown as Record<string, unknown>).compositeDiagnostics as
+    AICompressedInput["compositeDiagnostics"] | undefined;
+
   return {
     alpha: Math.round(baseAlpha * 1000) / 1000,
     standardizedAlpha: Math.round(reliability.standardizedAlpha * 1000) / 1000,
@@ -122,5 +126,6 @@ export function compressResults(
     theoreticalFramework,
     hypotheses,
     freeNotes,
+    compositeDiagnostics,
   };
 }

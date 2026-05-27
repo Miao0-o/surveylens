@@ -351,6 +351,16 @@ export interface AICompressedInput {
   theoreticalFramework: string;
   hypotheses: string;
   freeNotes: string;
+  compositeDiagnostics?: Array<{
+    compositeId: string;
+    compositeLabel: string;
+    methodRequested: string;
+    methodUsed: string;
+    varianceExplained?: number;
+    loadings?: Record<string, number>;
+    fallbackTriggered: boolean;
+    warnings: string[];
+  }>;
 }
 
 // ---- AI Results ----
