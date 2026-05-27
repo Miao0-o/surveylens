@@ -1,54 +1,64 @@
-<p align="center">
-  <h1 align="center">SurveyLens</h1>
-  <p align="center">Instant insight from survey data.<br/>Reliability, validity, factor analysis — all in your browser.</p>
-</p>
+# Surveylens
 
-<p align="center">
-  <a href="https://miao0-o.github.io/surveylens/">Try it online</a>
-  &nbsp;·&nbsp;
-  <a href="#getting-started">Getting Started</a>
-  &nbsp;·&nbsp;
-  <a href="#privacy">Privacy</a>
-</p>
+Browser-based survey data analysis for reliability, validity, and factor structure — fully local-first and privacy-preserving.
+
+## Live Demo
+
+https://miao0-o.github.io/surveylens/
 
 ---
 
-## Why SurveyLens
+## Overview
 
-Before you can run regressions or SEM, your scale needs to hold up. Existing tools require installation, upload your data to a server, or leave you manually formatting APA tables. SurveyLens handles all three — in the browser, with no install and no upload.
+Surveylens helps researchers quickly evaluate whether survey data is ready for statistical analysis and academic reporting.
+
+Run reliability analysis, validity checks, factor exploration, and APA-ready interpretation directly in the browser — with no backend or data upload required.
 
 ---
 
 ## Features
 
-- **Reliability** — Cronbach's α, per-dimension diagnostics, item-total correlations
-- **Validity & Factor** — KMO, Bartlett's test, EFA with scree plots and loading matrices
-- **Codebook-aware** — Drop a codebook (CSV, XLSX, SPSS, PDF, Markdown) and responses are auto-mapped to values
-- **AI interpretation** — Evidence-traceable explanations with APA 7th edition output. Bilingual (EN/ZH)
-- **Zero data upload** — All computation runs in-browser via WebAssembly. Your data never leaves your device
+- Reliability analysis (Cronbach's alpha)
+- Validity diagnostics
+- Exploratory factor analysis
+- APA-ready statistical summaries
+- Local-first architecture
+- Browser-only execution
+- Privacy-preserving workflow
+- AI-assisted interpretation (optional)
 
 ---
 
-## How it works
+## Supported Data Formats
 
-1. **Upload** your survey data (CSV, XLSX, SAV, DTA, or Qualtrics export)
-2. **Analyze** — reliability, validity, and factor structure computed locally via Pyodide
-3. **Export** — APA-ready results and AI interpretation, ready for your manuscript
+- CSV
+- XLSX / XLS
+- SPSS (.sav)
+- Qualtrics exports
+
+---
+
+## How It Works
+
+1. Upload survey data
+2. Run statistical diagnostics
+3. Review reliability and factor results
+4. Generate APA-ready interpretation
 
 ---
 
 ## Privacy
 
-SurveyLens is a fully static site. **No server, no database, no analytics.**
+Surveylens is fully local-first.
 
-- Statistical engine runs in-browser (Python/NumPy/SciPy compiled to WebAssembly)
-- AI receives only aggregated statistical summaries, never raw responses
-- API keys stored in ephemeral session storage, auto-cleared after inactivity
-- Bring your own API key — we never proxy your requests
+All statistical computation runs directly in the browser.  
+No dataset is uploaded, stored, or transmitted to external servers.
+
+AI interpretation is optional and requires your own API key.
 
 ---
 
-## Getting started
+## Getting Started
 
 Clone the repository and run locally:
 
@@ -59,16 +69,56 @@ npm install
 npm run dev
 ```
 
-Core reliability, validity, and factor analysis are fully functional without extra setup. If you want AI interpretation, you'll need your own API key from OpenRouter, Anthropic, OpenAI, or DeepSeek.
+No backend setup required.
+
+Core reliability, validity, and factor analysis workflows work out of the box.
+
+Optional AI interpretation supports:
+
+- OpenRouter
+- Anthropic
+- OpenAI
+- DeepSeek
+
+---
+
+## Tech Stack
+
+- Next.js
+- TypeScript
+- Tailwind CSS
+- GitHub Pages
+- GitHub Actions
 
 ---
 
 ## Deployment
 
-Static Next.js export. Deployed via GitHub Actions to GitHub Pages on every push to `main`.
+Surveylens is deployed as a static site via GitHub Pages.
+
+CI/CD is handled through GitHub Actions.
+
+---
+
+## Use Cases
+
+- Psychology research
+- Social science surveys
+- Scale validation
+- Academic thesis analysis
+- Questionnaire diagnostics
+
+---
+
+## Roadmap
+
+- Expanded psychometric diagnostics
+- Improved factor visualization
+- Enhanced APA export workflows
+- Additional local AI tooling
 
 ---
 
 ## License
 
-MIT © 2026
+MIT License
