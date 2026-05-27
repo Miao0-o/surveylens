@@ -263,6 +263,28 @@ export default function AISettingsPage() {
           )}
         </div>
 
+        {/* Trust & Disclaimer */}
+        <div className="rounded-lg border border-border/60 bg-card/50 p-4 space-y-3 text-[11px] text-muted-foreground leading-relaxed">
+          <div>
+            <p className="font-medium text-foreground/80 mb-0.5">{en ? "Privacy" : "隐私提示"}</p>
+            <p>{en
+              ? "All survey data is processed locally in your browser and is never uploaded to our servers. When using AI interpretation, only the statistical summary text is sent to the model provider's API."
+              : "所有问卷数据仅在您的浏览器本地完成运算，不会上传至本站服务器。调用 AI 接口时，仅分析文本会同步至对应模型服务商。"}</p>
+          </div>
+          <div>
+            <p className="font-medium text-foreground/80 mb-0.5">{en ? "API Key" : "密钥提示"}</p>
+            <p>{en
+              ? "Your API key is stored only in this browser's session storage. We do not collect, store, or have access to your key. Please keep it secure."
+              : "您的 API 密钥仅保存在本机浏览器会话中，本站不会收集、存储任何密钥信息，请妥善保管个人密钥。"}</p>
+          </div>
+          <div>
+            <p className="font-medium text-foreground/80 mb-0.5">{en ? "Disclaimer" : "功能说明"}</p>
+            <p>{en
+              ? "This tool is intended for academic data analysis support only. All results and AI interpretations are for reference and should be reviewed by a qualified researcher before use in publication."
+              : "本工具仅做学术数据分析辅助，所有结果与 AI 解读仅供参考，发表前请由具备资质的研究者复核确认。"}</p>
+          </div>
+        </div>
+
         {aiMode === "connected" && (
           <Link href="/analyze"
             className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">

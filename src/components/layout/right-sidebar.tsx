@@ -254,9 +254,11 @@ export function RightSidebar() {
               {en ? "Generating..." : "生成中..."}
             </div>
           )}
-          <p className="text-[9px] text-muted-foreground/50 text-center mt-2">
-            {en ? "AI interpretation uses your own API key and may incur a small cost (~$0.01–0.05 per request)." : "AI 解读使用您自己的 API Key，可能产生少量费用（每次约 ¥0.05–0.30）。"}
-          </p>
+          <div className="text-[9px] text-muted-foreground/50 text-center mt-2 space-y-1">
+            <p>{en ? "AI interpretation uses your own API key and may incur a small cost (~$0.01–0.05 per request)." : "AI 解读使用您自己的 API Key，可能产生少量费用（每次约 ¥0.05–0.30）。"}</p>
+            <p>{en ? "Your key is stored only in this browser session. We never see or store it." : "密钥仅保存在本机浏览器会话中，本站不会收集或存储。"}</p>
+            <p>{en ? "Results are for academic reference. Review before publication." : "结果仅供学术参考，发表前请复核确认。"}</p>
+          </div>
           {aiCallError && (
             <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
               <p className="font-medium">{en ? "Request failed" : "请求失败"}</p>
