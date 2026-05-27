@@ -4,7 +4,7 @@ Browser-based survey data analysis â€” reliability, validity, factor structure â
 
 ## Live Demo
 
-**[miao0-o.github.io/surveylens](https://miao0-o.github.io/surveylens/)**
+**[surveylens.org](https://surveylens.org/)**
 
 ---
 

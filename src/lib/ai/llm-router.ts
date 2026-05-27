@@ -9,7 +9,7 @@
 // ============================================================
 
 const SITE_NAME = "SurveyLens";
-const SITE_URL = "https://miao0-o.github.io/surveylens";
+const SITE_URL = "https://surveylens.org";
 
 export interface LLMRequest {
   systemPrompt: string;
