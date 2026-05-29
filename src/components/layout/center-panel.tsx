@@ -31,6 +31,7 @@ import { EFACard } from "@/components/analysis/efa-card";
 import { FactorStructure } from "@/components/analysis/factor-structure";
 import { ConstructValiditySummary } from "@/components/analysis/construct-validity-summary";
 import { StabilityCard } from "@/components/analysis/stability-card";
+import { ScaleConsistencyCard } from "@/components/analysis/scale-consistency-card";
 import { DescriptiveCard } from "@/components/analysis/descriptive-card";
 import { DiagnosticDashboard } from "@/components/analysis/diagnostic-dashboard";
 import { AnalysisMatrixCard } from "@/components/analysis/analysis-matrix-card";
@@ -151,9 +152,12 @@ export function CenterPanel() {
             />
           )}
           {results.efa._meta.status === "ok" ? (
-            <div className="space-y-4">
-              <EFACard data={results.efa} />
-              <FactorStructure data={results.efa} />
+            <div className="space-y-5">
+              <div className="space-y-4">
+                <EFACard data={results.efa} />
+                <FactorStructure data={results.efa} />
+              </div>
+              <ScaleConsistencyCard results={results} />
             </div>
           ) : results.validity._meta.status === "ok" ? null : (
             <UnavailableCard
