@@ -13,23 +13,64 @@ interface Props {
 
 // ============================================================
 // Two-layer decision system
-// Layer 1: Quality Gates (must pass for READY status)
-// Layer 2: Readiness Score (summary indicator)
+// Layer 1: Quality Gates (severity-weighted, must pass for READY)
+// Layer 2: Readiness Score (descriptive only, never overrides gates)
 // ============================================================
+
+type GateSeverity = "excellent" | "good" | "acceptable" | "questionable" | "poor" | "critical";
+
+interface Gate {
+  name: string;
+  labelZh: string;
+  labelEn: string;
+  passed: boolean;
+  severity: GateSeverity;
+  detail: string;
+}
+
+function severityLabel(s: GateSeverity, en: boolean): string {
+  const map: Record<GateSeverity, { zh: string; en: string }> = {
+    excellent: { zh: "优秀", en: "Excellent" },
+    good: { zh: "良好", en: "Good" },
+    acceptable: { zh: "可接受", en: "Acceptable" },
+    questionable: { zh: "存疑", en: "Questionable" },
+    poor: { zh: "较差", en: "Poor" },
+    critical: { zh: "严重", en: "Critical" },
+  };
+  return en ? map[s].en : map[s].zh;
+}
 
 function readinessStatus(gateResult: ReturnType<typeof evaluateGates>, score: number, en: boolean): {
   label: string;
   level: "ready" | "review" | "not_ready";
 } {
-  if (!gateResult.allPassed) {
-    if (gateResult.failed.length >= 3) {
-      return { label: en ? "NOT READY" : "未就绪", level: "not_ready" };
-    }
-    return { label: en ? "REVIEW REQUIRED" : "建议审阅", level: "review" };
+  const { gates, allPassed } = gateResult;
+
+  // All gates pass → READY (score provides nuance)
+  if (allPassed) {
+    if (score >= 80) return { label: en ? "READY" : "就绪", level: "ready" };
+    if (score >= 60) return { label: en ? "REVIEW REQUIRED" : "建议审阅", level: "review" };
+    return { label: en ? "NOT READY" : "未就绪", level: "not_ready" };
   }
-  if (score >= 80) return { label: en ? "READY" : "就绪", level: "ready" };
-  if (score >= 60) return { label: en ? "REVIEW RECOMMENDED" : "建议审阅", level: "review" };
-  return { label: en ? "NOT READY" : "未就绪", level: "not_ready" };
+
+  // Severity-based gate failure analysis
+  const hasCritical = gates.some(g => !g.passed && g.severity === "critical");
+  const hasPoor = gates.some(g => !g.passed && (g.severity === "poor" || g.severity === "critical"));
+  const failedCount = gates.filter(g => !g.passed).length;
+
+  // Critical failures → NOT READY immediately
+  // Missing > 50%, KMO < .50, Bartlett not significant, all scales unreliable
+  if (hasCritical) {
+    return { label: en ? "NOT READY" : "未就绪", level: "not_ready" };
+  }
+
+  // Multiple poor failures → NOT READY
+  if (hasPoor && failedCount >= 2) {
+    return { label: en ? "NOT READY" : "未就绪", level: "not_ready" };
+  }
+
+  // One poor or multiple questionable → REVIEW REQUIRED
+  return { label: en ? "REVIEW REQUIRED" : "建议审阅", level: "review" };
 }
 
 function statusColor(level: "ready" | "review" | "not_ready"): string {
@@ -38,12 +79,12 @@ function statusColor(level: "ready" | "review" | "not_ready"): string {
   return "text-red-600 bg-red-50 border-red-200";
 }
 
-interface Gate {
-  name: string;
-  labelZh: string;
-  labelEn: string;
-  passed: boolean;
-  detail: string;
+function scoreCategory(score: number, en: boolean): string {
+  if (score >= 90) return en ? "Excellent" : "优秀";
+  if (score >= 80) return en ? "Ready" : "就绪";
+  if (score >= 70) return en ? "Mostly Ready" : "基本就绪";
+  if (score >= 60) return en ? "Review Recommended" : "建议审阅";
+  return en ? "Not Ready" : "未就绪";
 }
 
 function evaluateGates(
@@ -51,7 +92,7 @@ function evaluateGates(
   validity: AnalysisResults["validity"],
   missingRate: number,
   en: boolean
-): { gates: Gate[]; allPassed: boolean; failed: Gate[] } {
+): { gates: Gate[]; allPassed: boolean } {
   const dims = reliability.dimensions ?? [];
   const gates: Gate[] = [];
 
@@ -59,59 +100,71 @@ function evaluateGates(
   if (dims.length > 0) {
     const passing = dims.filter(d => d.cronbachsAlpha >= 0.70).length;
     const ratio = passing / dims.length;
+    const worstAlpha = Math.min(...dims.map(d => d.cronbachsAlpha));
     const passed = ratio >= 0.50;
+    const sev: GateSeverity = worstAlpha < 0.50 ? "critical" : worstAlpha < 0.60 ? "poor" : ratio < 0.50 ? "questionable" : ratio >= 0.80 ? "good" : "acceptable";
     gates.push({
       name: "reliability",
       labelZh: "信度门槛",
       labelEn: "Reliability Gate",
       passed,
+      severity: sev,
       detail: en
-        ? `${passing}/${dims.length} scales meet α ≥ .70 (${(ratio * 100).toFixed(0)}%) — ${passed ? "Passed" : "Requires ≥ 50%"}.`
-        : `${passing}/${dims.length} 个量表 α ≥ .70 (${(ratio * 100).toFixed(0)}%) — ${passed ? "通过" : "需要 ≥ 50%"}。`,
+        ? `${passing}/${dims.length} scales meet α ≥ .70 (${(ratio * 100).toFixed(0)}%) — ${severityLabel(sev, en)}.`
+        : `${passing}/${dims.length} 个量表 α ≥ .70 (${(ratio * 100).toFixed(0)}%) — ${severityLabel(sev, en)}。`,
     });
   } else if (reliability.cronbachsAlpha > 0) {
-    // Single scale
-    const passed = reliability.cronbachsAlpha >= 0.70;
+    const a = reliability.cronbachsAlpha;
+    const passed = a >= 0.70;
+    const sev: GateSeverity = a >= 0.90 ? "excellent" : a >= 0.80 ? "good" : a >= 0.70 ? "acceptable" : a >= 0.60 ? "questionable" : a >= 0.50 ? "poor" : "critical";
     gates.push({
       name: "reliability",
       labelZh: "信度门槛",
       labelEn: "Reliability Gate",
       passed,
+      severity: sev,
       detail: en
-        ? `α = ${reliability.cronbachsAlpha.toFixed(2)} — ${passed ? "Passed" : "Below .70 threshold"}.`
-        : `α = ${reliability.cronbachsAlpha.toFixed(2)} — ${passed ? "通过" : "低于 .70 阈值"}。`,
+        ? `α = ${a.toFixed(2)} — ${severityLabel(sev, en)}${passed ? "" : " (below .70 threshold)"}.`
+        : `α = ${a.toFixed(2)} — ${severityLabel(sev, en)}${passed ? "" : "（低于 .70 阈值）"}。`,
     });
   }
 
   // Factor analysis gate: KMO >= .60 AND Bartlett p < .05
   if (validity.kmo > 0) {
-    const passed = validity.kmo >= 0.60 && validity.bartlettPValue < 0.05;
+    const kmo = validity.kmo;
+    const bartOk = validity.bartlettPValue < 0.05;
+    const passed = kmo >= 0.60 && bartOk;
+    const sev: GateSeverity = kmo < 0.50 ? "critical" : kmo < 0.60 ? "poor" : !bartOk ? "questionable" : kmo >= 0.80 ? "good" : "acceptable";
     gates.push({
       name: "factor",
       labelZh: "因子分析门槛",
       labelEn: "Factor Analysis Gate",
       passed,
+      severity: sev,
       detail: en
-        ? `KMO = ${validity.kmo.toFixed(2)}, Bartlett ${validity.bartlettPValue < 0.001 ? "p < .001" : `p = ${validity.bartlettPValue.toFixed(3)}`} — ${passed ? "Passed" : "Failed"}.`
-        : `KMO = ${validity.kmo.toFixed(2)}，Bartlett ${validity.bartlettPValue < 0.001 ? "p < .001" : `p = ${validity.bartlettPValue.toFixed(3)}`} — ${passed ? "通过" : "未通过"}。`,
+        ? `KMO = ${kmo.toFixed(2)}, Bartlett ${validity.bartlettPValue < 0.001 ? "p < .001" : `p = ${validity.bartlettPValue.toFixed(3)}`} — ${severityLabel(sev, en)}.`
+        : `KMO = ${kmo.toFixed(2)}，Bartlett ${validity.bartlettPValue < 0.001 ? "p < .001" : `p = ${validity.bartlettPValue.toFixed(3)}`} — ${severityLabel(sev, en)}。`,
     });
   }
 
   // Missing data gate: < 30%
   if (missingRate >= 0) {
-    const passed = missingRate < 0.30;
+    const mr = missingRate;
+    const passed = mr < 0.30;
+    const sev: GateSeverity = mr >= 0.50 ? "critical" : mr >= 0.30 ? "poor" : mr >= 0.20 ? "questionable" : mr >= 0.10 ? "acceptable" : mr < 0.05 ? "excellent" : "good";
     gates.push({
       name: "missing",
       labelZh: "缺失数据门槛",
       labelEn: "Missing Data Gate",
       passed,
+      severity: sev,
       detail: en
-        ? `Missing rate = ${(missingRate * 100).toFixed(0)}% — ${passed ? "Passed" : "Failed (> 30%)"}.`
-        : `缺失率 = ${(missingRate * 100).toFixed(0)}% — ${passed ? "通过" : "未通过 (> 30%)"}。`,
+        ? `Missing rate = ${(mr * 100).toFixed(0)}% — ${severityLabel(sev, en)}${passed ? "" : " (fails > 30%)"}.`
+        : `缺失率 = ${(mr * 100).toFixed(0)}% — ${severityLabel(sev, en)}${passed ? "" : "（超过 30% 门槛）"}。`,
     });
   }
 
-  return { gates, allPassed: gates.every(g => g.passed), failed: gates.filter(g => !g.passed) };
+  return { gates, allPassed: gates.every(g => g.passed) };
 }
 
 export function OverviewDashboard({ results }: Props) {
@@ -167,11 +220,12 @@ export function OverviewDashboard({ results }: Props) {
   }
   weakItems.sort((a, b) => a.corr - b.corr);
 
-  // LAYER 1: Quality gates
-  const { gates, allPassed, failed } = useMemo(
+  // LAYER 1: Quality gates (severity-weighted)
+  const { gates, allPassed } = useMemo(
     () => evaluateGates(reliability, validity, missingRate, en),
     [reliability, validity, missingRate, en]
   );
+  const failedGates = gates.filter(g => !g.passed);
 
   // LAYER 2: Readiness score
   const readinessScore = useMemo(() => {
@@ -221,16 +275,17 @@ export function OverviewDashboard({ results }: Props) {
     return Math.round(score);
   }, [hasMultiScale, dims, reliability.cronbachsAlpha, validity.kmo, consistencyReport, stability.stabilityLevel, meta.sampleSize, missingRate]);
 
-  const gateResult = { gates, allPassed, failed };
+  const gateResult = { gates, allPassed };
   const status = readinessStatus(gateResult, readinessScore, en);
   const statusCls = statusColor(status.level);
+  const sc = scoreCategory(readinessScore, en);
 
   // Recommended actions
   const actions = useMemo((): { text: string; priority: "high" | "medium" | "low" }[] => {
     const result: { text: string; priority: "high" | "medium" | "low" }[] = [];
 
     // Failed gates first
-    for (const g of failed) {
+    for (const g of failedGates) {
       if (g.name === "reliability") {
         for (const d of failingScales) {
           result.push({
@@ -290,7 +345,7 @@ export function OverviewDashboard({ results }: Props) {
     }
 
     return result;
-  }, [failed, failingScales, weakItems, overlapPairs, redundancyPairs, meta.sampleSize, en]);
+  }, [failedGates, failingScales, weakItems, overlapPairs, redundancyPairs, meta.sampleSize, en]);
 
   return (
     <div className="space-y-5">
@@ -306,10 +361,10 @@ export function OverviewDashboard({ results }: Props) {
         </div>
         <div>
           <p className="text-sm font-semibold">{en ? "Research Readiness" : "研究准备度"}</p>
-          <p className="text-xs opacity-80">{status.label}</p>
+          <p className="text-xs opacity-80">{status.label} · {sc}</p>
           {!allPassed && (
             <p className="text-[10px] opacity-60 mt-0.5">
-              {en ? `${failed.length} gate(s) failed` : `${failed.length} 个门槛未通过`}
+              {en ? `${failedGates.length} gate(s) failed` : `${failedGates.length} 个门槛未通过`}
             </p>
           )}
         </div>
