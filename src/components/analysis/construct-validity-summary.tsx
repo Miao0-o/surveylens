@@ -169,6 +169,11 @@ export function ConstructValiditySummary({ correlationMatrix, columnLabels, samp
 
   return (
     <div className="space-y-4">
+      <p className="text-[11px] text-muted-foreground/70">
+        {en
+          ? "Validity evaluates construct-level relationships, overlap, and distinctiveness between scales."
+          : "效度评估量表层面的构念关系、重叠与区分度。"}
+      </p>
       {/* Strong Relationships */}
       {observations.strong.length > 0 && (
         <div className="rounded-lg bg-emerald-50/30 border border-emerald-100/50 p-3 space-y-1.5">

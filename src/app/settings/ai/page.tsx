@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
 import { CANONICAL_BY_PROVIDER, DEFAULT_CANONICAL, CANONICAL_MODELS } from "@/lib/ai/llm-router";
 import { ArrowLeft, Check, Info, Loader2, Shield, Sparkles, Zap } from "lucide-react";
+import { VerificationBadge } from "@/components/verification/verification-badge";
 
 export default function AISettingsPage() {
   const apiKey = useAppStore((s) => s.apiKey);
@@ -284,6 +285,10 @@ export default function AISettingsPage() {
               : "本工具仅做学术数据分析辅助，所有结果与 AI 解读仅供参考，发表前请由具备资质的研究者复核确认。"}</p>
           </div>
         </div>
+
+        <hr className="border-border" />
+
+        <VerificationBadge />
 
         {aiMode === "connected" && (
           <Link href="/analyze"
