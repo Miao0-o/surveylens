@@ -632,15 +632,37 @@ export function usePyodide() {
 
       await py.runPythonAsync(step.fn);
 
+      // Safe fallback for stability: skip if data is too thin
       const callCode = step.id === "stability"
-        ? `run_stability(__data_json__, 200)`
+        ? (() => {
+            const data = isItemLevel ? itemData : scaleData;
+            if (!data || data.length < 2 || (data[0]?.length ?? 0) < 2) return null;
+            return `run_stability(__data_json__, 200)`;
+          })()
         : `run_${step.id}(__data_json__)`;
-      const resultJson = await py.runPythonAsync(callCode) as string;
-      const parsed = JSON.parse(resultJson as string);
-      if ((parsed as Record<string, unknown>).error) {
-        throw new Error(`Step ${step.id}: ${(parsed as Record<string, unknown>).error}`);
+      if (callCode === null) {
+        results[step.id] = {
+          bootstrapSamples: 0, alphaCurve: [],
+          stabilityLevel: "unstable", recommendedSampleSize: 0, elbowPoint: null,
+          _meta: { error: "Insufficient data for bootstrap stability." }
+        };
+        continue;
       }
-      results[step.id] = parsed as Record<string, unknown>;
+      try {
+        const resultJson = await py.runPythonAsync(callCode) as string;
+        const parsed = JSON.parse(resultJson as string);
+        if ((parsed as Record<string, unknown>).error) {
+          throw new Error(`Step ${step.id}: ${(parsed as Record<string, unknown>).error}`);
+        }
+        results[step.id] = parsed as Record<string, unknown>;
+      } catch (e) {
+        console.warn(`[analysis] Stability step failed, using safe fallback:`, e instanceof Error ? e.message : e);
+        results[step.id] = {
+          bootstrapSamples: 0, alphaCurve: [],
+          stabilityLevel: "unstable", recommendedSampleSize: 0, elbowPoint: null,
+          _meta: { error: `Bootstrap stability could not be computed: ${e instanceof Error ? e.message : String(e)}` }
+        };
+      }
     }
 
     // Store descriptive results
@@ -925,16 +947,20 @@ function buildResults(raw: Record<string, Record<string, unknown>>, labels: stri
 
   const s = raw.stability;
   if (s && !s.error) {
+    const sMeta = (s as Record<string, unknown>)._meta as Record<string, unknown> | undefined;
     const bootN = (s.bootstrapSamples as number) ?? 0;
+    const fallbackReason = sMeta?.error as string | undefined;
     results.stability = {
       bootstrapSamples: bootN,
       alphaCurve: (s.alphaCurve as { sampleSize: number; alpha: number }[]) ?? [],
       stabilityLevel: (s.stabilityLevel as "stable" | "moderate" | "unstable") ?? "unstable",
       recommendedSampleSize: (s.recommendedSampleSize as number) ?? 0,
       elbowPoint: (s.elbowPoint as number) ?? null,
-      _meta: bootN > 0
-        ? { value: (s.recommendedSampleSize as number) ?? 0, status: "ok" as const, reason: `Bootstrap stability assessed with ${bootN} samples`, confidence: 0.9 }
-        : { value: null, status: "insufficient_data" as const, reason: "Sample too small for bootstrap stability assessment", confidence: 0.7 },
+      _meta: fallbackReason
+        ? { value: null, status: "not_applicable" as const, reason: fallbackReason, confidence: 0.5 }
+        : bootN > 0
+          ? { value: (s.recommendedSampleSize as number) ?? 0, status: "ok" as const, reason: `Bootstrap stability assessed with ${bootN} samples`, confidence: 0.9 }
+          : { value: null, status: "insufficient_data" as const, reason: "Sample too small for bootstrap stability assessment", confidence: 0.7 },
     };
   }
 

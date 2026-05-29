@@ -34,6 +34,21 @@ const levelColors: Record<string, { color: string; bg: string; border: string }>
 export function StabilityCard({ data }: Props) {
   const lang = useAppStore((s) => s.reportLanguage);
   const en = lang === "en";
+
+  if (data._meta?.status === "not_applicable") {
+    return (
+      <div className="px-4 py-3 rounded-lg bg-secondary/20 border border-border/50 text-xs text-muted-foreground">
+        <p className="font-medium mb-1">{en ? "Stability Unavailable" : "稳定性分析暂不可用"}</p>
+        <p>{en
+          ? "Bootstrap stability analysis could not be computed for this dataset. Please check sample size, item count, or missing data."
+          : "Bootstrap 稳定性分析暂无法对此数据集进行计算。请检查样本量、题项数量或缺失值情况。"}</p>
+        {data._meta.reason && (
+          <p className="text-[10px] text-muted-foreground/60 mt-1">{data._meta.reason}</p>
+        )}
+      </div>
+    );
+  }
+
   const cfg = levelColors[data.stabilityLevel];
   const label = levelLabels[data.stabilityLevel]?.[lang === "en" ? "en" : "zh"] ?? data.stabilityLevel;
 
