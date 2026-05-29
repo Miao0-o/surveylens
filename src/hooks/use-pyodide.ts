@@ -613,7 +613,7 @@ export function usePyodide() {
 
     // Item-level steps: validity (KMO/Bartlett), EFA
     // Reliability: routed per-composite when user-selected, globally otherwise
-    const ITEM_LEVEL_STEPS = new Set(["validity", "efa"]);
+    const ITEM_LEVEL_STEPS = new Set(["validity", "efa", "stability"]);
     const skipGlobalReliability = hasUserSelection && userComposites.length > 0;
 
     for (const step of PYTHON_STEPS) {

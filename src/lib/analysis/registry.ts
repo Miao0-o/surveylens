@@ -98,9 +98,9 @@ export const analysisModules: AnalysisModule[] = [
       const s = r.stability;
       if (lang === "zh") {
         const sl = s.stabilityLevel === "stable" ? "稳定" : s.stabilityLevel === "moderate" ? "一般" : "不稳定";
-        return `Bootstrap（${s.bootstrapSamples}次）显示因子结构${sl}；建议N≥${s.recommendedSampleSize}。`;
+        return `Bootstrap（${s.bootstrapSamples}次）显示信度估计${sl}；建议N≥${s.recommendedSampleSize}。`;
       }
-      return `Bootstrap (${s.bootstrapSamples}) indicated ${s.stabilityLevel} solution; recommended N ≥ ${s.recommendedSampleSize}.`;
+      return `Bootstrap (${s.bootstrapSamples}) indicated ${s.stabilityLevel} reliability estimate; recommended N ≥ ${s.recommendedSampleSize}.`;
     },
   },
 ];
@@ -206,7 +206,7 @@ function buildSummaryZH(results: AnalysisResults, _insights: string[], n: number
   // Stability
   if (stability.stabilityLevel && stability.recommendedSampleSize > 0) {
     const sl = stability.stabilityLevel === "stable" ? "良好" : stability.stabilityLevel === "moderate" ? "一般" : "不够稳定";
-    parts.push(`Bootstrap稳健性检验显示因子结构稳定性${sl}，研究建议最低有效样本量为${fmtInt(stability.recommendedSampleSize)}份。`);
+    parts.push(`Bootstrap稳健性检验显示信度估计${sl}，研究建议最低有效样本量为${fmtInt(stability.recommendedSampleSize)}份。`);
   }
 
   return parts.join("");
