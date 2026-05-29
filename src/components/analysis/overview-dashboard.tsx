@@ -45,32 +45,28 @@ function readinessStatus(gateResult: ReturnType<typeof evaluateGates>, score: nu
   level: "ready" | "review" | "not_ready";
 } {
   const { gates, allPassed } = gateResult;
+  const failedGates = gates.filter(g => !g.passed);
 
-  // All gates pass → READY (score provides nuance)
-  if (allPassed) {
-    if (score >= 80) return { label: en ? "READY" : "就绪", level: "ready" };
-    if (score >= 60) return { label: en ? "REVIEW REQUIRED" : "建议审阅", level: "review" };
+  // CRITICAL gate failure → NOT READY immediately
+  if (failedGates.some(g => g.severity === "critical")) {
     return { label: en ? "NOT READY" : "未就绪", level: "not_ready" };
   }
 
-  // Severity-based gate failure analysis
-  const hasCritical = gates.some(g => !g.passed && g.severity === "critical");
-  const hasPoor = gates.some(g => !g.passed && (g.severity === "poor" || g.severity === "critical"));
-  const failedCount = gates.filter(g => !g.passed).length;
-
-  // Critical failures → NOT READY immediately
-  // Missing > 50%, KMO < .50, Bartlett not significant, all scales unreliable
-  if (hasCritical) {
+  // Two or more poor failures → NOT READY
+  const poorCount = failedGates.filter(g => g.severity === "poor").length;
+  if (poorCount >= 2) {
     return { label: en ? "NOT READY" : "未就绪", level: "not_ready" };
   }
 
-  // Multiple poor failures → NOT READY
-  if (hasPoor && failedCount >= 2) {
-    return { label: en ? "NOT READY" : "未就绪", level: "not_ready" };
+  // Any questionable or poor → REVIEW REQUIRED
+  if (!allPassed) {
+    return { label: en ? "REVIEW REQUIRED" : "建议审阅", level: "review" };
   }
 
-  // One poor or multiple questionable → REVIEW REQUIRED
-  return { label: en ? "REVIEW REQUIRED" : "建议审阅", level: "review" };
+  // All gates pass: score provides nuance
+  if (score >= 80) return { label: en ? "READY" : "就绪", level: "ready" };
+  if (score >= 60) return { label: en ? "REVIEW REQUIRED" : "建议审阅", level: "review" };
+  return { label: en ? "NOT READY" : "未就绪", level: "not_ready" };
 }
 
 function statusColor(level: "ready" | "review" | "not_ready"): string {
@@ -91,27 +87,33 @@ function evaluateGates(
   reliability: AnalysisResults["reliability"],
   validity: AnalysisResults["validity"],
   missingRate: number,
+  sampleSize: number,
+  consistencyReport: ReturnType<typeof computeScaleConsistency> | null,
   en: boolean
 ): { gates: Gate[]; allPassed: boolean } {
   const dims = reliability.dimensions ?? [];
   const gates: Gate[] = [];
 
-  // Reliability gate: >= 50% scales have α >= .70
+  // Reliability gate: at least 50% scales α >= .70
   if (dims.length > 0) {
     const passing = dims.filter(d => d.cronbachsAlpha >= 0.70).length;
     const ratio = passing / dims.length;
     const worstAlpha = Math.min(...dims.map(d => d.cronbachsAlpha));
+    const meanAlpha = dims.reduce((s, d) => s + d.cronbachsAlpha, 0) / dims.length;
     const passed = ratio >= 0.50;
-    const sev: GateSeverity = worstAlpha < 0.50 ? "critical" : worstAlpha < 0.60 ? "poor" : ratio < 0.50 ? "questionable" : ratio >= 0.80 ? "good" : "acceptable";
+    const sev: GateSeverity =
+      meanAlpha >= 0.90 ? "excellent" : meanAlpha >= 0.80 ? "good" :
+      ratio >= 0.50 ? "acceptable" : worstAlpha < 0.50 ? "critical" :
+      worstAlpha < 0.60 ? "poor" : "questionable";
     gates.push({
       name: "reliability",
-      labelZh: "信度门槛",
-      labelEn: "Reliability Gate",
+      labelZh: "信度",
+      labelEn: "Reliability",
       passed,
       severity: sev,
       detail: en
-        ? `${passing}/${dims.length} scales meet α ≥ .70 (${(ratio * 100).toFixed(0)}%) — ${severityLabel(sev, en)}.`
-        : `${passing}/${dims.length} 个量表 α ≥ .70 (${(ratio * 100).toFixed(0)}%) — ${severityLabel(sev, en)}。`,
+        ? `${passing}/${dims.length} scales α ≥ .70 (mean α = ${meanAlpha.toFixed(2)}) — ${severityLabel(sev, en)}${passed ? "" : " (requires ≥ 50%)"}.`
+        : `${passing}/${dims.length} 个量表 α ≥ .70 (均值 α = ${meanAlpha.toFixed(2)}) — ${severityLabel(sev, en)}${passed ? "" : "（需要 ≥ 50%）"}。`,
     });
   } else if (reliability.cronbachsAlpha > 0) {
     const a = reliability.cronbachsAlpha;
@@ -119,43 +121,65 @@ function evaluateGates(
     const sev: GateSeverity = a >= 0.90 ? "excellent" : a >= 0.80 ? "good" : a >= 0.70 ? "acceptable" : a >= 0.60 ? "questionable" : a >= 0.50 ? "poor" : "critical";
     gates.push({
       name: "reliability",
-      labelZh: "信度门槛",
-      labelEn: "Reliability Gate",
+      labelZh: "信度",
+      labelEn: "Reliability",
       passed,
       severity: sev,
-      detail: en
-        ? `α = ${a.toFixed(2)} — ${severityLabel(sev, en)}${passed ? "" : " (below .70 threshold)"}.`
-        : `α = ${a.toFixed(2)} — ${severityLabel(sev, en)}${passed ? "" : "（低于 .70 阈值）"}。`,
+      detail: en ? `α = ${a.toFixed(2)} — ${severityLabel(sev, en)}${passed ? "" : " (below .70)"}.` : `α = ${a.toFixed(2)} — ${severityLabel(sev, en)}${passed ? "" : "（低于 .70）"}。`,
     });
   }
 
-  // Factor analysis gate: KMO >= .60 AND Bartlett p < .05
+  // Factor analysis gate
   if (validity.kmo > 0) {
     const kmo = validity.kmo;
     const bartOk = validity.bartlettPValue < 0.05;
     const passed = kmo >= 0.60 && bartOk;
-    const sev: GateSeverity = kmo < 0.50 ? "critical" : kmo < 0.60 ? "poor" : !bartOk ? "questionable" : kmo >= 0.80 ? "good" : "acceptable";
+    const sev: GateSeverity =
+      kmo >= 0.90 ? "excellent" : kmo >= 0.80 ? "good" : kmo >= 0.60 ? "acceptable" :
+      kmo < 0.50 ? "critical" : kmo < 0.60 ? "poor" : !bartOk ? "questionable" : "acceptable";
     gates.push({
       name: "factor",
-      labelZh: "因子分析门槛",
-      labelEn: "Factor Analysis Gate",
+      labelZh: "因子分析",
+      labelEn: "Factor Analysis",
       passed,
       severity: sev,
       detail: en
         ? `KMO = ${kmo.toFixed(2)}, Bartlett ${validity.bartlettPValue < 0.001 ? "p < .001" : `p = ${validity.bartlettPValue.toFixed(3)}`} — ${severityLabel(sev, en)}.`
-        : `KMO = ${kmo.toFixed(2)}，Bartlett ${validity.bartlettPValue < 0.001 ? "p < .001" : `p = ${validity.bartlettPValue.toFixed(3)}`} — ${severityLabel(sev, en)}。`,
+        : `KMO = ${kmo.toFixed(2)}, Bartlett ${validity.bartlettPValue < 0.001 ? "p < .001" : `p = ${validity.bartlettPValue.toFixed(3)}`} — ${severityLabel(sev, en)}。`,
     });
   }
 
-  // Missing data gate: < 30%
+  // Structure consistency gate (only in multi-scale mode)
+  if (consistencyReport) {
+    const ac = consistencyReport.overview.averageConsistency;
+    const reviewCount = consistencyReport.overview.reviewCount;
+    const passed = ac >= 0.70;
+    const sev: GateSeverity =
+      ac >= 0.90 ? "excellent" : ac >= 0.80 ? "good" : ac >= 0.70 ? "acceptable" :
+      ac >= 0.60 ? "questionable" : ac >= 0.50 ? "poor" : "critical";
+    gates.push({
+      name: "consistency",
+      labelZh: "结构一致性",
+      labelEn: "Structure Consistency",
+      passed,
+      severity: sev,
+      detail: en
+        ? `${(ac * 100).toFixed(0)}% consistency, ${reviewCount} scale(s) need review — ${severityLabel(sev, en)}.`
+        : `一致性 ${(ac * 100).toFixed(0)}%，${reviewCount} 个量表需审阅 — ${severityLabel(sev, en)}。`,
+    });
+  }
+
+  // Missing data gate
   if (missingRate >= 0) {
     const mr = missingRate;
     const passed = mr < 0.30;
-    const sev: GateSeverity = mr >= 0.50 ? "critical" : mr >= 0.30 ? "poor" : mr >= 0.20 ? "questionable" : mr >= 0.10 ? "acceptable" : mr < 0.05 ? "excellent" : "good";
+    const sev: GateSeverity =
+      mr < 0.05 ? "excellent" : mr < 0.10 ? "good" : mr < 0.20 ? "acceptable" :
+      mr >= 0.50 ? "critical" : mr >= 0.30 ? "poor" : "questionable";
     gates.push({
       name: "missing",
-      labelZh: "缺失数据门槛",
-      labelEn: "Missing Data Gate",
+      labelZh: "缺失数据",
+      labelEn: "Missing Data",
       passed,
       severity: sev,
       detail: en
@@ -164,7 +188,22 @@ function evaluateGates(
     });
   }
 
-  return { gates, allPassed: gates.every(g => g.passed) };
+  // Sample size — warning only (not a gate)
+  if (sampleSize > 0) {
+    const sev: GateSeverity = sampleSize >= 300 ? "excellent" : sampleSize >= 100 ? "acceptable" : sampleSize >= 30 ? "questionable" : "critical";
+    gates.push({
+      name: "sample",
+      labelZh: "样本量",
+      labelEn: "Sample Size",
+      passed: true, // Never fails readiness — warning only
+      severity: sev,
+      detail: en
+        ? `N = ${sampleSize} — ${severityLabel(sev, en)}${sampleSize < 100 ? ". Results may be unstable." : ""}`
+        : `N = ${sampleSize} — ${severityLabel(sev, en)}${sampleSize < 100 ? "，结果可能不稳定" : ""}。`,
+    });
+  }
+
+  return { gates, allPassed: gates.filter(g => g.name !== "sample").every(g => g.passed) };
 }
 
 export function OverviewDashboard({ results }: Props) {
@@ -222,8 +261,8 @@ export function OverviewDashboard({ results }: Props) {
 
   // LAYER 1: Quality gates (severity-weighted)
   const { gates, allPassed } = useMemo(
-    () => evaluateGates(reliability, validity, missingRate, en),
-    [reliability, validity, missingRate, en]
+    () => evaluateGates(reliability, validity, missingRate, meta.sampleSize, consistencyReport, en),
+    [reliability, validity, missingRate, meta.sampleSize, consistencyReport, en]
   );
   const failedGates = gates.filter(g => !g.passed);
 
