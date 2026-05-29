@@ -54,14 +54,22 @@ export const analysisRegistry: AnalysisModule[] = [
     card: ({ results, snippet }) => <ReliabilityCard data={results.reliability} snippet={snippet} />,
   },
   {
-    id: "validity",
-    label: "效度",
+    id: "factor-analysis",
+    label: "因子分析",
     sourceKey: "validity",
     summarize: (r) => {
       const v = r.validity;
-      if (v.kmo <= 0) return null;
-      const sig = v.bartlettPValue < 0.001 ? "p < .001" : v.bartlettPValue < 0.05 ? `p = ${v.bartlettPValue.toFixed(3)}` : `p = ${v.bartlettPValue.toFixed(3)} (n.s.)`;
-      return `KMO = ${v.kmo.toFixed(2)} (${kmoLabel(v.kmo)}); Bartlett's test ${sig}.`;
+      const e = r.efa;
+      const parts: string[] = [];
+      if (v.kmo > 0) {
+        const sig = v.bartlettPValue < 0.001 ? "p < .001" : v.bartlettPValue < 0.05 ? `p = ${v.bartlettPValue.toFixed(3)}` : `p = ${v.bartlettPValue.toFixed(3)} (n.s.)`;
+        parts.push(`KMO = ${v.kmo.toFixed(2)} (${kmoLabel(v.kmo)}); Bartlett's test ${sig}`);
+      }
+      if (e.suggestedFactors > 0) {
+        const tv = (e.varianceExplained.reduce((a, b) => a + b, 0) * 100).toFixed(1);
+        parts.push(`EFA: ${e.suggestedFactors} factor(s), ${tv}% variance`);
+      }
+      return parts.length > 0 ? parts.join(". ") + "." : null;
     },
     card: ({ results }) => (
       <div className="space-y-5">
@@ -69,29 +77,26 @@ export const analysisRegistry: AnalysisModule[] = [
           <ValidityCard data={results.validity} />
         </div>
         <div className="p-5 rounded-xl bg-card border border-border">
-          <CorrelationHeatmap data={results.validity} />
-        </div>
-      </div>
-    ),
-  },
-  {
-    id: "efa",
-    label: "因子",
-    sourceKey: "efa",
-    summarize: (r) => {
-      const e = r.efa;
-      if (e.suggestedFactors <= 0) return null;
-      const tv = (e.varianceExplained.reduce((a, b) => a + b, 0) * 100).toFixed(1);
-      return `EFA (${e.rotation}) suggested ${e.suggestedFactors} factor(s), explaining ${tv}% of variance.`;
-    },
-    card: ({ results }) => (
-      <div className="space-y-5">
-        <div className="p-5 rounded-xl bg-card border border-border">
           <EFACard data={results.efa} />
         </div>
         <div className="p-5 rounded-xl bg-card border border-border">
           <FactorStructure data={results.efa} />
         </div>
+      </div>
+    ),
+  },
+  {
+    id: "construct-validity",
+    label: "构念效度",
+    sourceKey: "validity",
+    summarize: (r) => {
+      const n = r.validity.correlationMatrix.length;
+      if (n === 0) return null;
+      return `Scale correlation matrix: ${n} variables.`;
+    },
+    card: ({ results }) => (
+      <div className="p-5 rounded-xl bg-card border border-border">
+        <CorrelationHeatmap data={results.validity} />
       </div>
     ),
   },

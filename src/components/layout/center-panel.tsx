@@ -136,34 +136,45 @@ export function CenterPanel() {
         )
       )}
 
-      {activeTab === "validity" && (
-        results.validity._meta.status === "ok" ? (
-          <ResultCard title={t("section.validity", lang)} insight={insights["validity"]}>
-            <ValidityCard data={results.validity} />
-            <div className="mt-4">
-              <CorrelationHeatmap data={results.validity} />
-            </div>
-          </ResultCard>
-        ) : (
-          <UnavailableCard
-            title={t("section.validity", lang)}
-            reason={results.validity._meta.reason}
-          />
-        )
-      )}
-
-      {activeTab === "efa" && (
-        results.efa._meta.status === "ok" ? (
-          <ResultCard title={t("section.efa", lang)} insight={insights["efa"]}>
-            <EFACard data={results.efa} />
-            <div className="mt-4">
+      {/* Factor Analysis: KMO + Bartlett + EFA — item-level latent structure */}
+      {activeTab === "factor-analysis" && (
+        <div className="space-y-5">
+          {results.validity._meta.status === "ok" ? (
+            <ResultCard title={t("section.factor-analysis", lang)} insight={insights["factor-analysis"]}>
+              <ValidityCard data={results.validity} />
+            </ResultCard>
+          ) : (
+            <UnavailableCard
+              title={t("section.factor-analysis", lang)}
+              reason={results.validity._meta.reason}
+            />
+          )}
+          {results.efa._meta.status === "ok" ? (
+            <div className="space-y-4">
+              <EFACard data={results.efa} />
               <FactorStructure data={results.efa} />
             </div>
+          ) : results.validity._meta.status === "ok" ? null : (
+            <UnavailableCard
+              title={t("section.factor-analysis", lang)}
+              reason={results.efa._meta.reason}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Construct Validity: scale-level correlation matrix */}
+      {activeTab === "construct-validity" && (
+        results.validity.correlationMatrix.length > 0 ? (
+          <ResultCard title={t("section.construct-validity", lang)} insight={insights["construct-validity"]}>
+            <ChartWrapper title={t("section.heatmap", lang)}>
+              <CorrelationHeatmap data={results.validity} />
+            </ChartWrapper>
           </ResultCard>
         ) : (
           <UnavailableCard
-            title={t("section.efa", lang)}
-            reason={results.efa._meta.reason}
+            title={t("section.construct-validity", lang)}
+            reason={lang === "en" ? "Correlation matrix not available. Requires scale-level variables." : "相关矩阵不可用。需要量表级变量。"}
           />
         )
       )}
@@ -174,14 +185,6 @@ export function CenterPanel() {
             data={descriptiveResults as unknown as { n: number; mean: number | null; sd: number | null; min: number | null; max: number | null; skew: number | null; kurtosis: number | null }[]}
             labels={results.efa.itemLabels}
           />
-        </ResultCard>
-      )}
-
-      {activeTab === "correlation" && (
-        <ResultCard title={t("section.correlation", lang)} insight={insights["correlation"]}>
-          <ChartWrapper title={t("section.heatmap", lang)}>
-            <CorrelationHeatmap data={results.validity} />
-          </ChartWrapper>
         </ResultCard>
       )}
 

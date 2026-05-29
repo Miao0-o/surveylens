@@ -53,67 +53,39 @@ export const analysisModules: AnalysisModule[] = [
     },
   },
   {
-    id: "validity",
-    label: "效度",
-    intents: ["validate"],
+    id: "factor-analysis",
+    label: "因子分析",
+    intents: ["validate", "explore"],
     sourceStep: "validity",
-    isAvailable: (r) => r.validity._meta.status === "ok",
+    isAvailable: (r) => r.validity._meta.status === "ok" || r.efa._meta.status === "ok",
     apaInsight: (r, lang) => {
       const v = r.validity;
-      if (lang === "zh") {
-        const sig = v.bartlettPValue < 0.001 ? "p＜0.001" : v.bartlettPValue < 0.05 ? `p＝${v.bartlettPValue.toFixed(3)}` : `p＝${v.bartlettPValue.toFixed(3)} (不显著)`;
-        return `KMO＝${v.kmo.toFixed(2)}；Bartlett球形检验${sig}。`;
-      }
-      const sig = v.bartlettPValue < 0.001 ? "p < .001" : v.bartlettPValue < 0.05 ? `p = ${v.bartlettPValue.toFixed(3)}` : `p = ${v.bartlettPValue.toFixed(3)} (n.s.)`;
-      return `KMO = ${v.kmo.toFixed(2)}; Bartlett's test ${sig}.`;
-    },
-  },
-  {
-    id: "efa",
-    label: "因子",
-    intents: ["validate", "explore"],
-    sourceStep: "efa",
-    isAvailable: (r) => r.efa._meta.status === "ok",
-    apaInsight: (r, lang) => {
       const e = r.efa;
-      const tv = (e.varianceExplained.reduce((a, b) => a + b, 0) * 100).toFixed(1);
-      const displayN = e.suggestedFactors;
-      const kaiserN = e.metadata?.raw_factor_estimation?.kaiser_n ?? displayN;
-      if (lang === "zh") {
-        const w = (n: number) => n <= 9 ? ["", "一", "两", "三", "四", "五", "六", "七", "八", "九"][n] ?? String(n) : String(n);
-        const base = `探索性因子分析（${e.rotation}）：Kaiser准则建议${kaiserN}个因子，累计解释${tv}%方差。`;
-        return kaiserN !== displayN ? `${base}为可解释性显示${w(displayN)}个因子。` : base;
+      const parts: string[] = [];
+      if (v._meta.status === "ok") {
+        const kmo = v.kmo.toFixed(2);
+        const sigStr = v.bartlettPValue < 0.001 ? (lang === "zh" ? "p＜0.001" : "p < .001") : v.bartlettPValue < 0.05 ? `p = ${v.bartlettPValue.toFixed(3)}` : `p = ${v.bartlettPValue.toFixed(3)} (${lang === "zh" ? "不显著" : "n.s."})`;
+        parts.push(lang === "zh" ? `KMO＝${kmo}，Bartlett球形检验${sigStr}` : `KMO = ${kmo}, Bartlett's test ${sigStr}`);
       }
-      const base = `EFA (${e.rotation}): Kaiser criterion suggested ${kaiserN} factor(s), explaining ${tv}% of variance.`;
-      return kaiserN !== displayN ? `${base} Showing ${displayN} factors for interpretability.` : base;
+      if (e._meta.status === "ok") {
+        const tv = (e.varianceExplained.reduce((a, b) => a + b, 0) * 100).toFixed(1);
+        parts.push(lang === "zh" ? `EFA建议${e.suggestedFactors}个因子，累计解释${tv}%方差` : `EFA suggested ${e.suggestedFactors} factor(s), explaining ${tv}% of variance`);
+      }
+      return parts.length > 0 ? parts.join(lang === "zh" ? "。" : ". ") + "." : null;
     },
   },
   {
-    id: "correlation",
-    label: "相关",
-    intents: ["explore", "validate", "relationship"],
+    id: "construct-validity",
+    label: "构念效度",
+    intents: ["validate", "explore"],
     sourceStep: "correlation",
     isAvailable: (r) => r.validity.correlationMatrix.length > 0,
     apaInsight: (r, lang) => {
-      const cm = r.validity.correlationMatrix;
-      if (cm.length < 2) return null;
-      let maxR = 0; let maxI = 0; let maxJ = 0;
-      for (let i = 0; i < cm.length; i++) {
-        for (let j = 0; j < cm[i].length; j++) {
-          if (i !== j && Math.abs(cm[i][j]) > Math.abs(maxR)) {
-            maxR = cm[i][j]; maxI = i; maxJ = j;
-          }
-        }
-      }
-      const labels = r.validity.columnLabels;
-      const li = labels[maxI] ?? `V${maxI+1}`;
-      const lj = labels[maxJ] ?? `V${maxJ+1}`;
-      if (lang === "zh") {
-        const dir = maxR > 0 ? "正相关" : "负相关";
-        return `最强相关：${li}与${lj}呈${dir}（r＝${maxR.toFixed(2)}）。`;
-      }
-      const dir = maxR > 0 ? "positively" : "negatively";
-      return `Strongest correlation: ${li} was ${dir} related to ${lj} (r = ${maxR.toFixed(2)}).`;
+      const n = r.validity.correlationMatrix.length;
+      if (n === 0) return null;
+      return lang === "zh"
+        ? `构念间相关矩阵包含${n}个变量。`
+        : `Construct correlation matrix includes ${n} variables.`;
     },
   },
   {
