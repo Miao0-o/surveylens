@@ -5,6 +5,39 @@
 
 import type { AnalysisModule, AnalysisIntent } from "./types";
 import type { AnalysisResults } from "@/types";
+import { resolveSelectedVars } from "@/lib/stats/composite";
+
+// ============================================================
+// Adaptive Psychometric Workflow — Mode Detection
+// ============================================================
+
+export type AnalysisMode = "single" | "multi" | "exploratory";
+
+/** Module IDs that only apply in multi-scale mode */
+const MULTI_SCALE_ONLY = new Set(["construct-validity", "scale-consistency"]);
+
+/** Detect analysis mode from research design and available scales */
+export function detectAnalysisMode(
+  researchDesign: { outcomeVariables?: string[]; predictorVariables?: string[] } | null
+): AnalysisMode {
+  const allVars = [...(researchDesign?.outcomeVariables ?? []), ...(researchDesign?.predictorVariables ?? [])];
+  if (allVars.length === 0) return "exploratory";
+  const { composites } = resolveSelectedVars(allVars);
+  if (composites.length <= 1) return "single";
+  return "multi";
+}
+
+/** Get modules filtered by analysis mode */
+export function getActiveModulesForMode(
+  results: AnalysisResults,
+  mode: AnalysisMode
+): AnalysisModule[] {
+  return analysisModules.filter((m) => {
+    if (!m.isAvailable(results)) return false;
+    if (mode !== "multi" && MULTI_SCALE_ONLY.has(m.id)) return false;
+    return true;
+  });
+}
 
 function alphaLabel(a: number) {
   return a >= 0.90 ? "excellent" : a >= 0.80 ? "good" : a >= 0.70 ? "acceptable" : "low";

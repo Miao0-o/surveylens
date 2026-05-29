@@ -20,7 +20,7 @@ const STAGE_LABELS_EN: Record<AnalysisStage, string> = {
   completed: "Complete",
   error: "Error",
 };
-import { getActiveModules, getOneLineAPA } from "@/lib/analysis/registry";
+import { detectAnalysisMode, getActiveModulesForMode, getOneLineAPA } from "@/lib/analysis/registry";
 import { DataPreview } from "@/components/preprocessing/data-preview";
 import { OverviewDashboard } from "@/components/analysis/overview-dashboard";
 import { ResultCard } from "@/components/analysis/result-card";
@@ -54,7 +54,8 @@ export function CenterPanel() {
 
   const tl = (key: string) => t(key, lang);
 
-  const activeModules = useMemo(() => results ? getActiveModules(results) : [], [results]);
+  const analysisMode = detectAnalysisMode(useAppStore((s) => s.researchDesign));
+  const activeModules = useMemo(() => results ? getActiveModulesForMode(results, analysisMode) : [], [results, analysisMode]);
   const insights = useMemo(() => results ? getOneLineAPA(results, lang) : {}, [results, lang]);
   const summaryZH = useMemo(() => results ? getSummaryAPA(results, "zh") : "", [results]);
   const summaryEN = useMemo(() => results ? getSummaryAPA(results, "en") : "", [results]);
@@ -157,7 +158,7 @@ export function CenterPanel() {
                 <EFACard data={results.efa} />
                 <FactorStructure data={results.efa} />
               </div>
-              <ScaleConsistencyCard results={results} />
+              {analysisMode === "multi" && <ScaleConsistencyCard results={results} />}
             </div>
           ) : results.validity._meta.status === "ok" ? null : (
             <UnavailableCard
