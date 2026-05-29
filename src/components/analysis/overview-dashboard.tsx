@@ -480,32 +480,31 @@ export function OverviewDashboard({ results }: Props) {
         <div className="flex items-center gap-1.5 mb-2">
           <Info className="w-3.5 h-3.5 text-blue-500" strokeWidth={1.5} />
           <span className="text-xs font-medium">{en ? "Analysis Scope" : "分析范围"}</span>
+          <span className={`text-[9px] px-1.5 py-0.5 rounded border ${
+            scope.hasUserSelection ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-blue-50 text-blue-600 border-blue-100"
+          }`}>
+            {scope.hasUserSelection
+              ? (en ? "Custom Mode" : "自定义模式")
+              : (en ? "Quick Mode" : "快速模式")}
+          </span>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-[11px]">
+        <div className="grid grid-cols-4 gap-2 text-[11px]">
           <div>
-            <span className="text-muted-foreground">{en ? "Total Columns: " : "总列数: "}</span>
+            <span className="text-muted-foreground">{en ? "Total: " : "总列数: "}</span>
             <span className="text-foreground font-semibold">{columns.length}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">{en ? "Included: " : "已纳入: "}</span>
+            <span className="text-muted-foreground">{en ? "Included: " : "纳入: "}</span>
             <span className="text-emerald-600 font-semibold">{scope.scopeItemNames.size}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">{en ? "Excluded: " : "已排除: "}</span>
+            <span className="text-muted-foreground">{en ? "Excluded: " : "排除: "}</span>
             <span className="text-amber-600 font-semibold">{columns.length - scope.scopeItemNames.size}</span>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-1 mt-1.5">
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100">
-            {scope.hasUserSelection
-              ? (en ? "Custom Mode — based on selected variables and defined scales" : "自定义模式 — 基于已选变量与定义的量表")
-              : (en ? "Quick Mode — auto-detected survey items, metadata excluded" : "快速模式 — 自动识别问卷题项，已排除元数据列")}
-          </span>
-          {scope.excludedColumns.length > 0 && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100" title={scope.excludedColumns.slice(0, 10).join(", ")}>
-              {en ? `${scope.excludedColumns.length} metadata columns filtered` : `${scope.excludedColumns.length} 个元数据列已过滤`}
-            </span>
-          )}
+          <div>
+            <span className="text-muted-foreground">{en ? "Metadata: " : "元数据: "}</span>
+            <span className="text-red-500 font-semibold">{scope.excludedColumns.length}</span>
+          </div>
         </div>
       </div>
 
