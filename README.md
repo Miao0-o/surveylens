@@ -1,55 +1,54 @@
-# Surveylens
+# SurveyLens
 
-Browser-based survey data analysis — reliability, validity, factor structure — fully local-first and privacy-preserving.
+**Local-first psychometric analysis platform.** Reliability, validity, factor analysis, and APA-ready survey diagnostics — all in your browser.
 
-## Live Demo
-
-**[surveylens.org](https://surveylens.org/)**
+[Live Demo](https://surveylens.org/) · [Methodology](docs/methodology.md) · [Privacy](docs/privacy.md)
 
 ---
 
-## Overview
+## What is SurveyLens?
 
-Surveylens helps researchers evaluate whether survey data is ready for the next stage of analysis. Reliability diagnostics, validity checks, factor exploration, and APA-ready interpretation — all in the browser, with no install and no data upload.
+SurveyLens helps researchers evaluate whether questionnaire data is ready for statistical analysis. Upload your survey data and get instant reliability diagnostics, validity checks, factor exploration, and APA-ready interpretation — no install, no data upload, no backend.
+
+### Two workflows
+
+| Quick Mode | Custom Mode |
+|------------|-------------|
+| Upload and analyze immediately | Define scales, composites, and research design |
+| Auto-detects Likert items | Per-scale reliability, validity, factor analysis |
+| Metadata columns auto-excluded | Strict analysis scope — only your selected variables |
+| Ideal for first-pass exploration | Ideal for publishing and scale validation |
 
 ---
 
 ## Features
 
-- **Reliability analysis** — Cronbach's alpha, item-total correlations, per-dimension diagnostics
-- **Validity diagnostics** — KMO measure, Bartlett's test, sampling adequacy
-- **Factor exploration** — EFA with scree plots and loading matrices
-- **APA-ready output** — Statistical summaries formatted for publication
-- **Codebook-aware** — Auto-map text responses to numeric values
-- **Local-first** — No server, no data upload, no tracking
-- **AI interpretation** — Optional, evidence-traceable, bilingual (EN/ZH)
+### Analysis
+
+- **Research Readiness Dashboard** — Overall dataset quality with quality gates and severity assessment
+- **Reliability** — Cronbach's α, McDonald's ω, item-total correlations, α-if-deleted diagnostics
+- **Construct Validity** — Scale-level correlation matrix, relationship interpretation, overlap detection
+- **Factor Analysis** — KMO, Bartlett's test, EFA with scree plots and loading matrices, structure consistency
+- **Statistical Stability** — Bootstrap reliability curves with recommended sample size estimation
+- **Problematic Items** — Multi-source risk scanner with primary/secondary issues and suggested actions
+
+### Workflow
+
+- **Codebook-aware** — Auto-map text responses to numeric values (CSV, XLSX, SPSS, PDF, Markdown)
+- **AI Executive Summary** — Evidence-traceable, bilingual (EN/ZH), evidence-grounded recommendations
+- **Export** — PDF, APA, Markdown, Quarto, Excel — all publication-ready
+
+### Trust
+
+- **Local-first** — All computation runs in-browser via Pyodide (WebAssembly)
+- **Zero data upload** — No server, no database, no tracking
+- **Analysis scope lock** — Only user-selected variables enter analysis
+- **Verification framework** — Internal checks + external validation against R psych, Jamovi, SPSS
+- **Methodology center** — Transparent thresholds, formulas, and references
 
 ---
 
-## Supported Formats
-
-| Data Files | Codebooks |
-|------------|-----------|
-| CSV, XLSX, SPSS (.sav), DTA, Qualtrics | CSV, XLSX, SPSS, PDF, Markdown |
-
----
-
-## How It Works
-
-1. **Upload** survey data and optionally a codebook
-2. **Run** reliability, validity, and factor diagnostics
-3. **Review** results with APA-ready summaries
-4. **Export** for your manuscript
-
----
-
-## Privacy
-
-Surveylens is fully local-first. All statistical computation runs directly in your browser via WebAssembly — no dataset is uploaded, stored, or transmitted. AI interpretation is opt-in and sends only aggregated statistical summaries, never raw responses.
-
----
-
-## Getting Started
+## Quick Start
 
 ```bash
 git clone https://github.com/Miao0-o/surveylens.git
@@ -58,30 +57,46 @@ npm install
 npm run dev
 ```
 
-No backend required. Core analysis works out of the box.
+No backend or API keys required. Core analysis works out of the box. AI interpretation is optional and supports OpenRouter, Anthropic, OpenAI, and DeepSeek.
 
-AI interpretation is optional and supports **OpenRouter**, **Anthropic**, **OpenAI**, and **DeepSeek**.
+---
+
+## Privacy & AI Safety
+
+- Data never leaves your browser — all statistics computed locally
+- AI receives only aggregated statistical summaries (~500 characters), never raw responses
+- API keys stored in ephemeral session storage, auto-cleared on inactivity
+- AI uses cautious language ("may indicate", "could suggest"), never makes definitive causal claims
+
+See [docs/privacy.md](docs/privacy.md) for details.
 
 ---
 
 ## Tech Stack
 
-Next.js · TypeScript · Tailwind CSS · Vercel · Cloudflare
+Next.js · TypeScript · Tailwind CSS · Pyodide (NumPy/SciPy) · Zustand · Recharts · Vercel · Cloudflare
 
 ---
 
-## Use Cases
+## Screenshots
 
-Psychology research · Social science surveys · Scale validation · Thesis analysis · Questionnaire diagnostics
+*[Screenshots placeholder — add readiness dashboard, reliability results, factor analysis, AI report]*
+
+---
+
+## Verification
+
+SurveyLens results are validated against R psych package, Jamovi, and SPSS where applicable. See [docs/verification.md](docs/verification.md) and the in-app Verification Badge for current status.
 
 ---
 
 ## Roadmap
 
-- Expanded psychometric diagnostics
-- Improved factor visualization
-- Enhanced APA export workflows
-- Additional local AI tooling
+- Enhanced factor visualization
+- Per-scale McDonald's omega
+- CFA and SEM integration
+- Multi-language UI support
+- Collaborative sharing
 
 ---
 
