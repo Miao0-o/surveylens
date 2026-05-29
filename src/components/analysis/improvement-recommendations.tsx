@@ -16,6 +16,7 @@ interface Rec {
   category: string;
   issue: string;
   recommendation: string;
+  impact: string;
 }
 
 const prioConfig = {
@@ -40,6 +41,12 @@ export function ImprovementRecommendations({ results }: Props) {
     // ---- SCALE-LEVEL: Low reliability ----
     for (const d of dims) {
       if (d.cronbachsAlpha < 0.70 && d.cronbachsAlpha > 0) {
+        // Estimate potential alpha improvement from worst alpha-if-deleted item
+        let bestAlphaIfDel = d.cronbachsAlpha;
+        for (const [, aid] of Object.entries(reliability.alphaIfItemDeleted)) {
+          if (aid !== null && aid > bestAlphaIfDel) bestAlphaIfDel = aid;
+        }
+        const potAlpha = Math.min(bestAlphaIfDel, 0.95);
         recs.push({
           priority: d.cronbachsAlpha < 0.50 ? "critical" : d.cronbachsAlpha < 0.60 ? "moderate" : "minor",
           category: en ? "Scale Reliability" : "量表信度",
@@ -47,6 +54,11 @@ export function ImprovementRecommendations({ results }: Props) {
           recommendation: en
             ? "Inspect problematic items first. If reliability remains low after item revision, consider revising the scale definition or adding items."
             : "优先检查问题题项。若题项修订后信度仍然偏低，可考量调整量表定义或增加题项。",
+          impact: potAlpha > d.cronbachsAlpha
+            ? (en
+              ? `May improve reliability: α ${d.cronbachsAlpha.toFixed(2)} → ~${potAlpha.toFixed(2)}`
+              : `可能提升信度: α ${d.cronbachsAlpha.toFixed(2)} → ~${potAlpha.toFixed(2)}`)
+            : (en ? "Scale reliability may move toward acceptable levels." : "量表信度可能趋向可接受水平。"),
         });
       }
     }
@@ -59,12 +71,25 @@ export function ImprovementRecommendations({ results }: Props) {
         recommendation: en
           ? "Review items with low item-total correlations. Consider revising or replacing the weakest items."
           : "检查题总相关较低的题项。可考量修订或替换最弱的题项。",
+        impact: en ? "May improve internal consistency toward acceptable levels." : "可能提升内部一致性至可接受水平。",
       });
     }
 
     // ---- ITEM-LEVEL: Problematic items ----
     const riskReport = scanItemRisks(results, columns, composites, en);
     for (const r of riskReport.items.slice(0, 5)) {
+      let impact = "";
+      if (r.primaryIssue.type === "reverse_coded") {
+        impact = en ? "Correcting coding may substantially improve reliability estimates." : "修正编码可能显著改善信度估计。";
+      } else if (r.primaryIssue.type === "low_item_total") {
+        impact = en ? "Removing or revising this item may improve scale reliability." : "删除或修订此题项可能提升量表信度。";
+      } else if (r.primaryIssue.type === "alpha_improvement") {
+        impact = en ? "Removing this item may increase Cronbach's α." : "删除此题项可能提升 Cronbach's α。";
+      } else if (r.primaryIssue.type === "cross_loading") {
+        impact = en ? "Reviewing item placement may improve factor structure clarity." : "审视题项归属可能改善因子结构清晰度。";
+      } else if (r.primaryIssue.type === "high_missing") {
+        impact = en ? "Addressing missing data may improve estimate stability." : "处理缺失数据可能提升估计稳定性。";
+      }
       recs.push({
         priority: r.severity === "critical" || r.severity === "high" ? "critical" : r.severity === "moderate" ? "moderate" : "minor",
         category: en ? "Item Diagnostic" : "题项诊断",
@@ -72,6 +97,7 @@ export function ImprovementRecommendations({ results }: Props) {
           ? `${r.item}${r.scale ? ` (${r.scale})` : ""}: ${r.primaryIssue.label}`
           : `${r.item}${r.scale ? ` (${r.scale})` : ""}: ${r.primaryIssue.label}`,
         recommendation: r.suggestedAction,
+        impact,
       });
     }
 
@@ -93,6 +119,7 @@ export function ImprovementRecommendations({ results }: Props) {
               recommendation: en
                 ? "These constructs are extremely highly correlated and may represent redundant measurements. Consider consolidating or examining conceptual distinction."
                 : "这些构念关联极强，可能代表冗余测量。建议考量合并或审视概念区分。",
+              impact: en ? "Improved construct distinctiveness and interpretability." : "提升构念区分度与可解释性。",
             });
           } else if (Math.abs(r) >= 0.80) {
             recs.push({
@@ -102,6 +129,7 @@ export function ImprovementRecommendations({ results }: Props) {
               recommendation: en
                 ? "These constructs are highly correlated and may partially overlap. Review their conceptual distinction."
                 : "这些构念高度相关，可能存在部分重叠。请审视其概念区分。",
+              impact: en ? "Stronger construct distinctiveness and clearer factor interpretation." : "增强构念区分度与因子解释清晰度。",
             });
           }
         }
@@ -131,6 +159,7 @@ export function ImprovementRecommendations({ results }: Props) {
             recommendation: en
               ? "Compare the metadata-defined scale with the observed factor structure. Review items loading onto unexpected factors."
               : "将元数据定义的量表与实测因子结构对比。审视载荷于非预期因子的题项。",
+            impact: en ? "Improved alignment between metadata-defined scales and observed factor structure." : "改善元数据定义量表与实测因子结构之间的一致性。",
           });
         }
       }
@@ -148,6 +177,7 @@ export function ImprovementRecommendations({ results }: Props) {
         recommendation: en
           ? "Review the missing-data handling strategy. Consider multiple imputation, full-information maximum likelihood, or pairwise deletion where appropriate."
           : "审视缺失数据处理策略。可考量多重插补、全信息最大似然法或成对删除等方法。",
+        impact: en ? "More stable parameter estimates and improved readiness classification." : "更稳定的参数估计与改善的准备度分类。",
       });
     }
 
@@ -160,6 +190,9 @@ export function ImprovementRecommendations({ results }: Props) {
         recommendation: en
           ? `Small sample may produce unstable estimates. Interpret results with caution.${meta.sampleSize < 50 ? " Consider collecting additional data." : ""}`
           : `样本量较小可能导致估计不稳定。请谨慎解读结果。${meta.sampleSize < 50 ? " 建议考虑收集更多数据。" : ""}`,
+        impact: en
+          ? `Larger samples may produce more stable estimates and narrower confidence intervals.${stability.recommendedSampleSize > 0 ? ` Recommended N ≥ ${stability.recommendedSampleSize}.` : ""}`
+          : `增加样本量可能产生更稳定的估计与更窄的置信区间。${stability.recommendedSampleSize > 0 ? ` 推荐 N ≥ ${stability.recommendedSampleSize}。` : ""}`,
       });
     }
 
@@ -172,6 +205,7 @@ export function ImprovementRecommendations({ results }: Props) {
         recommendation: en
           ? `Consider increasing sample size (recommended N ≥ ${stability.recommendedSampleSize}). Small samples may produce unreliable reliability estimates.`
           : `建议增加样本量（推荐 N ≥ ${stability.recommendedSampleSize}）。小样本可能产生不可靠的信度估计。`,
+        impact: en ? "More reliable estimates and improved readiness score." : "更可靠的信度估计与提升的准备度分数。",
       });
     }
 
@@ -221,6 +255,11 @@ export function ImprovementRecommendations({ results }: Props) {
                     <ArrowRight className="w-3 h-3 text-muted-foreground/30 shrink-0 mt-0.5" />
                     <p className="text-[10px] text-muted-foreground">{rec.recommendation}</p>
                   </div>
+                  {rec.impact && (
+                    <p className="text-[10px] text-blue-600/70 ml-4 mt-1">
+                      {en ? "Expected impact: " : "预期影响: "}{rec.impact}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
