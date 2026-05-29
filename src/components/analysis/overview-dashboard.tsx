@@ -420,11 +420,11 @@ export function OverviewDashboard({ results }: Props) {
           <p className="text-[11px] text-blue-600/80">
             {isSingleScale
               ? (en
-                ? "Single-scale questionnaire detected. Construct-level relationship analyses (Construct Validity, Scale Structure Consistency) are not applicable — only one construct is defined."
-                : "检测为单量表问卷。构念层面分析（构念效度、量表结构一致性）不适用——仅定义了一个构念。")
+                ? "Single-scale questionnaire detected. The current data contains only one construct, so construct relationship analysis and scale structure consistency checks are not applicable. The system will focus on reliability, factor structure, and statistical stability."
+                : "检测为单量表问卷。当前数据仅包含一个构念，因此构念关系分析与量表结构一致性检查不适用。系统将重点评估信度、因子结构与结果稳定性。")
               : (en
-                ? "No construct definitions found. Scale-level analyses are not available. Factor analysis and descriptive statistics will focus on discovering latent structure."
-                : "未发现构念定义。量表层分析不可用。因子分析与描述统计将聚焦于探索潜在结构。")}
+                ? "Exploratory analysis mode. No scale or construct definitions have been found. The system will focus on item relationships, latent factor structure, and data quality to help identify potential scale structures."
+                : "检测为探索性分析模式。尚未定义量表或构念结构。系统将重点分析题项关系、潜在因子结构与数据质量，以帮助识别可能的量表结构。")}
           </p>
         </div>
       )}

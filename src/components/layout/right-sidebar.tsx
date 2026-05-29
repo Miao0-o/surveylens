@@ -107,6 +107,8 @@ export function RightSidebar() {
 
   // ---- Has AI results ----
   if (aiResults) {
+    const hasExecSummary = !!aiResults.executive_summary;
+
     return (
       <div className="space-y-3.5 overflow-y-auto h-full">
         <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
@@ -121,37 +123,103 @@ export function RightSidebar() {
             "bg-red-50 border-red-100 text-red-600"
           }`}>
             {aiResults.interpretationConfidence === "high"
-              ? (en ? "✓ Sufficient evidence — interpretation well-supported" : "✓ 统计证据较充分，解读可信度较高")
+              ? (en ? "Sufficient evidence" : "统计证据较充分")
               : aiResults.interpretationConfidence === "moderate"
-                ? (en ? "△ Partial support — interpret with caution" : "△ 统计证据部分支持，解读宜保持谨慎")
-                : (en ? "⚠ Limited evidence — treat as tentative" : "⚠ 统计证据有限，解读结论宜视为初步参考")}
+                ? (en ? "Partial support" : "统计证据部分支持")
+                : (en ? "Limited evidence" : "统计证据有限")}
           </div>
         )}
 
-        <ResultCard title={en ? "Simple Explanation" : "通俗解释"} icon={<Zap className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.5} />}>
-          <p className="text-sm text-foreground leading-relaxed">{aiResults.explanation.simple}</p>
-        </ResultCard>
+        {/* Executive Summary mode (v4.0) */}
+        {hasExecSummary && aiResults.executive_summary && (
+          <>
+            <ResultCard title={en ? "Executive Summary" : "执行摘要"} icon={<Zap className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.5} />}>
+              <div className="space-y-2">
+                <p className="text-sm text-foreground leading-relaxed">{aiResults.executive_summary.overall_assessment}</p>
+                <p className="text-xs text-muted-foreground">{aiResults.executive_summary.key_strengths}</p>
+                {aiResults.executive_summary.key_concerns && (
+                  <p className="text-xs text-amber-600/80">{aiResults.executive_summary.key_concerns}</p>
+                )}
+              </div>
+            </ResultCard>
 
-        <ResultCard title={en ? "Academic Interpretation" : "学术解释"} icon={<Info className="w-3.5 h-3.5 text-blue-400" strokeWidth={1.5} />}>
-          <p className="text-sm text-muted-foreground leading-relaxed">{aiResults.explanation.academic}</p>
-        </ResultCard>
+            {aiResults.reliability_summary && (
+              <ResultCard title={en ? "Reliability" : "信度"} icon={<Info className="w-3.5 h-3.5 text-blue-400" strokeWidth={1.5} />}>
+                <p className="text-xs text-muted-foreground leading-relaxed">{aiResults.reliability_summary.summary}</p>
+              </ResultCard>
+            )}
 
-        {aiResults.suggestions.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              <Lightbulb className="w-4 h-4 text-violet-400" strokeWidth={1.5} />
-              {en ? "Diagnosis & Suggestions" : "诊断与建议"}
-            </p>
-            {aiResults.suggestions.map((s, i) => {
-              const parts = s.detail.split("\n\n证据: ");
-              const mainText = parts[0] ?? s.detail;
-              const evidence = parts.length > 1 ? parts[1] : "";
-              return (
-              <div key={i} className="px-3 py-2.5 rounded-lg bg-secondary/30 border border-border/60">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                    s.severity === "warning" ? "bg-amber-400" : s.severity === "suggestion" ? "bg-blue-400" : "bg-emerald-400"
-                  }`} />
+            {aiResults.factor_structure_summary && (
+              <ResultCard title={en ? "Factor Structure" : "因子结构"}>
+                <p className="text-xs text-muted-foreground leading-relaxed">{aiResults.factor_structure_summary.summary}</p>
+              </ResultCard>
+            )}
+
+            {aiResults.construct_relationships_summary && (
+              <ResultCard title={en ? "Construct Relationships" : "构念间关系"}>
+                <p className="text-xs text-muted-foreground leading-relaxed">{aiResults.construct_relationships_summary.summary}</p>
+              </ResultCard>
+            )}
+
+            {aiResults.data_readiness && (
+              <ResultCard title={en ? "Data Readiness" : "数据准备度"}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    aiResults.data_readiness.readiness_level === "READY" ? "bg-emerald-50 text-emerald-600" :
+                    aiResults.data_readiness.readiness_level === "REVIEW REQUIRED" ? "bg-amber-50 text-amber-600" :
+                    "bg-red-50 text-red-500"
+                  }`}>{aiResults.data_readiness.readiness_level}</span>
+                  <span className="text-xs text-muted-foreground">{aiResults.data_readiness.suitability}</span>
+                </div>
+              </ResultCard>
+            )}
+
+            {aiResults.recommended_actions && aiResults.recommended_actions.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-foreground">{en ? "Recommended Actions" : "建议操作"}</p>
+                {aiResults.recommended_actions.map((a, i) => (
+                  <div key={i} className="flex items-start gap-1.5 text-[11px]">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1 ${
+                      a.priority === "critical" ? "bg-red-400" : a.priority === "moderate" ? "bg-amber-400" : "bg-blue-400"
+                    }`} />
+                    <div>
+                      <span className="text-foreground">{a.action}</span>
+                      <p className="text-muted-foreground">{a.rationale}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Legacy format (v3.0 fallback) */}
+        {!hasExecSummary && (
+          <>
+            <ResultCard title={en ? "Simple Explanation" : "通俗解释"} icon={<Zap className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.5} />}>
+              <p className="text-sm text-foreground leading-relaxed">{aiResults.explanation.simple}</p>
+            </ResultCard>
+
+            <ResultCard title={en ? "Academic Interpretation" : "学术解释"} icon={<Info className="w-3.5 h-3.5 text-blue-400" strokeWidth={1.5} />}>
+              <p className="text-sm text-muted-foreground leading-relaxed">{aiResults.explanation.academic}</p>
+            </ResultCard>
+
+            {aiResults.suggestions.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                  <Lightbulb className="w-4 h-4 text-violet-400" strokeWidth={1.5} />
+                  {en ? "Diagnosis & Suggestions" : "诊断与建议"}
+                </p>
+                {aiResults.suggestions.map((s, i) => {
+                  const parts = s.detail.split("\n\n证据: ");
+                  const mainText = parts[0] ?? s.detail;
+                  const evidence = parts.length > 1 ? parts[1] : "";
+                  return (
+                  <div key={i} className="px-3 py-2.5 rounded-lg bg-secondary/30 border border-border/60">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        s.severity === "warning" ? "bg-amber-400" : s.severity === "suggestion" ? "bg-blue-400" : "bg-emerald-400"
+                      }`} />
                   <p className="text-xs font-medium text-foreground">{s.title}</p>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed ml-3">{mainText}</p>
@@ -166,6 +234,8 @@ export function RightSidebar() {
               </div>
             )})}
           </div>
+        )}
+          </>
         )}
 
         {(aiResults.diagnosis.lowReliabilityItems.length > 0 || aiResults.diagnosis.crossLoadingItems.length > 0) && (
