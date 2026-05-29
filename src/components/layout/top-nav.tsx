@@ -62,10 +62,13 @@ export function TopNav() {
           <Sparkles className="w-3.5 h-3.5" strokeWidth={1.5} />
           {en ? "AI Settings" : "AI 设置"}
         </Link>
-        <button className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground rounded-lg px-2.5 py-1.5 transition-colors">
+        <Link
+          href="/methodology"
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground rounded-lg px-2.5 py-1.5 transition-colors"
+        >
           <HelpCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
-          {en ? "Help" : "帮助"}
-        </button>
+          {en ? "Methodology" : "方法论"}
+        </Link>
       </nav>
     </header>
   );
