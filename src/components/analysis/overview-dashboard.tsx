@@ -423,11 +423,13 @@ export function OverviewDashboard({ results }: Props) {
         <div>
           <p className="text-sm font-semibold">{en ? "Research Readiness" : "研究准备度"}</p>
           <p className="text-xs opacity-80">{status.label} · {sc}</p>
-          {!allPassed && (
-            <p className="text-[10px] opacity-60 mt-0.5">
-              {en ? `${failedGates.length} gate(s) failed` : `${failedGates.length} 个门槛未通过`}
-            </p>
-          )}
+          <p className="text-[10px] opacity-60 mt-0.5">
+            {!allPassed
+              ? (en
+                ? `Primary reason: ${failedGates.length} gate(s) failed — ${failedGates.map(g => en ? g.labelEn : g.labelZh).join(", ")}`
+                : `主要原因: ${failedGates.length} 个门槛未通过 — ${failedGates.map(g => g.labelZh).join("、")}`)
+              : (en ? "All quality gates passed." : "所有质量门槛已通过。")}
+          </p>
         </div>
       </div>
 

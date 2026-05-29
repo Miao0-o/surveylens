@@ -19,12 +19,20 @@ interface Rec {
   recommendation: string;
   impact: string;
   confidence: "high" | "moderate" | "low";
+  confidenceReason: string;
+  evidence: string;
 }
 
 const confidenceLabel = {
-  high: { zh: "高置信度", en: "High confidence" },
-  moderate: { zh: "中等置信度", en: "Moderate confidence" },
-  low: { zh: "低置信度", en: "Low confidence" },
+  high: { zh: "高置信度", en: "High" },
+  moderate: { zh: "中等置信度", en: "Moderate" },
+  low: { zh: "低置信度", en: "Low" },
+} as const;
+
+const confidenceReason = {
+  high: { zh: "基于直接统计证据", en: "Based on direct statistical evidence" },
+  moderate: { zh: "统计证据存在但结果不确定", en: "Evidence exists but outcome is uncertain" },
+  low: { zh: "解释高度依赖理论判断", en: "Interpretation depends heavily on theory" },
 } as const;
 
 const confidenceColor = {
@@ -76,6 +84,8 @@ export function ImprovementRecommendations({ results }: Props) {
               : `可能提升信度: α ${d.cronbachsAlpha.toFixed(2)} → ~${potAlpha.toFixed(2)}`)
             : (en ? "Scale reliability may move toward acceptable levels." : "量表信度可能趋向可接受水平。"),
           confidence: "moderate",
+          confidenceReason: confidenceReason.moderate[lang],
+          evidence: en ? `Cronbach's α = ${d.cronbachsAlpha.toFixed(2)}` : `Cronbach's α = ${d.cronbachsAlpha.toFixed(2)}`,
         });
       }
     }
@@ -90,6 +100,8 @@ export function ImprovementRecommendations({ results }: Props) {
           : "检查题总相关较低的题项。可考量修订或替换最弱的题项。",
         impact: en ? "May improve internal consistency toward acceptable levels." : "可能提升内部一致性至可接受水平。",
         confidence: "moderate",
+        confidenceReason: confidenceReason.moderate[lang],
+        evidence: en ? `Cronbach's α = ${reliability.cronbachsAlpha.toFixed(2)}` : `Cronbach's α = ${reliability.cronbachsAlpha.toFixed(2)}`,
       });
     }
 
@@ -123,6 +135,8 @@ export function ImprovementRecommendations({ results }: Props) {
         recommendation: r.suggestedAction,
         impact,
         confidence,
+        confidenceReason: confidenceReason[confidence][lang],
+        evidence: `${r.primaryIssue.label} (${r.primaryIssue.detail})`,
       });
     }
 
@@ -146,6 +160,8 @@ export function ImprovementRecommendations({ results }: Props) {
                 : "这些构念关联极强，可能代表冗余测量。建议考量合并或审视概念区分。",
               impact: en ? "Improved construct distinctiveness and interpretability." : "提升构念区分度与可解释性。",
               confidence: "low",
+              confidenceReason: confidenceReason.low[lang],
+              evidence: en ? `r = ${r.toFixed(2)} (≥ .90 threshold)` : `r = ${r.toFixed(2)} (≥ .90 阈值)`,
             });
           } else if (Math.abs(r) >= 0.80) {
             recs.push({
@@ -157,6 +173,8 @@ export function ImprovementRecommendations({ results }: Props) {
                 : "这些构念高度相关，可能存在部分重叠。请审视其概念区分。",
               impact: en ? "Stronger construct distinctiveness and clearer factor interpretation." : "增强构念区分度与因子解释清晰度。",
               confidence: "low",
+              confidenceReason: confidenceReason.low[lang],
+              evidence: en ? `r = ${r.toFixed(2)} (≥ .80 threshold)` : `r = ${r.toFixed(2)} (≥ .80 阈值)`,
             });
           }
         }
@@ -188,6 +206,8 @@ export function ImprovementRecommendations({ results }: Props) {
               : "将元数据定义的量表与实测因子结构对比。审视载荷于非预期因子的题项。",
             impact: en ? "Improved alignment between metadata-defined scales and observed factor structure." : "改善元数据定义量表与实测因子结构之间的一致性。",
             confidence: "moderate",
+            confidenceReason: confidenceReason.moderate[lang],
+            evidence: en ? `${crossCount}/${matched} items with cross-loadings` : `${crossCount}/${matched} 个题项存在交叉载荷`,
           });
         }
       }
@@ -204,6 +224,8 @@ export function ImprovementRecommendations({ results }: Props) {
           : "审视缺失数据处理策略。可考量多重插补、全信息最大似然法或成对删除等方法。",
         impact: en ? "More stable parameter estimates and improved readiness classification." : "更稳定的参数估计与改善的准备度分类。",
         confidence: "low",
+        confidenceReason: confidenceReason.low[lang],
+        evidence: en ? `Missing rate = ${(missRate * 100).toFixed(0)}%` : `缺失率 = ${(missRate * 100).toFixed(0)}%`,
       });
     }
 
@@ -220,6 +242,8 @@ export function ImprovementRecommendations({ results }: Props) {
           ? `Larger samples may produce more stable estimates and narrower confidence intervals.${stability.recommendedSampleSize != null && stability.recommendedSampleSize > 0 ? ` Recommended N ≥ ${stability.recommendedSampleSize}.` : ""}`
           : `增加样本量可能产生更稳定的估计与更窄的置信区间。${stability.recommendedSampleSize != null && stability.recommendedSampleSize > 0 ? ` 推荐 N ≥ ${stability.recommendedSampleSize}。` : ""}`,
         confidence: "high",
+        confidenceReason: confidenceReason.high[lang],
+        evidence: en ? `N = ${meta.sampleSize}` : `N = ${meta.sampleSize}`,
       });
     }
 
@@ -234,6 +258,8 @@ export function ImprovementRecommendations({ results }: Props) {
           : `建议增加样本量（推荐 N ≥ ${stability.recommendedSampleSize}）。小样本可能产生不可靠的信度估计。`,
         impact: en ? "More reliable estimates and improved readiness score." : "更可靠的信度估计与提升的准备度分数。",
         confidence: "high",
+        confidenceReason: confidenceReason.high[lang],
+        evidence: en ? `Bootstrap stability = ${stability.stabilityLevel}` : `Bootstrap 稳定性 = ${stability.stabilityLevel}`,
       });
     }
 
@@ -283,12 +309,16 @@ export function ImprovementRecommendations({ results }: Props) {
                     <ArrowRight className="w-3 h-3 text-muted-foreground/30 shrink-0 mt-0.5" />
                     <p className="text-[10px] text-muted-foreground">{rec.recommendation}</p>
                   </div>
+                  <p className="text-[10px] text-muted-foreground/50 ml-4 mt-1">
+                    {en ? "Evidence: " : "证据: "}{rec.evidence}
+                  </p>
                   {rec.impact && (
-                    <p className="text-[10px] text-blue-600/70 ml-4 mt-1">
+                    <p className="text-[10px] text-blue-600/70 ml-4 mt-0.5">
                       {en ? "Expected impact: " : "预期影响: "}{rec.impact}
                       <span className={`ml-1.5 text-[9px] px-1 py-0 rounded ${confidenceColor[rec.confidence]}`}>
                         {confidenceLabel[rec.confidence][lang]}
                       </span>
+                      <span className="ml-1 text-muted-foreground/40">— {rec.confidenceReason}</span>
                     </p>
                   )}
                 </div>
