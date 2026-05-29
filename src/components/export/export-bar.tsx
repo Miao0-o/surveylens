@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Download, Printer, Loader2, CheckCircle2, FileText, ChevronDown, Clipboard } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { downloadExcel } from "@/lib/export/excel-generator";
@@ -11,8 +11,27 @@ export function ExportBar() {
   const results = useAppStore((s) => s.results);
   const aiResults = useAppStore((s) => s.aiResults);
   const researchGoal = useAppStore((s) => s.researchGoal);
+  const design = useAppStore((s) => s.researchDesign);
   const lang = useAppStore((s) => s.reportLanguage);
   const en = lang === "en";
+
+  // Compute readiness info for export headers
+  const { readinessScore, readinessLabel } = useMemo(() => {
+    if (!results) return { readinessScore: 0, readinessLabel: "" };
+    const dims = results.reliability.dimensions ?? [];
+    const meanAlpha = dims.length > 0
+      ? dims.reduce((s, d) => s + d.cronbachsAlpha, 0) / dims.length
+      : results.reliability.cronbachsAlpha;
+    let s = 0;
+    if (meanAlpha >= 0.90) s += 30; else if (meanAlpha >= 0.80) s += 26; else if (meanAlpha >= 0.70) s += 20; else if (meanAlpha >= 0.60) s += 12; else s += 4;
+    if (results.validity.kmo >= 0.80) s += 25; else if (results.validity.kmo >= 0.60) s += 18; else if (results.validity.kmo > 0) s += 8;
+    if (dims.length > 0) s += 10; else s += 16;
+    if (results.stability.stabilityLevel === "stable") s += 10; else if (results.stability.stabilityLevel === "moderate") s += 6; else s += 2;
+    if (results.meta.sampleSize >= 200) s += 10; else if (results.meta.sampleSize >= 100) s += 7; else if (results.meta.sampleSize >= 50) s += 4; else s += 1;
+    if (s >= 80) return { readinessScore: s, readinessLabel: en ? "READY" : "就绪" };
+    if (s >= 60) return { readinessScore: s, readinessLabel: en ? "REVIEW REQUIRED" : "建议审阅" };
+    return { readinessScore: s, readinessLabel: en ? "NOT READY" : "未就绪" };
+  }, [results, en]);
 
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -38,20 +57,20 @@ export function ExportBar() {
     {
       key: "apa-copy", label: en ? "Copy APA to Clipboard" : "复制 APA 到剪贴板", icon: Clipboard,
       action: () => {
-        navigator.clipboard.writeText(apaResultsText(results, lang)).then(() => done("apa-copy"));
+        navigator.clipboard.writeText(apaResultsText(results, lang, design, readinessScore, readinessLabel)).then(() => done("apa-copy"));
       },
     },
     {
       key: "apa", label: en ? "Download APA (.txt)" : "下载 APA (.txt)", icon: Download,
-      action: () => { downloadAPAResults(results, lang); done("apa"); },
+      action: () => { downloadAPAResults(results, lang, design, readinessScore, readinessLabel); done("apa"); },
     },
     {
       key: "md", label: en ? "Markdown Report" : "Markdown 报告", icon: FileText,
-      action: () => { downloadMarkdownReport(results, aiResults, lang); done("md"); },
+      action: () => { downloadMarkdownReport(results, aiResults, lang, design, readinessScore, readinessLabel); done("md"); },
     },
     {
       key: "qmd", label: en ? "Quarto Report" : "Quarto 报告", icon: FileText,
-      action: () => { downloadQuartoReport(results, aiResults, lang); done("qmd"); },
+      action: () => { downloadQuartoReport(results, aiResults, lang, design, readinessScore, readinessLabel); done("qmd"); },
     },
     {
       key: "xlsx", label: en ? "Raw Statistics (.xlsx)" : "原始统计 (.xlsx)", icon: Download,
@@ -70,7 +89,7 @@ export function ExportBar() {
       {/* Quick Copy APA — most common academic workflow */}
       <button
         onClick={() => {
-          navigator.clipboard.writeText(apaResultsText(results, lang)).then(() => done("apa-quick"));
+          navigator.clipboard.writeText(apaResultsText(results, lang, design, readinessScore, readinessLabel)).then(() => done("apa-quick"));
         }}
         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-xs text-foreground hover:bg-secondary/50 transition-colors"
         title={en ? "Copy APA results to clipboard" : "复制 APA 结果到剪贴板"}

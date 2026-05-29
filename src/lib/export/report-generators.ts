@@ -4,10 +4,39 @@
 
 import type { AnalysisResults, AIResults } from "@/types";
 import { generateAllSnippets } from "./apa-snippets";
-import { getSummaryAPA } from "@/lib/analysis/registry";
+import { getSummaryAPA, detectAnalysisMode } from "@/lib/analysis/registry";
 
 function fmt(n: number, d = 2): string {
   return n.toFixed(d);
+}
+
+/** Build export metadata header block */
+function buildExportHeader(
+  results: AnalysisResults,
+  design: { outcomeVariables?: string[]; predictorVariables?: string[] } | null,
+  lang: "zh" | "en",
+  readinessScore: number,
+  readinessLabel: string
+): string[] {
+  const en = lang === "en";
+  const mode = detectAnalysisMode(design);
+  const modeLabel = mode === "multi" ? (en ? "Multi Scale" : "多量表")
+    : mode === "single" ? (en ? "Single Scale" : "单量表")
+    : (en ? "Exploratory" : "探索性");
+
+  return [
+    "---",
+    en ? "SurveyLens Report" : "SurveyLens 报告",
+    "",
+    `${en ? "Generated" : "生成时间"}: ${new Date().toISOString().slice(0, 10)}`,
+    `${en ? "Language" : "语言"}: ${lang === "en" ? "English" : "中文"}`,
+    `${en ? "Mode" : "模式"}: ${modeLabel}`,
+    `${en ? "Readiness" : "准备度"}: ${readinessScore} (${readinessLabel})`,
+    `${en ? "Sample" : "样本量"}: N = ${results.meta.sampleSize}`,
+    `${en ? "Items" : "题项数"}: ${results.meta.itemCount}`,
+    "---",
+    "",
+  ];
 }
 
 /** Download a text file */
@@ -23,33 +52,43 @@ function downloadText(content: string, filename: string) {
 // APA Results text (copy-friendly)
 // ============================================================
 
-export function apaResultsText(results: AnalysisResults, lang: "zh" | "en" = "en"): string {
+export function apaResultsText(
+  results: AnalysisResults,
+  lang: "zh" | "en" = "en",
+  design?: { outcomeVariables?: string[]; predictorVariables?: string[] } | null,
+  readinessScore = 0, readinessLabel = ""
+): string {
+  const header = buildExportHeader(results, design ?? null, lang, readinessScore, readinessLabel);
   const snippets = generateAllSnippets(results);
-  return snippets.map(s => `## ${s.section}\n\n${s.text}`).join("\n\n---\n\n");
+  const body = snippets.map(s => `## ${s.section}\n\n${s.text}`).join("\n\n---\n\n");
+  return [...header, body].join("\n");
 }
 
-export function downloadAPAResults(results: AnalysisResults, lang: "zh" | "en" = "en") {
-  const text = apaResultsText(results, lang);
-  downloadText(text, `survey-lens-apa-results-${lang}.txt`);
+export function downloadAPAResults(
+  results: AnalysisResults, lang: "zh" | "en" = "en",
+  design?: { outcomeVariables?: string[]; predictorVariables?: string[] } | null,
+  readinessScore = 0, readinessLabel = ""
+) {
+  downloadText(apaResultsText(results, lang, design, readinessScore, readinessLabel), `survey-lens-apa-results-${lang}.txt`);
 }
 
 // ============================================================
 // Markdown Report
 // ============================================================
 
-export function markdownReport(results: AnalysisResults, aiResults: AIResults | null, lang: "zh" | "en" = "en"): string {
+export function markdownReport(
+  results: AnalysisResults, aiResults: AIResults | null,
+  lang: "zh" | "en" = "en",
+  design?: { outcomeVariables?: string[]; predictorVariables?: string[] } | null,
+  readinessScore = 0, readinessLabel = ""
+): string {
   const en = lang === "en";
   const { reliability, validity, efa, stability, meta } = results;
   const lines: string[] = [];
 
+  // Export metadata header
+  lines.push(...buildExportHeader(results, design ?? null, lang, readinessScore, readinessLabel));
   lines.push(`# ${en ? "SurveyLens Analysis Report" : "SurveyLens 分析报告"}`);
-  lines.push(`*${new Date().toISOString().slice(0, 10)}*`);
-  lines.push("");
-
-  // Overview
-  lines.push(`## ${en ? "Dataset Overview" : "数据集概览"}`);
-  lines.push(`- ${en ? "Sample size" : "样本量"}: ${meta.sampleSize}`);
-  lines.push(`- ${en ? "Items" : "题项数"}: ${meta.itemCount}`);
   lines.push("");
 
   // Reliability
@@ -115,19 +154,37 @@ export function markdownReport(results: AnalysisResults, aiResults: AIResults | 
   return lines.join("\n");
 }
 
-export function downloadMarkdownReport(results: AnalysisResults, aiResults: AIResults | null, lang: "zh" | "en" = "en") {
-  downloadText(markdownReport(results, aiResults, lang), `survey-lens-report-${lang}.md`);
+export function downloadMarkdownReport(
+  results: AnalysisResults, aiResults: AIResults | null, lang: "zh" | "en" = "en",
+  design?: { outcomeVariables?: string[]; predictorVariables?: string[] } | null,
+  readinessScore = 0, readinessLabel = ""
+) {
+  downloadText(markdownReport(results, aiResults, lang, design, readinessScore, readinessLabel), `survey-lens-report-${lang}.md`);
 }
 
 // ============================================================
 // Quarto Report (.qmd)
 // ============================================================
 
-export function quartoReport(results: AnalysisResults, aiResults: AIResults | null, lang: "zh" | "en" = "en"): string {
+export function quartoReport(
+  results: AnalysisResults, aiResults: AIResults | null,
+  lang: "zh" | "en" = "en",
+  design?: { outcomeVariables?: string[]; predictorVariables?: string[] } | null,
+  readinessScore = 0, readinessLabel = ""
+): string {
   const en = lang === "en";
   const lines: string[] = [];
 
-  // YAML header
+  // YAML header with metadata
+  lines.push("---");
+  lines.push(`title: "${en ? "SurveyLens Analysis Report" : "SurveyLens 分析报告"}"`);
+  lines.push(`date: "${new Date().toISOString().slice(0, 10)}"`);
+  lines.push(`lang: "${lang}"`);
+  lines.push("format: html");
+  lines.push("---");
+  lines.push("");
+  lines.push(...buildExportHeader(results, design ?? null, lang, readinessScore, readinessLabel).map(l => `# ${l}`));
+  lines.push("");
   lines.push("---");
   lines.push(`title: "${en ? "Survey Analysis Report" : "问卷分析报告"}"`);
   lines.push(`date: "${new Date().toISOString().slice(0, 10)}"`);
@@ -181,6 +238,10 @@ export function quartoReport(results: AnalysisResults, aiResults: AIResults | nu
   return lines.join("\n");
 }
 
-export function downloadQuartoReport(results: AnalysisResults, aiResults: AIResults | null, lang: "zh" | "en" = "en") {
-  downloadText(quartoReport(results, aiResults, lang), `survey-lens-report-${lang}.qmd`);
+export function downloadQuartoReport(
+  results: AnalysisResults, aiResults: AIResults | null, lang: "zh" | "en" = "en",
+  design?: { outcomeVariables?: string[]; predictorVariables?: string[] } | null,
+  readinessScore = 0, readinessLabel = ""
+) {
+  downloadText(quartoReport(results, aiResults, lang, design, readinessScore, readinessLabel), `survey-lens-report-${lang}.qmd`);
 }
