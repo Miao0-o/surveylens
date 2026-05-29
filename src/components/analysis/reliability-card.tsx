@@ -72,15 +72,23 @@ function ScaleCard({ dim, en, globalData }: { dim: NonNullable<ReliabilityResult
       {/* Expanded diagnostics */}
       {expanded && (
         <div className="px-4 pb-4 space-y-3 border-t border-border/30 pt-3">
-          {/* Quick stats row */}
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span>Cronbach&apos;s α = <strong className="text-foreground">{a.toFixed(3)}</strong></span>
-            {dim.standardizedAlpha != null && (
-              <span>{en ? "Standardized α" : "标准化 α"} = <strong className="text-foreground">{dim.standardizedAlpha.toFixed(3)}</strong></span>
-            )}
-            {dim.standardizedAlpha == null && (
-              <span>{en ? "Standardized α: —" : "标准化 α: —"}</span>
-            )}
+          {/* Reliability Details */}
+          <div className="rounded-lg bg-secondary/10 p-2.5 space-y-1.5">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{en ? "Reliability Details" : "信度详情"}</p>
+            <div className="grid grid-cols-3 gap-3 text-xs">
+              <div>
+                <span className="text-muted-foreground">Cronbach&apos;s α</span>
+                <p className="text-foreground font-semibold">{a.toFixed(3)}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">{en ? "Standardized α" : "标准化 α"}</span>
+                <p className="text-foreground font-semibold">{formatVal(dim.standardizedAlpha)}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">McDonald&apos;s ω</span>
+                <p className="text-foreground font-semibold">{formatVal(null)}</p>
+              </div>
+            </div>
           </div>
 
           {/* Warnings */}
@@ -89,13 +97,13 @@ function ScaleCard({ dim, en, globalData }: { dim: NonNullable<ReliabilityResult
               {reverseItems.length > 0 && (
                 <div className="flex items-start gap-1.5 text-[10px] text-amber-600 bg-amber-50 border border-amber-100 rounded px-2 py-1.5">
                   <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
-                  <span>{en ? `Reverse-coded risk: ${reverseItems.join(", ")}` : `可能反向计分: ${reverseItems.join(", ")}`}</span>
+                  <span>{en ? `Possible reverse-coded: ${reverseItems.join(", ")}` : `可能反向计分: ${reverseItems.join(", ")}`}</span>
                 </div>
               )}
               {weakItems.length > 0 && (
                 <div className="flex items-start gap-1.5 text-[10px] text-blue-600 bg-blue-50 border border-blue-100 rounded px-2 py-1.5">
                   <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
-                  <span>{en ? `Weak item-total correlation: ${weakItems.join(", ")}` : `题总相关较弱: ${weakItems.join(", ")}`}</span>
+                  <span>{en ? `Low item-total correlation: ${weakItems.join(", ")}` : `题总相关较弱: ${weakItems.join(", ")}`}</span>
                 </div>
               )}
             </div>
