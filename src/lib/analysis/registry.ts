@@ -14,7 +14,7 @@ import { resolveSelectedVars } from "@/lib/stats/composite";
 export type AnalysisMode = "single" | "multi" | "exploratory";
 
 /** Module IDs that only apply in multi-scale mode */
-const MULTI_SCALE_ONLY = new Set(["validity", "scale-consistency"]);
+const MULTI_SCALE_ONLY = new Set(["scale-consistency"]);
 
 /** Detect analysis mode from research design and available scales */
 export function detectAnalysisMode(

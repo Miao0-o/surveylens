@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, type ReactNode } from "react";
 import { useAppStore } from "@/lib/store";
 import { STAGE_LABELS, type AnalysisStage } from "@/types";
 
@@ -114,11 +114,20 @@ export function CenterPanel() {
         <TabBtn active={activeTab === "overview"} onClick={() => setActiveTab("overview")}>
           {tl("tab.overview")}
         </TabBtn>
-        {activeModules.map((m) => (
+        {activeModules.filter(m => m.id !== "validity").map((m) => (
           <TabBtn key={m.id} active={activeTab === m.id} onClick={() => setActiveTab(m.id)}>
             {t(`tab.${m.id}`, lang)}
           </TabBtn>
         ))}
+        {/* Validity tab — always visible, lock icon when unavailable */}
+        <TabBtn active={activeTab === "validity"} onClick={() => setActiveTab("validity")}>
+          <span className="flex items-center gap-1">
+            {t("tab.validity", lang)}
+            {analysisMode !== "multi" && (
+              <span className="text-[9px] opacity-40" title={en ? "Requires 2+ scales" : "需要至少 2 个量表"}>🔒</span>
+            )}
+          </span>
+        </TabBtn>
       </div>
 
       {/* Content */}
@@ -177,7 +186,41 @@ export function CenterPanel() {
 
       {/* Validity: scale-level correlation heatmap + relationship interpretation */}
       {activeTab === "validity" && (
-        results.validity.correlationMatrix.length > 0 ? (
+        analysisMode !== "multi" ? (
+          /* Disabled: show why validity is unavailable */
+          <div className="rounded-xl bg-card border border-border p-6 space-y-4 text-center">
+            <div className="w-12 h-12 mx-auto rounded-full bg-secondary/50 flex items-center justify-center">
+              <span className="text-xl">🔒</span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground mb-1">
+                {en ? "Construct Validity Not Available" : "构念效度暂不可用"}
+              </p>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                {en
+                  ? "Construct validity analysis requires comparison between multiple defined scales."
+                  : "构念效度分析需要在多个已定义的量表之间进行比较。"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-secondary/20 border border-border/50 p-3 text-left text-xs space-y-1.5 max-w-sm mx-auto">
+              <p className="font-medium text-foreground">{en ? "Requirements" : "需要满足"}:</p>
+              <p className="text-muted-foreground">✓ {en ? "At least 2 defined scales" : "至少 2 个已定义量表"}</p>
+              <p className="text-muted-foreground">✓ {en ? "Scale-level variables available" : "量表级变量可用"}</p>
+              <div className="border-t border-border/30 pt-1.5 mt-1.5">
+                <p className="text-muted-foreground/70">
+                  {en ? "Current: " : "当前: "}
+                  <strong>{analysisMode === "single" ? (en ? "1 scale detected" : "检测到 1 个量表") : (en ? "No scales defined" : "未定义量表")}</strong>
+                </p>
+              </div>
+            </div>
+            <p className="text-[11px] text-blue-600/70">
+              {en
+                ? "How to unlock: Switch to Custom Mode → Create 2+ composite scales → Re-run analysis"
+                : "如何解锁：切换到自定义模式 → 创建 ≥ 2 个复合量表 → 重新分析"}
+            </p>
+          </div>
+        ) : (
+          results.validity.correlationMatrix.length > 0 ? (
           <ResultCard title={t("section.construct-validity", lang)} insight={insights["validity"]}>
             <div className="space-y-4">
               <ChartWrapper title={t("section.heatmap", lang)}>
@@ -193,9 +236,10 @@ export function CenterPanel() {
         ) : (
           <UnavailableCard
             title={t("section.construct-validity", lang)}
-            reason={lang === "en" ? "Correlation matrix not available. Requires scale-level variables." : "相关矩阵不可用。需要量表级变量。"}
+            reason={lang === "en" ? "Correlation matrix not available." : "相关矩阵不可用"}
           />
         )
+      )
       )}
 
       {activeTab === "descriptive" && descriptiveResults && (
@@ -229,7 +273,7 @@ export function CenterPanel() {
   );
 }
 
-function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: string }) {
+function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button
       onClick={onClick}
