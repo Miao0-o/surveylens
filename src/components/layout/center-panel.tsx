@@ -29,6 +29,7 @@ import { ValidityCard } from "@/components/analysis/validity-card";
 import { CorrelationHeatmap } from "@/components/analysis/correlation-heatmap";
 import { EFACard } from "@/components/analysis/efa-card";
 import { FactorStructure } from "@/components/analysis/factor-structure";
+import { ConstructValiditySummary } from "@/components/analysis/construct-validity-summary";
 import { StabilityCard } from "@/components/analysis/stability-card";
 import { DescriptiveCard } from "@/components/analysis/descriptive-card";
 import { DiagnosticDashboard } from "@/components/analysis/diagnostic-dashboard";
@@ -163,13 +164,19 @@ export function CenterPanel() {
         </div>
       )}
 
-      {/* Construct Validity: scale-level correlation matrix */}
+      {/* Construct Validity: scale-level correlation heatmap + auto-interpretation */}
       {activeTab === "construct-validity" && (
         results.validity.correlationMatrix.length > 0 ? (
           <ResultCard title={t("section.construct-validity", lang)} insight={insights["construct-validity"]}>
-            <ChartWrapper title={t("section.heatmap", lang)}>
-              <CorrelationHeatmap data={results.validity} />
-            </ChartWrapper>
+            <div className="space-y-4">
+              <ChartWrapper title={t("section.heatmap", lang)}>
+                <CorrelationHeatmap data={results.validity} />
+              </ChartWrapper>
+              <ConstructValiditySummary
+                correlationMatrix={results.validity.correlationMatrix}
+                columnLabels={results.validity.columnLabels}
+              />
+            </div>
           </ResultCard>
         ) : (
           <UnavailableCard
