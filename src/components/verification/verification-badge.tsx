@@ -115,6 +115,22 @@ export function VerificationBadge() {
         </div>
       )}
 
+      {/* Status lines */}
+      <div className="space-y-0.5 border-t border-border/50 pt-2">
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500 shrink-0" strokeWidth={1.5} />
+          <span className="text-emerald-600">
+            {en ? "Internal checks passed" : "内部检查已通过"}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <span className="w-2.5 h-2.5 flex items-center justify-center text-amber-500 shrink-0">—</span>
+          <span className="text-amber-600">
+            {en ? "External validation pending" : "外部验证待完成"}
+          </span>
+        </div>
+      </div>
+
       <p className="text-[10px] text-muted-foreground/50">
         {en
           ? "Validated against R psych package, Jamovi, and SPSS. Target tolerance: |error| < .001."
