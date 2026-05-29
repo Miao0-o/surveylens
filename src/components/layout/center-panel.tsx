@@ -32,6 +32,7 @@ import { FactorStructure } from "@/components/analysis/factor-structure";
 import { ConstructValiditySummary } from "@/components/analysis/construct-validity-summary";
 import { StabilityCard } from "@/components/analysis/stability-card";
 import { ScaleConsistencyCard } from "@/components/analysis/scale-consistency-card";
+import { ProblematicItemsCard } from "@/components/analysis/problematic-items-card";
 import { DescriptiveCard } from "@/components/analysis/descriptive-card";
 import { DiagnosticDashboard } from "@/components/analysis/diagnostic-dashboard";
 import { AnalysisMatrixCard } from "@/components/analysis/analysis-matrix-card";
@@ -123,6 +124,7 @@ export function CenterPanel() {
           <DiagnosticDashboard />
           <AnalysisMatrixCard />
           <OverviewDashboard results={results} />
+          <ProblematicItemsCard results={results} columns={useAppStore((s) => s.columns)} />
         </div>
       )}
 

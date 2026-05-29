@@ -6,6 +6,7 @@ import type { AnalysisResults } from "@/types";
 import { resolveSelectedVars } from "@/lib/stats/composite";
 import { computeScaleConsistency } from "@/lib/analysis/scale-consistency";
 import { detectAnalysisMode } from "@/lib/analysis/registry";
+import { scanItemRisks } from "@/lib/analysis/item-risk-scanner";
 import { CheckCircle2, AlertTriangle, XCircle, Shield, TrendingUp, ArrowRight, Info } from "lucide-react";
 
 interface Props {
@@ -323,6 +324,12 @@ export function OverviewDashboard({ results }: Props) {
   const statusCls = statusColor(status.level);
   const sc = scoreCategory(readinessScore, en);
 
+  // Item risk scan
+  const riskReport = useMemo(
+    () => scanItemRisks(results, columns, composites, en),
+    [results, columns, composites, en]
+  );
+
   // Recommended actions
   const actions = useMemo((): { text: string; priority: "high" | "medium" | "low" }[] => {
     const result: { text: string; priority: "high" | "medium" | "low" }[] = [];
@@ -477,6 +484,19 @@ export function OverviewDashboard({ results }: Props) {
             {missingRate >= 0 ? `${(missingRate * 100).toFixed(0)}%` : "—"}
           </p>
         </div>
+        {riskReport.totalRisky > 0 && (
+          <div className="col-span-2 px-3 py-2 rounded-lg bg-amber-50/30 border border-amber-100/50">
+            <p className="text-[10px] text-muted-foreground">{en ? "Problematic Items" : "问题题项"}</p>
+            <p className="text-base font-semibold text-amber-600">
+              {riskReport.totalRisky}
+              {riskReport.topItem && (
+                <span className="text-[10px] text-amber-500/70 ml-1 font-normal">
+                  — {riskReport.topItem.item}{riskReport.topItem.scale ? ` (${riskReport.topItem.scale})` : ""}
+                </span>
+              )}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* === RELIABILITY SUMMARY === */}
