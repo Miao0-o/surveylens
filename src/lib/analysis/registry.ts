@@ -129,7 +129,7 @@ export const analysisModules: AnalysisModule[] = [
     label: "稳定性",
     intents: ["validate"],
     sourceStep: "stability",
-    isAvailable: (r) => r.stability.stabilityLevel !== "unstable" || r.stability.recommendedSampleSize > 0,
+    isAvailable: (r) => r.stability.stabilityLevel != null,
     apaInsight: (r, lang) => {
       const s = r.stability;
       if (lang === "zh") {
@@ -240,7 +240,7 @@ function buildSummaryZH(results: AnalysisResults, _insights: string[], n: number
   }
 
   // Stability
-  if (stability.stabilityLevel && stability.recommendedSampleSize > 0) {
+  if (stability.stabilityLevel != null && stability.recommendedSampleSize != null && stability.recommendedSampleSize > 0) {
     const sl = stability.stabilityLevel === "stable" ? "良好" : stability.stabilityLevel === "moderate" ? "一般" : "不够稳定";
     parts.push(`Bootstrap稳健性检验显示信度估计${sl}，研究建议最低有效样本量为${fmtInt(stability.recommendedSampleSize)}份。`);
   }

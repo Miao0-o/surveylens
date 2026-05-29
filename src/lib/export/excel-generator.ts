@@ -32,8 +32,8 @@ export async function downloadExcel(
     ["Bartlett p", results.validity.bartlettPValue],
     ["Suggested Factors", results.efa.suggestedFactors],
     ["Variance Explained", results.efa.varianceExplained.reduce((a, b) => a + b, 0)],
-    ["Stability Level", results.stability.stabilityLevel],
-    ["Recommended N", results.stability.recommendedSampleSize],
+    ["Stability Level", results.stability.stabilityLevel ?? "n/a"],
+    ["Recommended N", results.stability.recommendedSampleSize ?? "n/a"],
     [""],
     ["Method Recommendation", results.recommendedMethod],
   ];

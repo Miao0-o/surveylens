@@ -643,8 +643,8 @@ export function usePyodide() {
       if (callCode === null) {
         results[step.id] = {
           bootstrapSamples: 0, alphaCurve: [],
-          stabilityLevel: "unstable", recommendedSampleSize: 0, elbowPoint: null,
-          _meta: { error: "Insufficient data for bootstrap stability." }
+          stabilityLevel: null, recommendedSampleSize: null, elbowPoint: null,
+          _meta: { error: "Insufficient data for bootstrap stability.", errorType: "insufficient_data" }
         };
         continue;
       }
@@ -659,8 +659,8 @@ export function usePyodide() {
         console.warn(`[analysis] Stability step failed, using safe fallback:`, e instanceof Error ? e.message : e);
         results[step.id] = {
           bootstrapSamples: 0, alphaCurve: [],
-          stabilityLevel: "unstable", recommendedSampleSize: 0, elbowPoint: null,
-          _meta: { error: `Bootstrap stability could not be computed: ${e instanceof Error ? e.message : String(e)}` }
+          stabilityLevel: null, recommendedSampleSize: null, elbowPoint: null,
+          _meta: { error: `Bootstrap stability could not be computed: ${e instanceof Error ? e.message : String(e)}`, errorType: "bootstrap_failure" }
         };
       }
     }
@@ -953,8 +953,8 @@ function buildResults(raw: Record<string, Record<string, unknown>>, labels: stri
     results.stability = {
       bootstrapSamples: bootN,
       alphaCurve: (s.alphaCurve as { sampleSize: number; alpha: number }[]) ?? [],
-      stabilityLevel: (s.stabilityLevel as "stable" | "moderate" | "unstable") ?? "unstable",
-      recommendedSampleSize: (s.recommendedSampleSize as number) ?? 0,
+      stabilityLevel: (s.stabilityLevel as "stable" | "moderate" | "unstable" | null) ?? null,
+      recommendedSampleSize: s.recommendedSampleSize != null ? (s.recommendedSampleSize as number) : null,
       elbowPoint: (s.elbowPoint as number) ?? null,
       _meta: fallbackReason
         ? { value: null, status: "not_applicable" as const, reason: fallbackReason, confidence: 0.5 }

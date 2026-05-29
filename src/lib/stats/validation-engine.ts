@@ -186,7 +186,7 @@ export function validateResults(results: AnalysisResults, lang: "zh" | "en" = "z
     });
   }
 
-  if (meta.sampleSize < stability.recommendedSampleSize) {
+  if (stability.recommendedSampleSize != null && meta.sampleSize < stability.recommendedSampleSize) {
     flags.push({
       type: "info", source: "stability", code: "SAMPLE_SIZE_BELOW_RECOMMENDED",
       message: en

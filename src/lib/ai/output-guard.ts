@@ -24,8 +24,8 @@ interface KnownValues {
   kmo: number;
   bartlettPValue: number;
   suggestedFactors: number;
-  stabilityLevel: string;
-  recommendedSampleSize: number;
+  stabilityLevel: string | null;
+  recommendedSampleSize: number | null;
   eigenvalueCount: number;
 }
 

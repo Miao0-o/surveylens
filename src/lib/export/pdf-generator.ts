@@ -67,7 +67,8 @@ function kmoLabel(v: number, lang: Lang): string {
   return v >= 0.9 ? "Marvelous" : v >= 0.8 ? "Meritorious" : v >= 0.7 ? "Middling" : v >= 0.6 ? "Mediocre" : "Unacceptable";
 }
 
-function stabilityLabel(level: string, lang: Lang): string {
+function stabilityLabel(level: string | null, lang: Lang): string {
+  if (level == null) return lang === "zh" ? "不可用" : "Unavailable";
   if (lang === "zh") return level === "stable" ? "稳定" : level === "moderate" ? "中等" : "不稳定";
   return level === "stable" ? "Stable" : level === "moderate" ? "Moderate" : "Unstable";
 }

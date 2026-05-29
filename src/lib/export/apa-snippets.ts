@@ -70,11 +70,11 @@ export function generateAllSnippets(results: AnalysisResults): APASnippet[] {
   }
 
   // Stability
-  if (stability.stabilityLevel !== "unstable" || stability.recommendedSampleSize > 0) {
+  if (stability.stabilityLevel != null && (stability.stabilityLevel !== "unstable" || (stability.recommendedSampleSize != null && stability.recommendedSampleSize > 0))) {
     const stabLabel = stability.stabilityLevel === "stable" ? "stable" : stability.stabilityLevel === "moderate" ? "moderately stable" : "unstable";
     snippets.push({
       section: "稳定性",
-      text: `Bootstrap stability analysis (${stability.bootstrapSamples} resamples) indicated a ${stabLabel} factor solution${stability.recommendedSampleSize > 0 ? `, with a recommended minimum sample size of N = ${stability.recommendedSampleSize}` : ""}.`,
+      text: `Bootstrap stability analysis (${stability.bootstrapSamples} resamples) indicated a ${stabLabel} factor solution${stability.recommendedSampleSize != null && stability.recommendedSampleSize > 0 ? `, with a recommended minimum sample size of N = ${stability.recommendedSampleSize}` : ""}.`,
     });
   }
 

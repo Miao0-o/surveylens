@@ -561,14 +561,18 @@ export function OverviewDashboard({ results }: Props) {
       {/* === STABILITY === */}
       <div className="rounded-lg bg-card border border-border p-3">
         <span className="text-xs font-medium">{en ? "Stability" : "稳定性"} </span>
-        <span className={`text-[11px] ${stability.stabilityLevel === "stable" ? "text-emerald-600" : stability.stabilityLevel === "moderate" ? "text-amber-600" : "text-red-500"}`}>
-          {stability.stabilityLevel === "stable"
-            ? (en ? "Stable" : "稳定")
-            : stability.stabilityLevel === "moderate"
-              ? (en ? "Moderate" : "中等")
-              : (en ? "Unstable" : "不稳定")}
-          {stability.recommendedSampleSize > 0 && ` (N ≥ ${stability.recommendedSampleSize})`}
-        </span>
+        {stability.stabilityLevel == null ? (
+          <span className="text-[11px] text-muted-foreground">{en ? "Unavailable" : "不可用"}</span>
+        ) : (
+          <span className={`text-[11px] ${stability.stabilityLevel === "stable" ? "text-emerald-600" : stability.stabilityLevel === "moderate" ? "text-amber-600" : "text-red-500"}`}>
+            {stability.stabilityLevel === "stable"
+              ? (en ? "Stable" : "稳定")
+              : stability.stabilityLevel === "moderate"
+                ? (en ? "Moderate" : "中等")
+                : (en ? "Unstable" : "不稳定")}
+            {stability.recommendedSampleSize != null && stability.recommendedSampleSize > 0 && ` (N ≥ ${stability.recommendedSampleSize})`}
+          </span>
+        )}
       </div>
 
       {/* === RECOMMENDED ACTIONS === */}

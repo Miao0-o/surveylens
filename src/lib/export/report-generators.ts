@@ -123,8 +123,8 @@ export function markdownReport(
 
   // Stability
   lines.push(`## ${en ? "Statistical Stability" : "统计稳定性"}`);
-  lines.push(`- ${en ? "Level" : "水平"}: ${stability.stabilityLevel}`);
-  if (stability.recommendedSampleSize > 0) lines.push(`- ${en ? "Recommended N" : "推荐 N"}: ${stability.recommendedSampleSize}`);
+  if (stability.stabilityLevel != null) lines.push(`- ${en ? "Level" : "水平"}: ${stability.stabilityLevel}`);
+  if (stability.recommendedSampleSize != null && stability.recommendedSampleSize > 0) lines.push(`- ${en ? "Recommended N" : "推荐 N"}: ${stability.recommendedSampleSize}`);
   lines.push("");
 
   // APA summary

@@ -281,8 +281,8 @@ export interface EFAResult {
 export interface StabilityResult {
   bootstrapSamples: number;
   alphaCurve: { sampleSize: number; alpha: number }[];
-  stabilityLevel: "stable" | "moderate" | "unstable";
-  recommendedSampleSize: number;
+  stabilityLevel: "stable" | "moderate" | "unstable" | null;
+  recommendedSampleSize: number | null;
   elbowPoint: number | null;
   _meta: StatValue;
 }
@@ -333,8 +333,8 @@ export interface AICompressedInput {
   bartlettPValue: number;
   problematicItems: string[];
   crossLoadingItems: string[];
-  stabilityLevel: string;
-  recommendedSampleSize: number;
+  stabilityLevel: string | null;
+  recommendedSampleSize: number | null;
   factorLoadings: { item: string; factor: number; loading: number }[];
   eigenvalues: number[];
   suggestedFactors: number;

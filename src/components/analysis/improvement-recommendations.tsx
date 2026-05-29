@@ -217,8 +217,8 @@ export function ImprovementRecommendations({ results }: Props) {
           ? `Small sample may produce unstable estimates. Interpret results with caution.${meta.sampleSize < 50 ? " Consider collecting additional data." : ""}`
           : `样本量较小可能导致估计不稳定。请谨慎解读结果。${meta.sampleSize < 50 ? " 建议考虑收集更多数据。" : ""}`,
         impact: en
-          ? `Larger samples may produce more stable estimates and narrower confidence intervals.${stability.recommendedSampleSize > 0 ? ` Recommended N ≥ ${stability.recommendedSampleSize}.` : ""}`
-          : `增加样本量可能产生更稳定的估计与更窄的置信区间。${stability.recommendedSampleSize > 0 ? ` 推荐 N ≥ ${stability.recommendedSampleSize}。` : ""}`,
+          ? `Larger samples may produce more stable estimates and narrower confidence intervals.${stability.recommendedSampleSize != null && stability.recommendedSampleSize > 0 ? ` Recommended N ≥ ${stability.recommendedSampleSize}.` : ""}`
+          : `增加样本量可能产生更稳定的估计与更窄的置信区间。${stability.recommendedSampleSize != null && stability.recommendedSampleSize > 0 ? ` 推荐 N ≥ ${stability.recommendedSampleSize}。` : ""}`,
         confidence: "high",
       });
     }

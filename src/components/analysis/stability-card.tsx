@@ -35,15 +35,16 @@ export function StabilityCard({ data }: Props) {
   const lang = useAppStore((s) => s.reportLanguage);
   const en = lang === "en";
 
-  if (data._meta?.status === "not_applicable") {
+  // Not applicable: bootstrap could not be computed
+  if (data._meta?.status === "not_applicable" || data.stabilityLevel == null) {
     return (
       <div className="px-4 py-3 rounded-lg bg-secondary/20 border border-border/50 text-xs text-muted-foreground">
-        <p className="font-medium mb-1">{en ? "Stability Unavailable" : "稳定性分析暂不可用"}</p>
-        <p>{en
-          ? "Bootstrap stability analysis could not be computed for this dataset. Please check sample size, item count, or missing data."
-          : "Bootstrap 稳定性分析暂无法对此数据集进行计算。请检查样本量、题项数量或缺失值情况。"}</p>
-        {data._meta.reason && (
-          <p className="text-[10px] text-muted-foreground/60 mt-1">{data._meta.reason}</p>
+        <p className="font-medium mb-1">{en ? "Stability Analysis Unavailable" : "稳定性分析暂不可用"}</p>
+        <p className="text-[11px]">{en
+          ? "The current dataset does not meet the requirements for Bootstrap stability analysis."
+          : "当前数据无法满足 Bootstrap 稳定性分析要求。"}</p>
+        {data._meta?.reason && (
+          <p className="text-[10px] text-muted-foreground/50 mt-1">{data._meta.reason}</p>
         )}
       </div>
     );
