@@ -58,10 +58,12 @@ export function apaResultsText(
   design?: { outcomeVariables?: string[]; predictorVariables?: string[] } | null,
   readinessScore = 0, readinessLabel = ""
 ): string {
+  const en = lang === "en";
   const header = buildExportHeader(results, design ?? null, lang, readinessScore, readinessLabel);
   const snippets = generateAllSnippets(results);
-  const body = snippets.map(s => `## ${s.section}\n\n${s.text}`).join("\n\n---\n\n");
-  return [...header, body].join("\n");
+  // Manuscript-style: join snippets as a flowing paragraph, not bullet lists
+  const body = snippets.map(s => s.text).join(" ");
+  return [...header, body].join("\n\n");
 }
 
 export function downloadAPAResults(
@@ -86,52 +88,85 @@ export function markdownReport(
   const { reliability, validity, efa, stability, meta } = results;
   const lines: string[] = [];
 
-  // Export metadata header
+  // Cover
   lines.push(...buildExportHeader(results, design ?? null, lang, readinessScore, readinessLabel));
+  const mode = design && ([...(design.outcomeVariables ?? []), ...(design.predictorVariables ?? [])].length > 0) ? "custom" : "quick";
   lines.push(`# ${en ? "SurveyLens Analysis Report" : "SurveyLens 分析报告"}`);
+  lines.push(`**${en ? "Readiness" : "准备度"}**: ${readinessLabel} (${readinessScore}) · ${mode === "custom" ? (en ? "Custom Mode" : "自定义模式") : (en ? "Quick Mode" : "快速模式")}`);
   lines.push("");
 
-  // Reliability
-  lines.push(`## ${en ? "Reliability" : "信度"}`);
+  // 1. Reliability
+  lines.push(`## 1. ${en ? "Reliability" : "信度分析"}`);
   if (reliability.cronbachsAlpha > 0) {
-    lines.push(`- Cronbach's α: ${fmt(reliability.cronbachsAlpha, 3)}`);
+    lines.push(`- Cronbach's α: **${fmt(reliability.cronbachsAlpha, 3)}**`);
     if (reliability.standardizedAlpha != null) lines.push(`- ${en ? "Standardized α" : "标准化 α"}: ${fmt(reliability.standardizedAlpha, 3)}`);
     if (reliability.mcdonaldsOmega != null && reliability.mcdonaldsOmega > 0) lines.push(`- McDonald's ω: ${fmt(reliability.mcdonaldsOmega, 3)}`);
   }
   if (reliability.dimensions && reliability.dimensions.length > 0) {
     lines.push("");
-    lines.push(`| ${en ? "Scale" : "量表"} | α | ${en ? "Items" : "题项"} |`);
-    lines.push("|---|---|---|");
+    lines.push(`| ${en ? "Scale" : "量表"} | α | ${en ? "Interpretation" : "解读"} | ${en ? "Items" : "题项"} |`);
+    lines.push("|---|---|---|---|");
     for (const d of reliability.dimensions) {
-      lines.push(`| ${d.name} | ${fmt(d.cronbachsAlpha, 2)} | ${d.items.length} |`);
+      const interp = d.cronbachsAlpha >= 0.90 ? (en ? "Excellent" : "优秀") : d.cronbachsAlpha >= 0.80 ? (en ? "Good" : "良好") : d.cronbachsAlpha >= 0.70 ? (en ? "Acceptable" : "可接受") : (en ? "Low" : "偏低");
+      lines.push(`| ${d.name} | ${fmt(d.cronbachsAlpha, 2)} | ${interp} | ${d.items.length} |`);
     }
   }
   lines.push("");
 
-  // Validity
-  lines.push(`## ${en ? "Factor Analysis" : "因子分析"}`);
+  // 2. Validity
+  lines.push(`## 2. ${en ? "Validity" : "效度分析"}`);
+  if (validity.correlationMatrix.length >= 2) {
+    const n = validity.correlationMatrix.length;
+    lines.push(`${en ? "Scale correlation matrix" : "量表相关矩阵"}: ${n} × ${n}`);
+    // Find strongest relationships
+    let maxR = 0; let maxA = ""; let maxB = "";
+    const overlaps: string[] = [];
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const r = validity.correlationMatrix[i][j];
+        if (r == null || isNaN(r)) continue;
+        if (Math.abs(r) > Math.abs(maxR)) { maxR = r; maxA = validity.columnLabels[i] ?? ""; maxB = validity.columnLabels[j] ?? ""; }
+        if (Math.abs(r) >= 0.80) overlaps.push(`${validity.columnLabels[i]} ↔ ${validity.columnLabels[j]} (r = ${r.toFixed(2)})`);
+      }
+    }
+    if (maxA) lines.push(`- ${en ? "Strongest relationship" : "最强关联"}: ${maxA} ↔ ${maxB} (r = ${maxR.toFixed(2)})`);
+    if (overlaps.length > 0) {
+      lines.push(`- ${en ? "Potential overlap / redundancy" : "潜在重叠/冗余"}:`);
+      overlaps.forEach(o => lines.push(`  - ${o}`));
+    }
+  }
+  lines.push("");
+
+  // 3. Factor Analysis
+  lines.push(`## 3. ${en ? "Factor Analysis" : "因子分析"}`);
   if (validity.kmo > 0) {
-    lines.push(`- KMO: ${fmt(validity.kmo, 2)}`);
+    lines.push(`- KMO: ${fmt(validity.kmo, 2)} (${validity.kmo >= 0.80 ? (en ? "Good" : "良好") : validity.kmo >= 0.60 ? (en ? "Acceptable" : "可接受") : (en ? "Weak" : "较弱")})`);
     const bp = validity.bartlettPValue < 0.001 ? "p < .001" : `p = ${fmt(validity.bartlettPValue, 3)}`;
-    lines.push(`- Bartlett's χ²: ${fmt(validity.bartlettChiSquare, 2)}, df = ${validity.bartlettDf}, ${bp}`);
+    lines.push(`- Bartlett's Test: χ² = ${fmt(validity.bartlettChiSquare, 0)}, df = ${validity.bartlettDf}, ${bp}`);
     if (efa.suggestedFactors > 0) {
       const tv = (efa.varianceExplained.reduce((a, b) => a + b, 0) * 100).toFixed(1);
-      lines.push(`- ${en ? "Suggested factors" : "建议因子数"}: ${efa.suggestedFactors} (${en ? "explained variance" : "解释方差"}: ${tv}%)`);
+      lines.push(`- ${en ? "Factors" : "因子数"}: ${efa.suggestedFactors} (${tv}% ${en ? "variance explained" : "解释方差"})`);
     }
   }
   lines.push("");
 
-  // Stability
-  lines.push(`## ${en ? "Statistical Stability" : "统计稳定性"}`);
-  if (stability.stabilityLevel != null) lines.push(`- ${en ? "Level" : "水平"}: ${stability.stabilityLevel}`);
+  // 4. Stability
+  lines.push(`## 4. ${en ? "Statistical Stability" : "统计稳定性"}`);
+  if (stability.stabilityLevel != null) {
+    lines.push(`- ${en ? "Stability" : "稳定性"}: **${stability.stabilityLevel}**`);
+  } else {
+    lines.push(`- ${en ? "Not assessed" : "未评估"}`);
+  }
   if (stability.recommendedSampleSize != null && stability.recommendedSampleSize > 0) lines.push(`- ${en ? "Recommended N" : "推荐 N"}: ${stability.recommendedSampleSize}`);
   lines.push("");
 
-  // APA summary
-  lines.push(`## ${en ? "APA Summary" : "APA 摘要"}`);
+  // 5. APA summary
   const summary = getSummaryAPA(results, lang);
-  lines.push(summary || en ? "No significant results." : "无显著结果。");
-  lines.push("");
+  if (summary) {
+    lines.push(`## 5. ${en ? "APA Summary" : "APA 摘要"}`);
+    lines.push(summary);
+    lines.push("");
+  }
 
   // AI
   if (aiResults) {
@@ -150,6 +185,14 @@ export function markdownReport(
     }
     lines.push("");
   }
+
+  // Methodology footer
+  lines.push("---");
+  lines.push("");
+  lines.push(`*${en ? "Generated by SurveyLens v1.0" : "由 SurveyLens v1.0 生成"}*`);
+  lines.push("");
+  lines.push(`${en ? "Analyses include" : "分析包含"}: ${en ? "Reliability, Validity, Factor Analysis, Stability, Readiness" : "信度、效度、因子分析、稳定性、准备度"}.`);
+  lines.push(`${en ? "See Methodology Center for assumptions and limitations." : "假设与局限性请参见方法论中心。"}`);
 
   return lines.join("\n");
 }
