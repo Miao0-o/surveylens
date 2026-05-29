@@ -378,6 +378,7 @@ export interface AIAdvisorSuggestion {
 }
 
 export interface AIResults {
+  // Legacy fields (maintained for backward compat)
   explanation: AIExplanation;
   suggestions: AIAdvisorSuggestion[];
   diagnosis: {
@@ -387,10 +388,40 @@ export interface AIResults {
   };
   apaResult: string;
   shortAPA: string;
-  /** Evidence sufficiency for AI interpretation (low/moderate/high) */
   interpretationConfidence?: "low" | "moderate" | "high";
-  /** Cache key to avoid re-running on same results */
   cachedAt?: number;
+
+  // Executive summary v4.0 fields
+  executive_summary?: {
+    overall_assessment: string;
+    key_strengths: string;
+    key_concerns: string;
+  };
+  reliability_summary?: {
+    summary: string;
+    scales_meeting: string[];
+    scales_needing_review: string[];
+    item_concerns?: string;
+  };
+  factor_structure_summary?: {
+    summary: string;
+    structure_consistency_notes?: string;
+  };
+  construct_relationships_summary?: {
+    summary: string;
+    overlap_concerns?: string;
+    redundancy_concerns?: string;
+  };
+  data_readiness?: {
+    readiness_level: string;
+    readiness_score: number;
+    suitability: string;
+  };
+  recommended_actions?: Array<{
+    priority: "critical" | "moderate" | "minor";
+    action: string;
+    rationale: string;
+  }>;
 }
 
 // ---- App State ----
