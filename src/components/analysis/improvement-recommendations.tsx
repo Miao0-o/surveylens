@@ -224,7 +224,7 @@ export function ImprovementRecommendations({ results }: Props) {
     }
 
     // ---- DATASET-LEVEL: Factor stability ----
-    if (stability.stabilityLevel === "unstable") {
+    if (stability.stabilityLevel != null && stability.stabilityLevel === "unstable") {
       recs.push({
         priority: "moderate",
         category: en ? "Statistical Stability" : "统计稳定性",

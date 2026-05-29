@@ -26,7 +26,7 @@ export function ExportBar() {
     if (meanAlpha >= 0.90) s += 30; else if (meanAlpha >= 0.80) s += 26; else if (meanAlpha >= 0.70) s += 20; else if (meanAlpha >= 0.60) s += 12; else s += 4;
     if (results.validity.kmo >= 0.80) s += 25; else if (results.validity.kmo >= 0.60) s += 18; else if (results.validity.kmo > 0) s += 8;
     if (dims.length > 0) s += 10; else s += 16;
-    if (results.stability.stabilityLevel === "stable") s += 10; else if (results.stability.stabilityLevel === "moderate") s += 6; else s += 2;
+    if (results.stability.stabilityLevel === "stable") s += 10; else if (results.stability.stabilityLevel === "moderate") s += 6; else if (results.stability.stabilityLevel === "unstable") s += 2;
     if (results.meta.sampleSize >= 200) s += 10; else if (results.meta.sampleSize >= 100) s += 7; else if (results.meta.sampleSize >= 50) s += 4; else s += 1;
     if (s >= 80) return { readinessScore: s, readinessLabel: en ? "READY" : "就绪" };
     if (s >= 60) return { readinessScore: s, readinessLabel: en ? "REVIEW REQUIRED" : "建议审阅" };

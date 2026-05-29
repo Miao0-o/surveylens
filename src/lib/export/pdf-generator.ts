@@ -168,8 +168,8 @@ ${researchGoal ? `<p class="meta">${t("researchGoal")}: ${escapeHtml(researchGoa
 <h2>${t("stability")}</h2>
 <table>
   <tr><td>${t("stabilityLevel")}</td><td class="stat ${stability.stabilityLevel === 'stable' ? 'good' : stability.stabilityLevel === 'moderate' ? 'warn' : 'bad'}">${stabilityLabel(stability.stabilityLevel, lang)}</td></tr>
-  <tr><td>${t("recommendedN")}</td><td class="stat">${stability.recommendedSampleSize}</td></tr>
-  ${stability.elbowPoint ? `<tr><td>${t("elbowPoint")}</td><td class="stat">n = ${stability.elbowPoint}</td></tr>` : ""}
+  <tr><td>${t("recommendedN")}</td><td class="stat">${stability.recommendedSampleSize != null ? stability.recommendedSampleSize : "—"}</td></tr>
+  ${stability.elbowPoint != null ? `<tr><td>${t("elbowPoint")}</td><td class="stat">n = ${stability.elbowPoint}</td></tr>` : ""}
   <tr><td>${t("bootstrapSamples")}</td><td class="stat">${stability.bootstrapSamples}</td></tr>
 </table>
 

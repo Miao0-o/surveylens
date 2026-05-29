@@ -81,7 +81,7 @@ export function StabilityCard({ data }: Props) {
       </div>
 
       {/* Stability curve */}
-      {data.alphaCurve.length > 0 && (
+      {Array.isArray(data.alphaCurve) && data.alphaCurve.length > 0 && (
         <ChartWrapper title={en ? "Stability Curve" : "样本稳定性曲线"}>
           <div className="h-[160px]">
             <ResponsiveContainer width="100%" height="100%">

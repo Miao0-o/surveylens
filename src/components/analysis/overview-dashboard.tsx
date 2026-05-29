@@ -302,7 +302,8 @@ export function OverviewDashboard({ results }: Props) {
     // Stability (10%)
     if (stability.stabilityLevel === "stable") score += 10;
     else if (stability.stabilityLevel === "moderate") score += 6;
-    else score += 2;
+    else if (stability.stabilityLevel === "unstable") score += 2;
+    // null = not assessed, add nothing
 
     // Sample size (10%)
     if (meta.sampleSize >= 200) score += 10;

@@ -177,7 +177,7 @@ export function validateResults(results: AnalysisResults, lang: "zh" | "en" = "z
   }
 
   // ── Stability Rules ──
-  if (stability.stabilityLevel === "unstable") {
+  if (stability.stabilityLevel != null && stability.stabilityLevel === "unstable") {
     flags.push({
       type: "warning", source: "stability", code: "UNSTABLE_SOLUTION",
       message: en
@@ -263,11 +263,10 @@ function computeConfidence(results: AnalysisResults, flags: ValidationFlag[]): C
 
   // Factor stability score
   let stabScore = 0;
-  switch (stability.stabilityLevel) {
-    case "stable": stabScore = 0.90; break;
-    case "moderate": stabScore = 0.60; break;
-    case "unstable": stabScore = 0.30; break;
-  }
+  if (stability.stabilityLevel === "stable") stabScore = 0.90;
+  else if (stability.stabilityLevel === "moderate") stabScore = 0.60;
+  else if (stability.stabilityLevel === "unstable") stabScore = 0.30;
+  // null → stay 0 (not assessed, not unstable)
   const totalVar = efa.varianceExplained.reduce((a, b) => a + b, 0);
   if (totalVar < 0.40) stabScore -= 0.15;
   // Only count stability/EFA-related errors

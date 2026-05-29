@@ -831,7 +831,7 @@ function buildResults(raw: Record<string, Record<string, unknown>>, labels: stri
     reliability: { cronbachsAlpha: 0, standardizedAlpha: null, mcdonaldsOmega: null, itemTotalCorrelation: {}, alphaIfItemDeleted: {}, _meta: { value: null, status: "not_applicable" as const, reason: "Analysis not yet executed", confidence: 1.0 } },
     validity: { kmo: 0, kmoPerItem: {}, bartlettChiSquare: 0, bartlettDf: 0, bartlettPValue: 0, correlationMatrix: [], columnLabels: labels, _meta: { value: null, status: "not_applicable" as const, reason: "Analysis not yet executed", confidence: 1.0 } },
     efa: { eigenvalues: [], loadings: [], communalities: [], varianceExplained: [], rotation: "varimax", suggestedFactors: 0, itemLabels: labels, metadata: { raw_factor_estimation: { kaiser_n: 0, scree_suggestion: null, parallel_analysis_n: null }, factor_stability: { risk_level: "low", too_many_factors: false, recommended_range: [1, 3], warnings: [] }, product_decision: { display_factor_n: 0, decision_rule: "", type: "presentation_constraint" } }, _meta: { value: null, status: "not_applicable" as const, reason: "Analysis not yet executed", confidence: 1.0 } },
-    stability: { bootstrapSamples: 0, alphaCurve: [], stabilityLevel: "unstable", recommendedSampleSize: 0, elbowPoint: null, _meta: { value: null, status: "not_applicable" as const, reason: "Analysis not yet executed", confidence: 1.0 } },
+    stability: { bootstrapSamples: 0, alphaCurve: [], stabilityLevel: null, recommendedSampleSize: null, elbowPoint: null, _meta: { value: null, status: "not_applicable" as const, reason: "Analysis not yet executed", confidence: 1.0 } },
     recommendedMethod: "",
   };
 
@@ -963,6 +963,16 @@ function buildResults(raw: Record<string, Record<string, unknown>>, labels: stri
           : { value: null, status: "insufficient_data" as const, reason: "Sample too small for bootstrap stability assessment", confidence: 0.7 },
     };
   }
+
+  // Normalize stability to prevent frontend crashes from null/NaN/undefined
+  results.stability = {
+    bootstrapSamples: results.stability.bootstrapSamples ?? 0,
+    alphaCurve: Array.isArray(results.stability.alphaCurve) ? results.stability.alphaCurve : [],
+    stabilityLevel: results.stability.stabilityLevel ?? null,
+    recommendedSampleSize: typeof results.stability.recommendedSampleSize === "number" && !isNaN(results.stability.recommendedSampleSize) ? results.stability.recommendedSampleSize : null,
+    elbowPoint: typeof results.stability.elbowPoint === "number" ? results.stability.elbowPoint : null,
+    _meta: results.stability._meta ?? { value: null, status: "not_applicable" as const, reason: "Analysis not yet executed", confidence: 0 },
+  };
 
   return results;
 }
