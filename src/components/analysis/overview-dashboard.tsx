@@ -225,6 +225,16 @@ export function OverviewDashboard({ results }: Props) {
   );
   const missingRate = useMemo(() => scopedMissingRate(columns, scope), [columns, scope]);
 
+  // Debug: scope summary
+  if (typeof window !== "undefined") {
+    console.log("[AnalysisScope]", {
+      mode: scope.hasUserSelection ? "curated" : "automatic",
+      included: scope.scopeItemNames.size,
+      excluded: columns.length - scope.scopeItemNames.size,
+      metadata: scope.excludedColumns.slice(0, 10),
+    });
+  }
+
   // Scale consistency
   const consistencyReport = useMemo(
     () => composites.length > 0 && efa.loadings.length > 0
@@ -465,14 +475,39 @@ export function OverviewDashboard({ results }: Props) {
         </div>
       )}
 
-      {/* Analysis scope note */}
-      {scope.excludedColumns.length > 0 && (
-        <div className="text-[10px] text-muted-foreground/60 px-1">
-          {en
-            ? `Analysis is based on selected variables and defined scales. ${scope.excludedColumns.length} metadata column(s) excluded (e.g., ${scope.excludedColumns.slice(0, 3).join(", ")}${scope.excludedColumns.length > 3 ? "…" : ""}).`
-            : `分析基于已选变量与定义的量表。已排除 ${scope.excludedColumns.length} 个元数据列（如 ${scope.excludedColumns.slice(0, 3).join("、")}${scope.excludedColumns.length > 3 ? "…" : ""}）。`}
+      {/* Analysis Scope Transparency Card */}
+      <div className="rounded-lg bg-card border border-border p-3">
+        <div className="flex items-center gap-1.5 mb-2">
+          <Info className="w-3.5 h-3.5 text-blue-500" strokeWidth={1.5} />
+          <span className="text-xs font-medium">{en ? "Analysis Scope" : "分析范围"}</span>
         </div>
-      )}
+        <div className="grid grid-cols-3 gap-2 text-[11px]">
+          <div>
+            <span className="text-muted-foreground">{en ? "Total Columns: " : "总列数: "}</span>
+            <span className="text-foreground font-semibold">{columns.length}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{en ? "Included: " : "已纳入: "}</span>
+            <span className="text-emerald-600 font-semibold">{scope.scopeItemNames.size}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{en ? "Excluded: " : "已排除: "}</span>
+            <span className="text-amber-600 font-semibold">{columns.length - scope.scopeItemNames.size}</span>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1.5">
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100">
+            {scope.hasUserSelection
+              ? (en ? "Curated — user-defined design" : "策划模式 — 用户定义研究设计")
+              : (en ? "Automatic — all non-metadata Likert/numeric" : "自动模式 — 非元数据 Likert/数值列")}
+          </span>
+          {scope.excludedColumns.length > 0 && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100" title={scope.excludedColumns.slice(0, 10).join(", ")}>
+              {en ? `${scope.excludedColumns.length} metadata columns filtered` : `${scope.excludedColumns.length} 个元数据列已过滤`}
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* === DATASET SUMMARY === */}
       <div className="grid grid-cols-4 gap-2">

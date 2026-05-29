@@ -486,6 +486,7 @@ export async function runHallucinationCheck(
 function buildUserMessage(input: AICompressedInput, validation?: ValidationReport | null): string {
   const lines: string[] = [
     "# STATISTICAL RESULTS SUMMARY",
+    "This report is based only on variables included in the defined research design. Unselected variables and metadata columns were excluded from analysis.",
     "",
     "## Data Overview",
     `Sample Size (N): ${input.sampleSize}`,
