@@ -130,63 +130,65 @@ export function RightSidebar() {
           </div>
         )}
 
-        {/* Executive Summary mode (v4.0) */}
+        {/* Report v2.0 format */}
         {hasExecSummary && aiResults.executive_summary && (
           <>
-            <ResultCard title={en ? "Executive Summary" : "执行摘要"} icon={<Zap className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.5} />}>
+            <ResultCard title={en ? "Executive Summary" : "执行摘要"}>
               <div className="space-y-2">
                 <p className="text-sm text-foreground leading-relaxed">{aiResults.executive_summary.overall_assessment}</p>
-                <p className="text-xs text-muted-foreground">{aiResults.executive_summary.key_strengths}</p>
-                {aiResults.executive_summary.key_concerns && (
-                  <p className="text-xs text-amber-600/80">{aiResults.executive_summary.key_concerns}</p>
+                {aiResults.executive_summary.readiness && (
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    aiResults.executive_summary.readiness.includes("READY") && !aiResults.executive_summary.readiness.includes("NOT") ? "bg-emerald-50 text-emerald-600" :
+                    aiResults.executive_summary.readiness.includes("REVIEW") ? "bg-amber-50 text-amber-600" :
+                    "bg-red-50 text-red-500"
+                  }`}>{aiResults.executive_summary.readiness}</span>
                 )}
               </div>
             </ResultCard>
 
-            {aiResults.reliability_summary && (
-              <ResultCard title={en ? "Reliability" : "信度"} icon={<Info className="w-3.5 h-3.5 text-blue-400" strokeWidth={1.5} />}>
-                <p className="text-xs text-muted-foreground leading-relaxed">{aiResults.reliability_summary.summary}</p>
-              </ResultCard>
+            {aiResults.key_strengths && aiResults.key_strengths.length > 0 && (
+              <div className="rounded-lg bg-emerald-50/20 border border-emerald-100/30 p-3 space-y-1">
+                <p className="text-[10px] font-medium text-emerald-700 uppercase tracking-wide">{en ? "Key Strengths" : "主要优势"}</p>
+                {aiResults.key_strengths.map((s, i) => (
+                  <p key={i} className="text-[11px] text-emerald-600/80">{s}</p>
+                ))}
+              </div>
             )}
 
-            {aiResults.factor_structure_summary && (
-              <ResultCard title={en ? "Factor Structure" : "因子结构"}>
-                <p className="text-xs text-muted-foreground leading-relaxed">{aiResults.factor_structure_summary.summary}</p>
-              </ResultCard>
+            {aiResults.key_risks && aiResults.key_risks.length > 0 && (
+              <div className="rounded-lg bg-amber-50/20 border border-amber-100/30 p-3 space-y-1">
+                <p className="text-[10px] font-medium text-amber-700 uppercase tracking-wide">{en ? "Key Risks" : "主要风险"}</p>
+                {aiResults.key_risks.map((r, i) => (
+                  <p key={i} className="text-[11px] text-amber-600/80">{r}</p>
+                ))}
+              </div>
             )}
 
-            {aiResults.construct_relationships_summary && (
-              <ResultCard title={en ? "Construct Relationships" : "构念间关系"}>
-                <p className="text-xs text-muted-foreground leading-relaxed">{aiResults.construct_relationships_summary.summary}</p>
-              </ResultCard>
-            )}
-
-            {aiResults.data_readiness && (
-              <ResultCard title={en ? "Data Readiness" : "数据准备度"}>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                    aiResults.data_readiness.readiness_level === "READY" ? "bg-emerald-50 text-emerald-600" :
-                    aiResults.data_readiness.readiness_level === "REVIEW REQUIRED" ? "bg-amber-50 text-amber-600" :
-                    "bg-red-50 text-red-500"
-                  }`}>{aiResults.data_readiness.readiness_level}</span>
-                  <span className="text-xs text-muted-foreground">{aiResults.data_readiness.suitability}</span>
-                </div>
-              </ResultCard>
-            )}
-
-            {aiResults.recommended_actions && aiResults.recommended_actions.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-foreground">{en ? "Recommended Actions" : "建议操作"}</p>
-                {aiResults.recommended_actions.map((a, i) => (
-                  <div key={i} className="flex items-start gap-1.5 text-[11px]">
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1 ${
+            {aiResults.priority_actions && aiResults.priority_actions.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{en ? "Priority Actions" : "优先操作"}</p>
+                {aiResults.priority_actions.map((a, i) => (
+                  <div key={i} className="flex items-start gap-2 text-[11px]">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${
                       a.priority === "critical" ? "bg-red-400" : a.priority === "moderate" ? "bg-amber-400" : "bg-blue-400"
                     }`} />
                     <div>
-                      <span className="text-foreground">{a.action}</span>
+                      <span className="text-foreground font-medium">{a.action}</span>
                       <p className="text-muted-foreground">{a.rationale}</p>
+                      {a.expected_impact && (
+                        <p className="text-[10px] text-blue-600/60 mt-0.5">{en ? "Impact: " : "影响: "}{a.expected_impact}</p>
+                      )}
                     </div>
                   </div>
+                ))}
+              </div>
+            )}
+
+            {aiResults.technical_notes && aiResults.technical_notes.length > 0 && (
+              <div className="rounded-lg bg-secondary/20 border border-border/40 p-3 space-y-1">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{en ? "Technical Notes" : "技术说明"}</p>
+                {aiResults.technical_notes.map((n, i) => (
+                  <p key={i} className="text-[10px] text-muted-foreground/70">{n}</p>
                 ))}
               </div>
             )}

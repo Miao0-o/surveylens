@@ -391,37 +391,20 @@ export interface AIResults {
   interpretationConfidence?: "low" | "moderate" | "high";
   cachedAt?: number;
 
-  // Executive summary v4.0 fields
+  // Report v2.0 fields
   executive_summary?: {
     overall_assessment: string;
-    key_strengths: string;
-    key_concerns: string;
+    readiness: string;
   };
-  reliability_summary?: {
-    summary: string;
-    scales_meeting: string[];
-    scales_needing_review: string[];
-    item_concerns?: string;
-  };
-  factor_structure_summary?: {
-    summary: string;
-    structure_consistency_notes?: string;
-  };
-  construct_relationships_summary?: {
-    summary: string;
-    overlap_concerns?: string;
-    redundancy_concerns?: string;
-  };
-  data_readiness?: {
-    readiness_level: string;
-    readiness_score: number;
-    suitability: string;
-  };
-  recommended_actions?: Array<{
+  key_strengths?: string[];
+  key_risks?: string[];
+  priority_actions?: Array<{
     priority: "critical" | "moderate" | "minor";
     action: string;
     rationale: string;
+    expected_impact: string;
   }>;
+  technical_notes?: string[];
 }
 
 // ---- App State ----

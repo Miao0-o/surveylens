@@ -1,15 +1,13 @@
 // ============================================================
-// AI Client — Multi-Layer Prompt Pipeline (v3.0)
-// Zero-backend: llm.call() → router → provider (OpenRouter | Anthropic)
-// Layer 0-3: Prompt pipeline
-// Layer 4: Hallucination Checker
+// AI Client — Multi-Layer Prompt Pipeline (v5.0)
+// Zero-backend: llm.call() → router → provider
 // ============================================================
-// promptVersion: executive_summary_v4.0
+// promptVersion: consultant_report_v2.0
 
 import type { AICompressedInput, AIResults, AIAdvisorSuggestion, ValidationReport } from "@/types";
 import { llmCall } from "./llm-router";
 
-export const PROMPT_VERSION = "executive_summary_v4.0";
+export const PROMPT_VERSION = "consultant_report_v2.0";
 
 // ============================================================
 // LAYER 0: SYSTEM CONTRACT (hard constraints, non-overridable)
@@ -254,85 +252,74 @@ CRITICAL RULES:
 - Be conservative and precise
 - Focus on patterns and priorities, not exhaustively listing every result
 
-# UNIFIED OUTPUT PROTOCOL (STRICT JSON)
+# UNIFIED OUTPUT PROTOCOL (STRICT JSON — Report v2.0)
 
 {
   "language": "zh-CN or en-US (same as input language)",
 
   "executive_summary": {
-    "overall_assessment": "1-2 sentence overall assessment of dataset readiness",
-    "key_strengths": "1-2 sentence summary of strongest findings",
-    "key_concerns": "1-2 sentence summary of most important concerns"
+    "overall_assessment": "1-2 paragraphs: Is the dataset suitable? What are the most important strengths and concerns?",
+    "readiness": "READY | REVIEW REQUIRED | NOT READY — and 1 sentence why"
   },
 
-  "reliability": {
-    "summary": "Brief summary: which scales meet α ≥ .70, which need review. Do not list every item.",
-    "scales_meeting": ["ScaleA (α=.84)", "ScaleB (α=.79)"],
-    "scales_needing_review": ["ScaleC (α=.52)"],
-    "item_concerns": "Only mention if severe item-level issues exist (e.g., item-total r < .10). Otherwise omit."
-  },
+  "key_strengths": [
+    "Concise finding grounded in evidence. Example: 'Most scales demonstrate acceptable reliability (mean α = .82).'",
+    "Keep 2-4 items. Only include if evidence is clear."
+  ],
 
-  "factor_structure": {
-    "summary": "Brief: KMO, Bartlett, and whether the observed structure supports intended scales.",
-    "structure_consistency_notes": "If consistency data exists, note which scales are well-supported and which diverge."
-  },
+  "key_risks": [
+    "Risk description sorted by severity. Example: 'Belong scale shows low internal consistency (α=.52).'",
+    "Keep 2-5 items. Prioritize critical and high-severity findings."
+  ],
 
-  "construct_relationships": {
-    "summary": "Brief: major relationship patterns. Highlight strong relationships and potential overlap. Do NOT claim convergent/discriminant validity.",
-    "overlap_concerns": "Pairs with |r| ≥ .80 if any exist. Otherwise omit.",
-    "redundancy_concerns": "Pairs with |r| ≥ .90 if any exist. Otherwise omit."
-  },
-
-  "data_readiness": {
-    "readiness_level": "READY | REVIEW REQUIRED | NOT READY",
-    "readiness_score": 85,
-    "suitability": "1 sentence on whether the dataset is suitable for downstream analysis"
-  },
-
-  "recommended_actions": [
+  "priority_actions": [
     {
       "priority": "critical | moderate | minor",
-      "action": "specific, actionable recommendation",
-      "rationale": "brief reason grounded in specific statistical evidence"
+      "action": "specific, actionable step",
+      "rationale": "brief evidence-grounded reason",
+      "expected_impact": "what improvement may result — use probabilistic language (may, could, potentially)"
     }
   ],
 
+  "technical_notes": [
+    "Brief methodological observation. Example: 'KMO=.89 indicates the correlation matrix is well-suited for factor analysis.'",
+    "Keep 1-3 items. Explain methodological context without repeating statistics."
+  ],
+
   "reporting": {
-    "apa_result": "APA 7th format results paragraph (scale-level summary, not item-by-item)"
+    "apa_result": "APA 7th format results paragraph (scale-level summary)"
   }
 }
 
 # SECTION GUIDANCE
 
 ## Executive Summary
-Answer the 3 questions: ready? strengths? concerns?
-Limit to 1-2 short paragraphs total.
-This is what a busy researcher reads first. Make it count.
+Synthesize, don't narrate. Answer: Is this dataset ready? What are the biggest issues?
+Limit to 1-2 paragraphs. This is the most important section.
 
-## Reliability
-Focus on SCALE-level reliability.
-List scales meeting threshold and scales needing review.
-Only mention specific items if item-total correlation is extremely low (< .10) or negative.
-Do NOT generate per-item diagnostics unless severe.
+## Key Strengths
+Highlight genuinely positive findings. Don't force positivity if data is poor.
+Be specific: name scales, cite values.
 
-## Factor Structure
-Report KMO and Bartlett briefly.
-If structure consistency exists, summarize which scales are supported.
-Do NOT list eigenvalues or individual loadings.
+## Key Risks
+Prioritize by severity. Each risk should be a single clear finding.
+Describe what's wrong AND why it matters.
 
-## Construct Relationships
-Summarize major patterns: strong relationships, potential overlap, redundancy.
-Do NOT claim "convergent validity supported" or "discriminant validity supported" unless theoretical expectations are explicitly provided in the research design.
+## Priority Actions
+Order by execution priority. Most critical first.
+Each action: what to do + why + expected benefit.
+Use cautious language: may, could, potentially.
 
-## Data Readiness
-Provide readiness level and score.
-1 sentence on overall suitability.
+## Technical Notes
+Brief methodological context. Not a stats lecture.
+Help the researcher understand method implications.
 
-## Recommended Actions
-Prioritize: critical first, then moderate, then minor.
-Each action MUST be specific and traceable to statistical evidence.
-Maximum 5-6 actions total. Prioritize actionable findings.
-Do NOT repeat the same action in different words.
+## FORBIDDEN
+✘ "Must remove item"
+✘ "Scale is invalid"
+✘ Definitive validity claims
+✘ Causal claims
+✘ Repeating raw statistics verbatim
 
 # CROSS-LEVEL INTERPRETATION RULES
 
