@@ -398,7 +398,6 @@ export function OverviewDashboard({ results }: Props) {
     return result;
   }, [failedGates, failingScales, weakItems, overlapPairs, redundancyPairs, meta.sampleSize, en]);
 
-  console.log("[OverviewDashboard] rendering, score:", readinessScore, "status:", status.level, "stabilityLevel:", stability.stabilityLevel);
   return (
     <div className="space-y-5">
       {/* === HEADER: Status + Score === */}

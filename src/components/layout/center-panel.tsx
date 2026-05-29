@@ -50,13 +50,15 @@ export function CenterPanel() {
   const analysisStage = useAppStore((s) => s.analysisStage);
   const results = useAppStore((s) => s.results);
   const descriptiveResults = useAppStore((s) => s.descriptiveResults);
+  const columns = useAppStore((s) => s.columns);
+  const researchDesign = useAppStore((s) => s.researchDesign);
   const lang = useAppStore((s) => s.reportLanguage);
   const en = lang === "en";
   const [activeTab, setActiveTab] = useState<string>("overview");
 
   const tl = (key: string) => t(key, lang);
 
-  const analysisMode = detectAnalysisMode(useAppStore((s) => s.researchDesign));
+  const analysisMode = detectAnalysisMode(researchDesign);
   const activeModules = useMemo(() => results ? getActiveModulesForMode(results, analysisMode) : [], [results, analysisMode]);
   const insights = useMemo(() => results ? getOneLineAPA(results, lang) : {}, [results, lang]);
   const summaryZH = useMemo(() => results ? getSummaryAPA(results, "zh") : "", [results]);
@@ -104,12 +106,6 @@ export function CenterPanel() {
 
   if (!results) return null;
 
-  // DEBUG: trace result shape before rendering
-  console.log("[CenterPanel] results keys:", Object.keys(results));
-  console.log("[CenterPanel] stability:", JSON.stringify({ sl: results.stability?.stabilityLevel, n: results.stability?.recommendedSampleSize, acLen: results.stability?.alphaCurve?.length }));
-  console.log("[CenterPanel] reliability alpha:", results.reliability?.cronbachsAlpha);
-  console.log("[CenterPanel] validity kmo:", results.validity?.kmo);
-
   // ---- Results ----
   return (
     <div id="report-content" className="space-y-5">
@@ -131,7 +127,7 @@ export function CenterPanel() {
           <DiagnosticDashboard />
           <AnalysisMatrixCard />
           <OverviewDashboard results={results} />
-          <ProblematicItemsCard results={results} columns={useAppStore((s) => s.columns)} />
+          <ProblematicItemsCard results={results} columns={columns} />
           <ImprovementRecommendations results={results} />
         </div>
       )}

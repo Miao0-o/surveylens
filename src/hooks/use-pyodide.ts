@@ -632,23 +632,37 @@ export function usePyodide() {
 
       await py.runPythonAsync(step.fn);
 
-      // PHASE 1 DEBUG: Hard-disable Python bootstrap to isolate crash source
-      if (step.id === "stability") {
+      // Safe fallback for stability: skip if data is too thin
+      const callCode = step.id === "stability"
+        ? (() => {
+            const data = isItemLevel ? itemData : scaleData;
+            if (!data || data.length < 2 || (data[0]?.length ?? 0) < 2) return null;
+            return `run_stability(__data_json__, 200)`;
+          })()
+        : `run_${step.id}(__data_json__)`;
+      if (callCode === null) {
         results[step.id] = {
           bootstrapSamples: 0, alphaCurve: [],
           stabilityLevel: null, recommendedSampleSize: null, elbowPoint: null,
-          _meta: { status: "not_applicable", errorType: "disabled_for_debug", message: "DEBUG: Bootstrap disabled to isolate crash." }
+          _meta: { status: "not_applicable", errorType: "insufficient_data" }
         };
         continue;
       }
-
-      const callCode = `run_${step.id}(__data_json__)`;
-      const resultJson = await py.runPythonAsync(callCode) as string;
-      const parsed = JSON.parse(resultJson as string);
-      if ((parsed as Record<string, unknown>).error) {
-        throw new Error(`Step ${step.id}: ${(parsed as Record<string, unknown>).error}`);
+      try {
+        const resultJson = await py.runPythonAsync(callCode) as string;
+        const parsed = JSON.parse(resultJson as string);
+        if ((parsed as Record<string, unknown>).error) {
+          throw new Error(`Step ${step.id}: ${(parsed as Record<string, unknown>).error}`);
+        }
+        results[step.id] = parsed as Record<string, unknown>;
+      } catch (e) {
+        console.warn(`[analysis] Stability step failed:`, e instanceof Error ? e.message : e);
+        results[step.id] = {
+          bootstrapSamples: 0, alphaCurve: [],
+          stabilityLevel: null, recommendedSampleSize: null, elbowPoint: null,
+          _meta: { status: "not_applicable", errorType: "bootstrap_failure", message: `Bootstrap stability could not be computed: ${e instanceof Error ? e.message : String(e)}` }
+        };
       }
-      results[step.id] = parsed as Record<string, unknown>;
     }
 
     // Store descriptive results
