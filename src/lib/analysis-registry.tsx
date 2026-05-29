@@ -86,8 +86,8 @@ export const analysisRegistry: AnalysisModule[] = [
     ),
   },
   {
-    id: "construct-validity",
-    label: "构念效度",
+    id: "validity",
+    label: "效度",
     sourceKey: "validity",
     summarize: (r) => {
       const n = r.validity.correlationMatrix.length;

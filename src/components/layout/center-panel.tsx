@@ -175,10 +175,10 @@ export function CenterPanel() {
         </div>
       )}
 
-      {/* Construct Validity: scale-level correlation heatmap + auto-interpretation */}
-      {activeTab === "construct-validity" && (
+      {/* Validity: scale-level correlation heatmap + relationship interpretation */}
+      {activeTab === "validity" && (
         results.validity.correlationMatrix.length > 0 ? (
-          <ResultCard title={t("section.construct-validity", lang)} insight={insights["construct-validity"]}>
+          <ResultCard title={t("section.construct-validity", lang)} insight={insights["validity"]}>
             <div className="space-y-4">
               <ChartWrapper title={t("section.heatmap", lang)}>
                 <CorrelationHeatmap data={results.validity} />

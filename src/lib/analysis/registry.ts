@@ -14,7 +14,7 @@ import { resolveSelectedVars } from "@/lib/stats/composite";
 export type AnalysisMode = "single" | "multi" | "exploratory";
 
 /** Module IDs that only apply in multi-scale mode */
-const MULTI_SCALE_ONLY = new Set(["construct-validity", "scale-consistency"]);
+const MULTI_SCALE_ONLY = new Set(["validity", "scale-consistency"]);
 
 /** Detect analysis mode from research design and available scales */
 export function detectAnalysisMode(
@@ -111,8 +111,8 @@ export const analysisModules: AnalysisModule[] = [
     },
   },
   {
-    id: "construct-validity",
-    label: "构念效度",
+    id: "validity",
+    label: "效度",
     intents: ["validate", "explore"],
     sourceStep: "correlation",
     isAvailable: (r) => r.validity.correlationMatrix.length > 0,
