@@ -21,9 +21,12 @@ export function detectAnalysisMode(
   researchDesign: { outcomeVariables?: string[]; predictorVariables?: string[] } | null
 ): AnalysisMode {
   const allVars = [...(researchDesign?.outcomeVariables ?? []), ...(researchDesign?.predictorVariables ?? [])];
+  // No user selection → no construct definitions → exploratory
   if (allVars.length === 0) return "exploratory";
   const { composites } = resolveSelectedVars(allVars);
-  if (composites.length <= 1) return "single";
+  // 0 composites with raw items selected → exploratory (unknown structure)
+  if (composites.length === 0) return "exploratory";
+  if (composites.length === 1) return "single";
   return "multi";
 }
 
