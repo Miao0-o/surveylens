@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useAppStore } from "@/lib/store";
 import { scanItemRisks } from "@/lib/analysis/item-risk-scanner";
 import { resolveSelectedVars } from "@/lib/stats/composite";
+import { buildAnalysisScope, scopedMissingRate } from "@/lib/analysis/scope-filter";
 import type { AnalysisResults } from "@/types";
 import { AlertTriangle, Lightbulb, ArrowRight } from "lucide-react";
 
@@ -50,6 +51,8 @@ export function ImprovementRecommendations({ results }: Props) {
     const allVars = [...(design?.outcomeVariables ?? []), ...(design?.predictorVariables ?? [])];
     const { composites } = resolveSelectedVars(allVars);
     const dims = reliability.dimensions ?? [];
+    const scope = buildAnalysisScope(columns, design ? { outcomeVariables: design.outcomeVariables, predictorVariables: design.predictorVariables } : null);
+    const missRate = scopedMissingRate(columns, scope);
 
     // ---- SCALE-LEVEL: Low reliability ----
     for (const d of dims) {
@@ -190,10 +193,7 @@ export function ImprovementRecommendations({ results }: Props) {
       }
     }
 
-    // ---- DATASET-LEVEL: Missing data ----
-    const totalMiss = columns.reduce((s, c) => s + c.missingCount, 0);
-    const totalCells = columns.reduce((s, c) => s + c.uniqueValues + c.missingCount, 0);
-    const missRate = totalCells > 0 ? totalMiss / totalCells : 0;
+    // ---- DATASET-LEVEL: Missing data (scoped) ----
     if (missRate >= 0.20) {
       recs.push({
         priority: missRate >= 0.30 ? "critical" : "moderate",

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useAppStore } from "@/lib/store";
 import { scanItemRisks } from "@/lib/analysis/item-risk-scanner";
 import { resolveSelectedVars } from "@/lib/stats/composite";
+import { buildAnalysisScope, filterColumnsToScope } from "@/lib/analysis/scope-filter";
 import type { AnalysisResults, ColumnInfo } from "@/types";
 import { AlertTriangle, ArrowRight, Lightbulb } from "lucide-react";
 
@@ -34,7 +35,9 @@ export function ProblematicItemsCard({ results, columns }: Props) {
   const report = useMemo(() => {
     const allVars = [...(design?.outcomeVariables ?? []), ...(design?.predictorVariables ?? [])];
     const { composites } = resolveSelectedVars(allVars);
-    return scanItemRisks(results, columns, composites, en);
+    const scope = buildAnalysisScope(columns, design ? { outcomeVariables: design.outcomeVariables, predictorVariables: design.predictorVariables } : null);
+    const scopedColumns = filterColumnsToScope(columns, scope);
+    return scanItemRisks(results, scopedColumns, composites, en);
   }, [results, columns, design, en]);
 
   if (report.items.length === 0) return null;

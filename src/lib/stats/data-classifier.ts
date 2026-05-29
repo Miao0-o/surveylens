@@ -5,6 +5,7 @@
 // ============================================================
 
 import type { ColumnInfo, ParsedData } from "@/types";
+import { isMetadataColumn } from "@/lib/analysis/scope-filter";
 
 export type ColumnClass = "item_scale" | "metadata" | "unknown";
 
@@ -116,6 +117,10 @@ function classifyColumn(
   _data: ParsedData,
   en = false
 ): { class: ColumnClass; reason: string } {
+  // Force metadata columns to metadata regardless of data profile
+  if (isMetadataColumn(col.name)) {
+    return { class: "metadata", reason: en ? "System/metadata column (auto-excluded)" : "系统/元数据列（自动排除）" };
+  }
   // Already classified as Likert by the preprocessing engine
   if (col.type === "likert") {
     return { class: "item_scale", reason: en ? "Likert-scale item (2-7 levels)" : "Likert 量表题（2-7 级数值）" };

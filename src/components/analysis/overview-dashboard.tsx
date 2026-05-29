@@ -7,6 +7,7 @@ import { resolveSelectedVars } from "@/lib/stats/composite";
 import { computeScaleConsistency } from "@/lib/analysis/scale-consistency";
 import { detectAnalysisMode } from "@/lib/analysis/registry";
 import { scanItemRisks } from "@/lib/analysis/item-risk-scanner";
+import { buildAnalysisScope, scopedMissingRate } from "@/lib/analysis/scope-filter";
 import { CheckCircle2, AlertTriangle, XCircle, Shield, TrendingUp, ArrowRight, Info } from "lucide-react";
 
 interface Props {
@@ -217,13 +218,12 @@ export function OverviewDashboard({ results }: Props) {
   const allVars = [...(design?.outcomeVariables ?? []), ...(design?.predictorVariables ?? [])];
   const { composites } = useMemo(() => resolveSelectedVars(allVars), [allVars]);
 
-  // Missing data rate
-  const missingRate = useMemo(() => {
-    if (columns.length === 0) return -1;
-    const totalMiss = columns.reduce((s, c) => s + c.missingCount, 0);
-    const totalCells = columns.reduce((s, c) => s + c.uniqueValues + c.missingCount, 0);
-    return totalCells > 0 ? totalMiss / totalCells : 0;
-  }, [columns]);
+  // Analysis scope + scoped missing rate
+  const scope = useMemo(
+    () => buildAnalysisScope(columns, design ? { outcomeVariables: design.outcomeVariables, predictorVariables: design.predictorVariables } : null),
+    [columns, design]
+  );
+  const missingRate = useMemo(() => scopedMissingRate(columns, scope), [columns, scope]);
 
   // Scale consistency
   const consistencyReport = useMemo(
@@ -462,6 +462,15 @@ export function OverviewDashboard({ results }: Props) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Analysis scope note */}
+      {scope.excludedColumns.length > 0 && (
+        <div className="text-[10px] text-muted-foreground/60 px-1">
+          {en
+            ? `Analysis is based on selected variables and defined scales. ${scope.excludedColumns.length} metadata column(s) excluded (e.g., ${scope.excludedColumns.slice(0, 3).join(", ")}${scope.excludedColumns.length > 3 ? "…" : ""}).`
+            : `分析基于已选变量与定义的量表。已排除 ${scope.excludedColumns.length} 个元数据列（如 ${scope.excludedColumns.slice(0, 3).join("、")}${scope.excludedColumns.length > 3 ? "…" : ""}）。`}
         </div>
       )}
 
