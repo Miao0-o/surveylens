@@ -17,7 +17,20 @@ interface Rec {
   issue: string;
   recommendation: string;
   impact: string;
+  confidence: "high" | "moderate" | "low";
 }
+
+const confidenceLabel = {
+  high: { zh: "高置信度", en: "High confidence" },
+  moderate: { zh: "中等置信度", en: "Moderate confidence" },
+  low: { zh: "低置信度", en: "Low confidence" },
+} as const;
+
+const confidenceColor = {
+  high: "text-emerald-600 bg-emerald-50",
+  moderate: "text-amber-600 bg-amber-50",
+  low: "text-muted-foreground bg-secondary/20",
+} as const;
 
 const prioConfig = {
   critical: { dot: "bg-red-400", text: "text-red-600", bg: "bg-red-50 border-red-100", label: { zh: "严重", en: "Critical" } },
@@ -59,6 +72,7 @@ export function ImprovementRecommendations({ results }: Props) {
               ? `May improve reliability: α ${d.cronbachsAlpha.toFixed(2)} → ~${potAlpha.toFixed(2)}`
               : `可能提升信度: α ${d.cronbachsAlpha.toFixed(2)} → ~${potAlpha.toFixed(2)}`)
             : (en ? "Scale reliability may move toward acceptable levels." : "量表信度可能趋向可接受水平。"),
+          confidence: "moderate",
         });
       }
     }
@@ -72,6 +86,7 @@ export function ImprovementRecommendations({ results }: Props) {
           ? "Review items with low item-total correlations. Consider revising or replacing the weakest items."
           : "检查题总相关较低的题项。可考量修订或替换最弱的题项。",
         impact: en ? "May improve internal consistency toward acceptable levels." : "可能提升内部一致性至可接受水平。",
+        confidence: "moderate",
       });
     }
 
@@ -79,16 +94,22 @@ export function ImprovementRecommendations({ results }: Props) {
     const riskReport = scanItemRisks(results, columns, composites, en);
     for (const r of riskReport.items.slice(0, 5)) {
       let impact = "";
+      let confidence: Rec["confidence"] = "moderate";
       if (r.primaryIssue.type === "reverse_coded") {
         impact = en ? "Correcting coding may substantially improve reliability estimates." : "修正编码可能显著改善信度估计。";
+        confidence = "high";
       } else if (r.primaryIssue.type === "low_item_total") {
         impact = en ? "Removing or revising this item may improve scale reliability." : "删除或修订此题项可能提升量表信度。";
+        confidence = "moderate";
       } else if (r.primaryIssue.type === "alpha_improvement") {
         impact = en ? "Removing this item may increase Cronbach's α." : "删除此题项可能提升 Cronbach's α。";
+        confidence = "moderate";
       } else if (r.primaryIssue.type === "cross_loading") {
         impact = en ? "Reviewing item placement may improve factor structure clarity." : "审视题项归属可能改善因子结构清晰度。";
+        confidence = "moderate";
       } else if (r.primaryIssue.type === "high_missing") {
         impact = en ? "Addressing missing data may improve estimate stability." : "处理缺失数据可能提升估计稳定性。";
+        confidence = "low";
       }
       recs.push({
         priority: r.severity === "critical" || r.severity === "high" ? "critical" : r.severity === "moderate" ? "moderate" : "minor",
@@ -98,6 +119,7 @@ export function ImprovementRecommendations({ results }: Props) {
           : `${r.item}${r.scale ? ` (${r.scale})` : ""}: ${r.primaryIssue.label}`,
         recommendation: r.suggestedAction,
         impact,
+        confidence,
       });
     }
 
@@ -120,6 +142,7 @@ export function ImprovementRecommendations({ results }: Props) {
                 ? "These constructs are extremely highly correlated and may represent redundant measurements. Consider consolidating or examining conceptual distinction."
                 : "这些构念关联极强，可能代表冗余测量。建议考量合并或审视概念区分。",
               impact: en ? "Improved construct distinctiveness and interpretability." : "提升构念区分度与可解释性。",
+              confidence: "low",
             });
           } else if (Math.abs(r) >= 0.80) {
             recs.push({
@@ -130,6 +153,7 @@ export function ImprovementRecommendations({ results }: Props) {
                 ? "These constructs are highly correlated and may partially overlap. Review their conceptual distinction."
                 : "这些构念高度相关，可能存在部分重叠。请审视其概念区分。",
               impact: en ? "Stronger construct distinctiveness and clearer factor interpretation." : "增强构念区分度与因子解释清晰度。",
+              confidence: "low",
             });
           }
         }
@@ -160,6 +184,7 @@ export function ImprovementRecommendations({ results }: Props) {
               ? "Compare the metadata-defined scale with the observed factor structure. Review items loading onto unexpected factors."
               : "将元数据定义的量表与实测因子结构对比。审视载荷于非预期因子的题项。",
             impact: en ? "Improved alignment between metadata-defined scales and observed factor structure." : "改善元数据定义量表与实测因子结构之间的一致性。",
+            confidence: "moderate",
           });
         }
       }
@@ -178,6 +203,7 @@ export function ImprovementRecommendations({ results }: Props) {
           ? "Review the missing-data handling strategy. Consider multiple imputation, full-information maximum likelihood, or pairwise deletion where appropriate."
           : "审视缺失数据处理策略。可考量多重插补、全信息最大似然法或成对删除等方法。",
         impact: en ? "More stable parameter estimates and improved readiness classification." : "更稳定的参数估计与改善的准备度分类。",
+        confidence: "low",
       });
     }
 
@@ -193,6 +219,7 @@ export function ImprovementRecommendations({ results }: Props) {
         impact: en
           ? `Larger samples may produce more stable estimates and narrower confidence intervals.${stability.recommendedSampleSize > 0 ? ` Recommended N ≥ ${stability.recommendedSampleSize}.` : ""}`
           : `增加样本量可能产生更稳定的估计与更窄的置信区间。${stability.recommendedSampleSize > 0 ? ` 推荐 N ≥ ${stability.recommendedSampleSize}。` : ""}`,
+        confidence: "high",
       });
     }
 
@@ -206,6 +233,7 @@ export function ImprovementRecommendations({ results }: Props) {
           ? `Consider increasing sample size (recommended N ≥ ${stability.recommendedSampleSize}). Small samples may produce unreliable reliability estimates.`
           : `建议增加样本量（推荐 N ≥ ${stability.recommendedSampleSize}）。小样本可能产生不可靠的信度估计。`,
         impact: en ? "More reliable estimates and improved readiness score." : "更可靠的信度估计与提升的准备度分数。",
+        confidence: "high",
       });
     }
 
@@ -258,6 +286,9 @@ export function ImprovementRecommendations({ results }: Props) {
                   {rec.impact && (
                     <p className="text-[10px] text-blue-600/70 ml-4 mt-1">
                       {en ? "Expected impact: " : "预期影响: "}{rec.impact}
+                      <span className={`ml-1.5 text-[9px] px-1 py-0 rounded ${confidenceColor[rec.confidence]}`}>
+                        {confidenceLabel[rec.confidence][lang]}
+                      </span>
                     </p>
                   )}
                 </div>
