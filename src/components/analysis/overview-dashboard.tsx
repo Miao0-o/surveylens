@@ -429,6 +429,23 @@ export function OverviewDashboard({ results }: Props) {
         </p>
       </div>
 
+      {/* Quick Mode multi-scale hint */}
+      {isExploratory && meta.itemCount > 50 && efa.suggestedFactors > 5 && (
+        <div className="rounded-lg bg-amber-50/30 border border-amber-100/50 p-3 flex items-start gap-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" strokeWidth={1.5} />
+          <div className="text-[11px]">
+            <p className="font-medium text-amber-700 mb-0.5">
+              {en ? "Multi-scale dataset detected" : "检测到多量表数据集"}
+            </p>
+            <p className="text-amber-600/80">
+              {en
+                ? `This dataset contains ${meta.itemCount} items and Kaiser criterion suggests ${efa.suggestedFactors} factors, which likely reflects multiple underlying constructs. Quick Mode provides exploratory diagnostics only. For scale-level psychometric evaluation, switch to Custom Mode and define your scales.`
+                : `此数据集包含 ${meta.itemCount} 个题项，Kaiser 准则建议 ${efa.suggestedFactors} 个因子，这很可能反映多个潜在构念。快速模式仅提供探索性诊断。如需量表级心理测量评估，请切换到自定义模式并定义你的量表。`}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Single-scale / exploratory notice */}
       {(isSingleScale || isExploratory) && (
         <div className="rounded-lg bg-blue-50/30 border border-blue-100/50 p-3 flex items-start gap-2">

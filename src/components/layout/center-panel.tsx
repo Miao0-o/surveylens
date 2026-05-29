@@ -173,6 +173,17 @@ export function CenterPanel() {
                 <EFACard data={results.efa} />
                 <FactorStructure data={results.efa} />
               </div>
+              {/* Factor interpretation safety: warn when many factors found in Quick Mode */}
+              {analysisMode === "exploratory" && results.efa.suggestedFactors > 10 && (
+                <div className="rounded-lg bg-amber-50/40 border border-amber-100/50 p-3 text-[11px] text-amber-700">
+                  <p className="font-medium mb-1">{en ? "Interpret with Caution" : "谨慎解读"}</p>
+                  <p>
+                    {en
+                      ? `Kaiser criterion suggests ${results.efa.suggestedFactors} factors, which likely reflects multiple underlying constructs. This is an exploratory result — do not use as a definitive factor count. Define scales in Custom Mode for construct-level factor analysis.`
+                      : `Kaiser 准则建议 ${results.efa.suggestedFactors} 个因子，这很可能反映多个潜在构念。此为探索性结果——请勿作为确定因子数。在自定义模式中定义量表可进行构念级因子分析。`}
+                  </p>
+                </div>
+              )}
               {analysisMode === "multi" && <ScaleConsistencyCard results={results} />}
             </div>
           ) : results.validity._meta.status === "ok" ? null : (
