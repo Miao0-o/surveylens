@@ -28,7 +28,7 @@ export interface ClassificationResult {
  * Classify each column and determine the overall dataset type.
  * Runs entirely in JS — no Pyodide needed.
  */
-export function classifyDataset(columns: ColumnInfo[], data: ParsedData): ClassificationResult {
+export function classifyDataset(columns: ColumnInfo[], data: ParsedData, en = false): ClassificationResult {
   const result: ClassificationResult = {
     datasetType: "insufficient",
     columns: [],
@@ -40,7 +40,7 @@ export function classifyDataset(columns: ColumnInfo[], data: ParsedData): Classi
   };
 
   if (columns.length === 0) {
-    result.warnings.push("数据集中未检测到任何列。");
+    result.warnings.push(en ? "No columns detected in the dataset." : "数据集中未检测到任何列。");
     return result;
   }
 
@@ -70,7 +70,9 @@ export function classifyDataset(columns: ColumnInfo[], data: ParsedData): Classi
     result.canRunReliability = false;
     result.canRunEFA = false;
     result.warnings.push(
-      "当前数据集不包含 Likert 量表题项，无法进行 Cronbach's α 信度分析。将仅提供描述性统计与相关矩阵分析。"
+      en
+        ? "No Likert-scale items detected — Cronbach's α reliability analysis cannot be performed. Only descriptive statistics and correlation analysis will be provided."
+        : "当前数据集不包含 Likert 量表题项，无法进行 Cronbach's α 信度分析。将仅提供描述性统计与相关矩阵分析。"
     );
   } else if (itemCount >= 1 && metadataCount >= 1) {
     result.datasetType = "mixed";
@@ -78,23 +80,29 @@ export function classifyDataset(columns: ColumnInfo[], data: ParsedData): Classi
       result.canRunReliability = true;
       result.canRunEFA = itemCount >= 5;
       result.warnings.push(
-        `数据集中包含 ${metadataCount} 个非量表列（如人口学变量、汇总分），将自动排除，仅对 ${itemCount} 个量表题项进行信效度分析。`
+        en
+          ? `Found ${metadataCount} non-scale columns (e.g., demographics, summary scores) — automatically excluded. Only ${itemCount} scale items will be analyzed.`
+          : `数据集中包含 ${metadataCount} 个非量表列（如人口学变量、汇总分），将自动排除，仅对 ${itemCount} 个量表题项进行信效度分析。`
       );
     } else {
       result.canRunReliability = false;
       result.canRunEFA = false;
       result.warnings.push(
-        `量表题项不足（仅 ${itemCount} 个），至少需要 3 个 Likert 题项才能进行信度分析。`
+        en
+          ? `Insufficient scale items (only ${itemCount}). At least 3 Likert items are required for reliability analysis.`
+          : `量表题项不足（仅 ${itemCount} 个），至少需要 3 个 Likert 题项才能进行信度分析。`
       );
     }
   } else if (itemCount < 3 && itemCount > 0) {
     result.datasetType = "insufficient";
     result.warnings.push(
-      `量表题项不足（仅 ${itemCount} 个），至少需要 3 个 Likert 题项才能进行信度分析。`
+      en
+        ? `Insufficient scale items (only ${itemCount}). At least 3 Likert items are required for reliability analysis.`
+        : `量表题项不足（仅 ${itemCount} 个），至少需要 3 个 Likert 题项才能进行信度分析。`
     );
   } else {
     result.datasetType = "insufficient";
-    result.warnings.push("无法确定数据类型，请检查数据格式。");
+    result.warnings.push(en ? "Unable to determine data type. Please check data format." : "无法确定数据类型，请检查数据格式。");
   }
 
   return result;
@@ -105,21 +113,22 @@ export function classifyDataset(columns: ColumnInfo[], data: ParsedData): Classi
  */
 function classifyColumn(
   col: ColumnInfo,
-  data: ParsedData
+  _data: ParsedData,
+  en = false
 ): { class: ColumnClass; reason: string } {
   // Already classified as Likert by the preprocessing engine
   if (col.type === "likert") {
-    return { class: "item_scale", reason: "Likert 量表题（2-7 级数值）" };
+    return { class: "item_scale", reason: en ? "Likert-scale item (2-7 levels)" : "Likert 量表题（2-7 级数值）" };
   }
 
   // Text columns → metadata
   if (col.type === "text") {
-    return { class: "metadata", reason: "文本/分类变量" };
+    return { class: "metadata", reason: en ? "Text/categorical variable" : "文本/分类变量" };
   }
 
   // ID columns → metadata
   if (col.type === "id") {
-    return { class: "metadata", reason: "ID 标识列" };
+    return { class: "metadata", reason: en ? "ID column" : "ID 标识列" };
   }
 
   // Numeric columns — need deeper analysis
@@ -128,38 +137,38 @@ function classifyColumn(
 
     // Very wide range with many unique values → likely a total/summary score
     if (col.uniqueValues > 15 && range > 7) {
-      // Check if this looks like a summary score (sum of Likert items)
-      // Heuristic: if range is roughly proportional to the number of unique values
       if (range > 20) {
-        return { class: "metadata", reason: "连续/汇总变量（范围过大，非量表题项）" };
+        return { class: "metadata", reason: en ? "Continuous/summary variable (range too wide for a scale item)" : "连续/汇总变量（范围过大，非量表题项）" };
       }
     }
 
     // Moderate range, many values → could be continuous demographic (age, income)
     if (range > 10 && col.uniqueValues > 20) {
-      return { class: "metadata", reason: "连续变量（范围与唯一值过多）" };
+      return { class: "metadata", reason: en ? "Continuous variable (wide range, many unique values)" : "连续变量（范围与唯一值过多）" };
     }
 
     // Low range (<=7) but not caught as Likert → could be binary or small-range
     if (range <= 7 && col.uniqueValues <= 7) {
-      return { class: "item_scale", reason: "低范围数值题项（疑似量表但未自动识别为 Likert）" };
+      return { class: "item_scale", reason: en ? "Low-range numeric item (possible scale item not auto-detected as Likert)" : "低范围数值题项（疑似量表但未自动识别为 Likert）" };
     }
 
     // Catch-all for ambiguous numeric
-    return { class: "unknown", reason: "数值列但无法确定类型" };
+    return { class: "unknown", reason: en ? "Numeric column, unable to classify" : "数值列但无法确定类型" };
   }
 
   // Default
-  return { class: "unknown", reason: "无法分类" };
+  return { class: "unknown", reason: en ? "Unable to classify" : "无法分类" };
 }
 
 /**
  * Determine if Cronbach's alpha is statistically meaningful for these columns.
  * Returns null if it IS appropriate, or a string reason if it's NOT.
  */
-export function validateReliabilityApplicability(classResult: ClassificationResult): string | null {
+export function validateReliabilityApplicability(classResult: ClassificationResult, en = false): string | null {
   if (classResult.itemColumns.length < 3) {
-    return "量表题项不足（至少需要 3 个 Likert 题项）。当前数据集不适用于内部一致性信度分析。";
+    return en
+      ? "Insufficient scale items (need ≥ 3 Likert items). Internal consistency reliability analysis is not applicable."
+      : "量表题项不足（至少需要 3 个 Likert 题项）。当前数据集不适用于内部一致性信度分析。";
   }
   return null; // OK to proceed
 }

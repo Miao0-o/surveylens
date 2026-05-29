@@ -88,7 +88,8 @@ export function DataPreview() {
     if (columns.length > 0 && rawData) {
       setColumns(columns);
       setLikertColumns(columns.filter((c) => c.type === "likert").map((c) => c.name));
-      const classResult = classifyDataset(columns, rawData);
+      const en = useAppStore.getState().reportLanguage === "en";
+      const classResult = classifyDataset(columns, rawData, en);
       useAppStore.getState().setClassification(classResult);
     }
   }, [columns, rawData, setColumns, setLikertColumns]);
