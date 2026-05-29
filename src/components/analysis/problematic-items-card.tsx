@@ -5,19 +5,26 @@ import { useAppStore } from "@/lib/store";
 import { scanItemRisks } from "@/lib/analysis/item-risk-scanner";
 import { resolveSelectedVars } from "@/lib/stats/composite";
 import type { AnalysisResults, ColumnInfo } from "@/types";
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { AlertTriangle, ArrowRight, Lightbulb } from "lucide-react";
 
 interface Props {
   results: AnalysisResults;
   columns: ColumnInfo[];
 }
 
-const severityConfig = {
-  critical: { bg: "bg-red-50 border-red-100", text: "text-red-700", dot: "bg-red-400", label: { zh: "严重", en: "Critical" } },
-  high: { bg: "bg-amber-50 border-amber-100", text: "text-amber-700", dot: "bg-amber-400", label: { zh: "高", en: "High" } },
-  moderate: { bg: "bg-blue-50 border-blue-100", text: "text-blue-700", dot: "bg-blue-400", label: { zh: "中", en: "Moderate" } },
-  low: { bg: "bg-secondary/20 border-border/50", text: "text-muted-foreground", dot: "bg-muted-foreground/30", label: { zh: "低", en: "Low" } },
-};
+const severityBadge = {
+  critical: "bg-red-50 text-red-700 border-red-100",
+  high: "bg-amber-50 text-amber-700 border-amber-100",
+  moderate: "bg-blue-50 text-blue-700 border-blue-100",
+  low: "bg-secondary/30 text-muted-foreground border-border/40",
+} as const;
+
+const severityLabel = {
+  critical: { zh: "严重", en: "Critical" },
+  high: { zh: "高", en: "High" },
+  moderate: { zh: "中", en: "Moderate" },
+  low: { zh: "低", en: "Low" },
+} as const;
 
 export function ProblematicItemsCard({ results, columns }: Props) {
   const lang = useAppStore((s) => s.reportLanguage);
@@ -34,6 +41,7 @@ export function ProblematicItemsCard({ results, columns }: Props) {
 
   return (
     <div className="space-y-3">
+      {/* Header */}
       <div className="flex items-center gap-2">
         <AlertTriangle className="w-4 h-4 text-amber-500" strokeWidth={1.5} />
         <span className="text-sm font-medium text-foreground">
@@ -46,38 +54,66 @@ export function ProblematicItemsCard({ results, columns }: Props) {
         </span>
         {report.criticalCount > 0 && (
           <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full">
-            {report.criticalCount} {en ? "critical" : "严重"}
+            {report.criticalCount}
           </span>
         )}
       </div>
 
-      <div className="space-y-1.5">
-        {report.items.map((r) => {
-          const cfg = severityConfig[r.severity];
-          return (
-            <div key={r.item} className={`rounded-lg border ${cfg.bg} px-3 py-2 flex items-start gap-2`}>
-              <span className={`w-2 h-2 rounded-full ${cfg.dot} shrink-0 mt-1.5`} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-foreground">{r.item}</span>
-                  {r.scale && <span className="text-[10px] text-muted-foreground/60">{r.scale}</span>}
-                  <span className={`text-[9px] px-1 py-0 rounded ${cfg.bg} ${cfg.text}`}>
-                    {cfg.label[lang]}
-                  </span>
-                </div>
-                <div className="mt-0.5 space-y-0.5">
-                  {r.sources.map((s, i) => (
-                    <p key={i} className="text-[10px] flex items-start gap-1">
-                      <ArrowRight className="w-2.5 h-2.5 shrink-0 mt-0.5 text-muted-foreground/40" />
+      {/* Items */}
+      <div className="space-y-2">
+        {report.items.map((r) => (
+          <div key={r.item} className="rounded-lg border border-border/50 bg-card p-3 space-y-2">
+            {/* Item header */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-foreground">{r.item}</span>
+              {r.scale && (
+                <span className="text-[10px] text-muted-foreground/60 bg-secondary/30 px-1.5 py-0.5 rounded">
+                  {r.scale}
+                </span>
+              )}
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${severityBadge[r.severity]}`}>
+                {severityLabel[r.severity][lang]}
+              </span>
+            </div>
+
+            {/* Primary issue */}
+            <div className="flex items-start gap-2">
+              <span className="text-[10px] text-red-500 font-medium shrink-0 mt-0.5">
+                {en ? "Primary:" : "主要问题："}
+              </span>
+              <div>
+                <span className="text-[11px] text-foreground">{r.primaryIssue.label}</span>
+                <span className="text-[10px] text-muted-foreground ml-1">({r.primaryIssue.detail})</span>
+              </div>
+            </div>
+
+            {/* Secondary issues */}
+            {r.secondaryIssues.length > 0 && (
+              <div className="flex items-start gap-2">
+                <span className="text-[10px] text-amber-500 font-medium shrink-0 mt-0.5">
+                  {en ? "Secondary:" : "次要："}
+                </span>
+                <div className="space-y-0.5">
+                  {r.secondaryIssues.map((s, i) => (
+                    <div key={i} className="flex items-center gap-1 text-[10px]">
+                      <ArrowRight className="w-2.5 h-2.5 text-muted-foreground/30 shrink-0" />
                       <span className="text-foreground/70">{s.label}</span>
-                      <span className="text-muted-foreground/60 ml-1">{s.detail}</span>
-                    </p>
+                      <span className="text-muted-foreground/50">({s.detail})</span>
+                    </div>
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* Suggested action */}
+            <div className="flex items-start gap-2">
+              <Lightbulb className="w-3 h-3 text-blue-400 shrink-0 mt-0.5" strokeWidth={1.5} />
+              <span className="text-[10px] text-blue-600/80">
+                {r.suggestedAction}
+              </span>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </div>
   );

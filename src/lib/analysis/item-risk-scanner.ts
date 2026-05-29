@@ -9,17 +9,26 @@ export type RiskSeverity = "critical" | "high" | "moderate" | "low";
 
 export interface ItemRisk {
   item: string;
-  scale?: string;            // which composite/scale the item belongs to
+  scale?: string;
   severity: RiskSeverity;
   sources: RiskSource[];
-  score: number;              // 0–100, higher = more problematic
+  score: number;
+  /** Strongest risk signal (determines primary diagnosis) */
+  primaryIssue: RiskSource;
+  /** Additional risk signals beyond the primary */
+  secondaryIssues: RiskSource[];
+  /** Actionable suggestion based on primary issue type */
+  suggestedAction: string;
 }
 
 export interface RiskSource {
-  type: "low_item_total" | "alpha_improvement" | "cross_loading" | "high_missing" | "reverse_coded";
+  type: RiskSourceType;
   label: string;
   detail: string;
+  weight: number;
 }
+
+export type RiskSourceType = "low_item_total" | "alpha_improvement" | "cross_loading" | "high_missing" | "reverse_coded";
 
 export interface RiskReport {
   items: ItemRisk[];
@@ -39,14 +48,19 @@ export function scanItemRisks(
 
   const ensure = (item: string): ItemRisk => {
     if (!itemRisks.has(item)) {
-      itemRisks.set(item, { item, severity: "low", sources: [], score: 0 });
+      itemRisks.set(item, {
+        item, severity: "low", sources: [], score: 0,
+        primaryIssue: { type: "low_item_total", label: "", detail: "", weight: 0 },
+        secondaryIssues: [],
+        suggestedAction: "",
+      });
     }
     return itemRisks.get(item)!;
   };
 
-  const addRisk = (item: string, source: RiskSource, weight: number) => {
+  const addRisk = (item: string, source: Omit<RiskSource, "weight">, weight: number) => {
     const r = ensure(item);
-    r.sources.push(source);
+    r.sources.push({ ...source, weight });
     r.score += weight;
   };
 
@@ -124,7 +138,7 @@ export function scanItemRisks(
     }
   }
 
-  // ---- Assign scales and finalize severity ----
+  // ---- Assign scales, primary/secondary issues, suggested actions ----
   const scaleMap = new Map<string, string>();
   for (const c of composites) {
     for (const item of c.sourceItems) {
@@ -132,9 +146,33 @@ export function scanItemRisks(
     }
   }
 
+  // Suggested actions by primary issue type
+  const actionTemplates: Record<RiskSourceType, (en: boolean, detail: string) => string> = {
+    reverse_coded: (e) => e
+      ? "Verify item coding direction and scoring rules."
+      : "核实题项编码方向与计分规则。",
+    low_item_total: (e) => e
+      ? "Review item wording clarity and construct alignment."
+      : "检查题项表述清晰度与构念对齐性。",
+    alpha_improvement: (e) => e
+      ? "Consider whether this item measures the same construct as others in the scale."
+      : "考量该题项是否与量表内其他题项测量同一构念。",
+    cross_loading: (e) => e
+      ? "Review whether this item conceptually belongs to multiple factors."
+      : "审视该题项是否在概念上属于多个因子。",
+    high_missing: (e, d) => e
+      ? `Inspect survey completion patterns (${d} missing). Check item placement and sensitivity.`
+      : `检查问卷完成模式（${d} 缺失），关注题项位置与敏感性。`,
+  };
+
   const items = Array.from(itemRisks.values()).map(r => {
     r.scale = scaleMap.get(r.item);
-    // Severity from score
+    // Sort by weight descending — primary = strongest signal
+    r.sources.sort((a, b) => b.weight - a.weight);
+    r.primaryIssue = r.sources[0];
+    r.secondaryIssues = r.sources.slice(1);
+    r.suggestedAction = actionTemplates[r.primaryIssue.type](en, r.primaryIssue.detail);
+    // Severity from raw score
     if (r.score >= 60) r.severity = "critical";
     else if (r.score >= 40) r.severity = "high";
     else if (r.score >= 20) r.severity = "moderate";
