@@ -5,7 +5,8 @@ import { useAppStore } from "@/lib/store";
 import type { AnalysisResults } from "@/types";
 import { resolveSelectedVars } from "@/lib/stats/composite";
 import { computeScaleConsistency } from "@/lib/analysis/scale-consistency";
-import { CheckCircle2, AlertTriangle, XCircle, Shield, TrendingUp, ArrowRight } from "lucide-react";
+import { detectAnalysisMode } from "@/lib/analysis/registry";
+import { CheckCircle2, AlertTriangle, XCircle, Shield, TrendingUp, ArrowRight, Info } from "lucide-react";
 
 interface Props {
   results: AnalysisResults;
@@ -235,6 +236,9 @@ export function OverviewDashboard({ results }: Props) {
   const passingScales = dims.filter(d => d.cronbachsAlpha >= 0.70);
   const failingScales = dims.filter(d => d.cronbachsAlpha < 0.70);
   const hasMultiScale = dims.length > 0;
+  const analysisMode = detectAnalysisMode(design ? { outcomeVariables: design.outcomeVariables, predictorVariables: design.predictorVariables } : null);
+  const isSingleScale = analysisMode === "single";
+  const isExploratory = analysisMode === "exploratory";
 
   // Construct relationships
   const corrMatrix = validity.correlationMatrix;
@@ -408,6 +412,22 @@ export function OverviewDashboard({ results }: Props) {
           )}
         </div>
       </div>
+
+      {/* Single-scale / exploratory notice */}
+      {(isSingleScale || isExploratory) && (
+        <div className="rounded-lg bg-blue-50/30 border border-blue-100/50 p-3 flex items-start gap-2">
+          <Info className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" strokeWidth={1.5} />
+          <p className="text-[11px] text-blue-600/80">
+            {isSingleScale
+              ? (en
+                ? "Single-scale questionnaire detected. Construct-level relationship analyses (Construct Validity, Scale Structure Consistency) are not applicable — only one construct is defined."
+                : "检测为单量表问卷。构念层面分析（构念效度、量表结构一致性）不适用——仅定义了一个构念。")
+              : (en
+                ? "No construct definitions found. Scale-level analyses are not available. Factor analysis and descriptive statistics will focus on discovering latent structure."
+                : "未发现构念定义。量表层分析不可用。因子分析与描述统计将聚焦于探索潜在结构。")}
+          </p>
+        </div>
+      )}
 
       {/* === QUALITY GATES === */}
       {gates.length > 0 && (
