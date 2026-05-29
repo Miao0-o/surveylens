@@ -104,6 +104,12 @@ export function CenterPanel() {
 
   if (!results) return null;
 
+  // DEBUG: trace result shape before rendering
+  console.log("[CenterPanel] results keys:", Object.keys(results));
+  console.log("[CenterPanel] stability:", JSON.stringify({ sl: results.stability?.stabilityLevel, n: results.stability?.recommendedSampleSize, acLen: results.stability?.alphaCurve?.length }));
+  console.log("[CenterPanel] reliability alpha:", results.reliability?.cronbachsAlpha);
+  console.log("[CenterPanel] validity kmo:", results.validity?.kmo);
+
   // ---- Results ----
   return (
     <div id="report-content" className="space-y-5">
