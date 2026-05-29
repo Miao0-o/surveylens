@@ -7,6 +7,7 @@ import { AlertTriangle, Info } from "lucide-react";
 interface Props {
   correlationMatrix: number[][];
   columnLabels: string[];
+  sampleSize?: number;
 }
 
 interface Observation {
@@ -16,7 +17,7 @@ interface Observation {
   text: string;
 }
 
-export function ConstructValiditySummary({ correlationMatrix, columnLabels }: Props) {
+export function ConstructValiditySummary({ correlationMatrix, columnLabels, sampleSize = 0 }: Props) {
   const lang = useAppStore((s) => s.reportLanguage);
   const en = lang === "en";
 
@@ -118,6 +119,14 @@ export function ConstructValiditySummary({ correlationMatrix, columnLabels }: Pr
     overlap.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
     redundancy.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
 
+    // Sample size caveat: small N can produce spurious high correlations
+    const smallSample = sampleSize > 0 && sampleSize < 50;
+    const nCaveat = smallSample
+      ? (en
+        ? `Note: small sample (N=${sampleSize}) — high correlations may reflect sampling fluctuation rather than true construct overlap. Interpret with caution.`
+        : `注意：样本量较小 (N=${sampleSize})，高相关性可能反映抽样波动而非真正的构念重叠。请谨慎解读。`)
+      : "";
+
     // Overall assessment
     const totalPairs = (n * (n - 1)) / 2;
     const concernCount = overlap.length + redundancy.length;
@@ -144,6 +153,8 @@ export function ConstructValiditySummary({ correlationMatrix, columnLabels }: Pr
         ? "The relationship pattern appears interpretable. Review individual pairs below for specific observations."
         : "构念间关联模式可解释。具体观察请参考下方详情。";
     }
+
+    if (nCaveat) assessment += " " + nCaveat;
 
     return { strong, moderate, weak, overlap, redundancy, assessment };
   }, [correlationMatrix, columnLabels, en]);
@@ -216,6 +227,13 @@ export function ConstructValiditySummary({ correlationMatrix, columnLabels }: Pr
           {observations.overlap.map((obs, i) => (
             <p key={i} className="text-[11px] text-amber-600/80 ml-5">{obs.text}</p>
           ))}
+          {sampleSize > 0 && sampleSize < 50 && observations.overlap.length > 0 && (
+            <p className="text-[10px] text-amber-500/60 ml-5 italic">
+              {en
+                ? `N=${sampleSize} — high r may reflect sampling fluctuation.`
+                : `N=${sampleSize} — 高 r 值可能反映抽样波动。`}
+            </p>
+          )}
         </div>
       )}
 

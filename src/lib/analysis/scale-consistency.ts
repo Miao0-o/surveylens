@@ -76,7 +76,7 @@ export function computeScaleConsistency(
       itemFactors.push({ item, factor: bestFactor + 1, loading: row[bestFactor] });
     }
 
-    // Determine dominant factor (most items assigned to it)
+    // Determine dominant factor (most items assigned to it by highest loading)
     const factorCounts = new Map<number, number>();
     for (const { factor } of itemFactors) {
       factorCounts.set(factor, (factorCounts.get(factor) ?? 0) + 1);
@@ -90,11 +90,33 @@ export function computeScaleConsistency(
       }
     }
 
+    // Loading-strength-weighted consistency:
+    // Each item contributes its "dominance ratio" = dominant_loading² / Σ(all squared loadings)
+    // This penalizes items that have similar loadings on multiple factors.
     const totalItems = itemFactors.length;
-    const consistency = totalItems > 0 ? dominantCount / totalItems : 0;
-    const crossLoaded = itemFactors
-      .filter(({ factor }) => factor !== dominantFactor)
-      .map(({ item, factor, loading }) => ({ item, assignedTo: factor, loading }));
+    let weightedSum = 0;
+    const crossLoaded: ScaleConsistencyResult["crossLoaded"] = [];
+    for (const { item, factor, loading } of itemFactors) {
+      // Compute all squared loadings for this item across all factors
+      const itemIdx = efaItemLabels.indexOf(item);
+      let sumSq = 0;
+      if (itemIdx >= 0) {
+        for (const l of efaLoadings[itemIdx]) {
+          sumSq += l * l;
+        }
+      }
+      const dominance = sumSq > 0 ? (loading * loading) / sumSq : 1;
+      if (factor === dominantFactor) {
+        weightedSum += dominance;
+      } else {
+        weightedSum += (1 - dominance); // penalized contribution
+        // Only flag as genuinely cross-loaded if dominance < 0.50 (ambiguous assignment)
+        if (dominance < 0.50) {
+          crossLoaded.push({ item, assignedTo: factor, loading });
+        }
+      }
+    }
+    const consistency = totalItems > 0 ? weightedSum / totalItems : 0;
 
     let interpretation: ScaleConsistencyResult["interpretation"];
     let summary: string;
@@ -111,13 +133,13 @@ export function computeScaleConsistency(
     } else if (consistency >= 0.70) {
       interpretation = "moderate";
       summary = en
-        ? "Some items load onto different factors. Scale structure may need review."
-        : "部分题项载荷于其他因子，量表结构可能需要审视。";
+        ? "Some items show ambiguous factor assignment. Scale structure may need review."
+        : "部分题项因子归属不够明确，量表结构可能需要审视。";
     } else {
       interpretation = "poor";
       summary = en
-        ? "Multiple items load onto different factors. Scale may not match observed structure."
-        : "多个题项分散于不同因子，量表构念定义可能不匹配观测结构。";
+        ? "Multiple items show ambiguous or conflicting factor assignments. Scale may not match observed structure."
+        : "多个题项因子归属模糊或冲突，量表构念定义可能不匹配观测结构。";
     }
 
     results.push({

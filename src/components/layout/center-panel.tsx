@@ -179,6 +179,7 @@ export function CenterPanel() {
               <ConstructValiditySummary
                 correlationMatrix={results.validity.correlationMatrix}
                 columnLabels={results.validity.columnLabels}
+                sampleSize={results.meta.sampleSize}
               />
             </div>
           </ResultCard>
