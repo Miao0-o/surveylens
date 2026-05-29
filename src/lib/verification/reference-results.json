@@ -1,0 +1,50 @@
+{
+  "highReliability": {
+    "source": "pending — run reference-data.ts HIGH_RELIABILITY through R psych::alpha() v2.4+",
+    "alpha": null,
+    "standardizedAlpha": null,
+    "kmo": null,
+    "bartlettChiSquare": null,
+    "bartlettPValue": null,
+    "alphaTolerance": 0.005,
+    "kmoTolerance": 0.005
+  },
+  "multiFactor": {
+    "source": "pending — run reference-data.ts MULTI_FACTOR through R psych::fa() + psych::KMO()",
+    "kmo": null,
+    "bartlettPValue": null,
+    "suggestedFactors": null,
+    "varianceExplained": null,
+    "kmoTolerance": 0.05,
+    "varianceTolerance": 0.05
+  },
+  "reverseScored": {
+    "source": "pending — run reference-data.ts REVERSE_SCORED through R psych::alpha()",
+    "reverseDetected": true,
+    "alphaBeforeReverse": null,
+    "alphaAfterReverse": null,
+    "alphaTolerance": 0.05
+  },
+  "highMissing": {
+    "source": "Mathematical ground truth — 30% NaN by construction",
+    "missingRate": 0.30,
+    "missingRateTolerance": 0.02,
+    "alphaWithListwise": null
+  },
+  "smallN": {
+    "source": "pending — run reference-data.ts SMALL_N through R psych::alpha()",
+    "alphaRange": null,
+    "stabilityLevel": null
+  },
+  "_meta": {
+    "instructions": "Replace null values with actual outputs from R psych, Jamovi, or SPSS. Run each reference dataset through the external tool, record results here. All null values will be skipped during verification until filled.",
+    "r_commands": {
+      "highReliability": "alpha(high_reliability_data)  # psych package",
+      "multiFactor": "KMO(multi_factor_data); fa(multi_factor_data, nfactors=2)",
+      "reverseScored": "alpha(reverse_scored_data)",
+      "smallN": "alpha(small_n_data)"
+    },
+    "lastVerified": null,
+    "verifiedBy": null
+  }
+}
