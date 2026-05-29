@@ -6,6 +6,7 @@ import { useAppStore } from "@/lib/store";
 import { downloadExcel } from "@/lib/export/excel-generator";
 import { printPDF } from "@/lib/export/pdf-generator";
 import { downloadAPAResults, downloadMarkdownReport, downloadQuartoReport, apaResultsText } from "@/lib/export/report-generators";
+import { copyToClipboard } from "@/lib/utils/clipboard";
 
 export function ExportBar() {
   const results = useAppStore((s) => s.results);
@@ -57,7 +58,7 @@ export function ExportBar() {
     {
       key: "apa-copy", label: en ? "Copy APA to Clipboard" : "复制 APA 到剪贴板", icon: Clipboard,
       action: () => {
-        navigator.clipboard.writeText(apaResultsText(results, lang, design, readinessScore, readinessLabel)).then(() => done("apa-copy"));
+        copyToClipboard(apaResultsText(results, lang, design, readinessScore, readinessLabel)).then(() => done("apa-copy"));
       },
     },
     {
@@ -89,7 +90,7 @@ export function ExportBar() {
       {/* Quick Copy APA — most common academic workflow */}
       <button
         onClick={() => {
-          navigator.clipboard.writeText(apaResultsText(results, lang, design, readinessScore, readinessLabel)).then(() => done("apa-quick"));
+          copyToClipboard(apaResultsText(results, lang, design, readinessScore, readinessLabel)).then(() => done("apa-quick"));
         }}
         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-xs text-foreground hover:bg-secondary/50 transition-colors"
         title={en ? "Copy APA results to clipboard" : "复制 APA 结果到剪贴板"}
