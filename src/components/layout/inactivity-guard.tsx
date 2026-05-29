@@ -12,6 +12,8 @@ export function InactivityGuard() {
   const lastActivityAt = useAppStore((s) => s.lastActivityAt);
   const touchActivity = useAppStore((s) => s.touchActivity);
   const clearSession = useAppStore((s) => s.clearAnalysisSession);
+  const lang = useAppStore((s) => s.reportLanguage);
+  const en = lang === "en";
   const [showWarning, setShowWarning] = useState(false);
   const [countdown, setCountdown] = useState(COUNTDOWN_S);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -74,25 +76,27 @@ export function InactivityGuard() {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
       <div className="bg-card border border-border rounded-xl p-6 max-w-sm mx-4 shadow-xl">
         <h3 className="text-sm font-semibold text-foreground mb-2">
-          检测到长时间无操作
+          {en ? "Inactivity Detected" : "检测到长时间无操作"}
         </h3>
         <p className="text-xs text-muted-foreground mb-4">
-          为保护隐私，分析数据将在{" "}
-          <span className="font-bold text-destructive">{countdown} 秒</span>
-          {" "}后自动清除。
+          {en
+            ? "To protect your privacy, analysis data will be automatically cleared in "
+            : "为保护隐私，分析数据将在"}
+          <span className="font-bold text-destructive">{countdown} {en ? "seconds" : "秒"}</span>
+          {en ? "." : " 后自动清除。"}
         </p>
         <div className="flex gap-2">
           <button
             onClick={extendSession}
             className="flex-1 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
           >
-            继续会话
+            {en ? "Continue Session" : "继续会话"}
           </button>
           <button
             onClick={clearAll}
             className="flex-1 px-4 py-2 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
           >
-            立即清除
+            {en ? "Clear Now" : "立即清除"}
           </button>
         </div>
       </div>

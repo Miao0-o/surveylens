@@ -12,6 +12,8 @@ export function MissingHandler() {
   const repair = useAppStore((s) => s.repair);
   const applyFix = useAppStore((s) => s.applyFix);
   const setRepairAction = useAppStore((s) => s.setRepairAction);
+  const lang = useAppStore((s) => s.reportLanguage);
+  const en = lang === "en";
 
   const missingSummary = useMemo(() => {
     if (!rawData) return null;
@@ -37,9 +39,9 @@ export function MissingHandler() {
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-xs font-medium text-foreground mb-1">缺失值处理</h3>
+        <h3 className="text-xs font-medium text-foreground mb-1">{en ? "Missing Value Handling" : "缺失值处理"}</h3>
         <p className="text-[10px] text-muted-foreground">
-          选择处理策略以应对数据中的缺失值
+          {en ? "Select a strategy to handle missing data" : "选择处理策略以应对数据中的缺失值"}
         </p>
       </div>
 
@@ -47,13 +49,13 @@ export function MissingHandler() {
       {missingSummary && (
         <div className="grid grid-cols-2 gap-2">
           <div className="px-3 py-2 rounded-lg bg-secondary/30 border border-border/50">
-            <p className="text-[10px] text-muted-foreground">缺失率</p>
+            <p className="text-[10px] text-muted-foreground">{en ? "Missing Rate" : "缺失率"}</p>
             <p className="text-sm font-semibold text-foreground">
               {missingSummary.missingRate}%
             </p>
           </div>
           <div className="px-3 py-2 rounded-lg bg-secondary/30 border border-border/50">
-            <p className="text-[10px] text-muted-foreground">有缺失的列</p>
+            <p className="text-[10px] text-muted-foreground">{en ? "Columns with Missing" : "有缺失的列"}</p>
             <p className="text-sm font-semibold text-foreground">
               {missingSummary.colsWithMissing.length} / {columns.length}
             </p>
@@ -63,11 +65,11 @@ export function MissingHandler() {
 
       {/* Strategy selection */}
       <div className="space-y-1.5">
-        <label className="text-[11px] text-muted-foreground">处理方式</label>
+        <label className="text-[11px] text-muted-foreground">{en ? "Method" : "处理方式"}</label>
         <div className="grid gap-1.5">
           {([
-            { method: "listwise" as const, label: "整行删除", desc: "移除含缺失值的整行样本" },
-            { method: "mean_imputation" as const, label: "均值填补", desc: "用该列均值填充缺失值" },
+            { method: "listwise" as const, label: en ? "Listwise Deletion" : "整行删除", desc: en ? "Remove rows with any missing values" : "移除含缺失值的整行样本" },
+            { method: "mean_imputation" as const, label: en ? "Mean Imputation" : "均值填补", desc: en ? "Fill missing values with column means" : "用该列均值填充缺失值" },
           ]).map((opt) => (
             <button
               key={opt.method}
@@ -97,7 +99,7 @@ export function MissingHandler() {
       {/* Threshold */}
       <div className="space-y-1.5">
         <label className="text-[11px] text-muted-foreground">
-          最大缺失容忍度：{(missingStrategy.threshold * 100).toFixed(0)}%
+          {en ? "Max missing tolerance: " : "最大缺失容忍度："}{(missingStrategy.threshold * 100).toFixed(0)}%
         </label>
         <input
           type="range"
@@ -125,7 +127,7 @@ export function MissingHandler() {
       {missingSummary && missingSummary.colsWithMissing.length > 0 && (
         <div className="space-y-1">
           <label className="text-[11px] text-muted-foreground">
-            含缺失值的变量
+            {en ? "Variables with Missing Values" : "含缺失值的变量"}
           </label>
           <div className="max-h-[120px] overflow-y-auto space-y-0.5">
             {missingSummary.colsWithMissing.map((col) => {
@@ -167,9 +169,9 @@ export function MissingHandler() {
           }`}
         >
           {repair.appliedFixes.missing ? (
-            <><Check className="w-3.5 h-3.5" /> 已应用缺失值修复</>
+            <><Check className="w-3.5 h-3.5" /> {en ? "Missing value fix applied" : "已应用缺失值修复"}</>
           ) : (
-            <>应用修复（{missingStrategy.method === "mean_imputation" ? "均值填补" : "整行删除"} · 阈值 {Math.round(missingStrategy.threshold * 100)}%）</>
+            <>{en ? "Apply fix" : "应用修复"}（{missingStrategy.method === "mean_imputation" ? (en ? "Mean imputation" : "均值填补") : (en ? "Listwise deletion" : "整行删除")} · {en ? "threshold" : "阈值"} {Math.round(missingStrategy.threshold * 100)}%）</>
           )}
         </button>
       )}

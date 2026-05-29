@@ -22,6 +22,8 @@ export function ReverseDetector() {
   const repair = useAppStore((s) => s.repair);
   const applyFix = useAppStore((s) => s.applyFix);
   const setRepairAction = useAppStore((s) => s.setRepairAction);
+  const lang = useAppStore((s) => s.reportLanguage);
+  const en = lang === "en";
   const [isExpanded, setIsExpanded] = useState(false);
 
   const detectedIssues = useMemo((): DetectedIssue[] => {
@@ -132,7 +134,7 @@ export function ReverseDetector() {
         className="w-full flex items-center justify-between text-xs font-medium text-foreground"
       >
         <div className="flex items-center gap-1.5">
-          反向题检测
+          {en ? "Reverse-Item Detection" : "反向题检测"}
           {highIssues.length > 0 && (
             <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-100 text-amber-600 text-[9px] font-bold">
               {highIssues.length}
@@ -140,7 +142,7 @@ export function ReverseDetector() {
           )}
           {confirmedCount > 0 && (
             <span className="inline-flex items-center justify-center px-1 h-4 rounded-full bg-emerald-100 text-emerald-600 text-[9px] font-bold">
-              {confirmedCount} 已确认
+              {confirmedCount} {en ? "confirmed" : "已确认"}
             </span>
           )}
         </div>
@@ -157,14 +159,18 @@ export function ReverseDetector() {
           {codebook && codebook.detectedReverseItems.length > 0 && (
             <div className="px-2.5 py-2 rounded-lg bg-blue-50/40 border border-blue-100/40">
               <p className="text-[11px] font-medium text-blue-600 mb-1">
-                编码簿已标记 {codebook.detectedReverseItems.length} 个反向题：
+                {en
+                  ? `Codebook marked ${codebook.detectedReverseItems.length} reverse item(s):`
+                  : `编码簿已标记 ${codebook.detectedReverseItems.length} 个反向题：`}
               </p>
               <p className="text-[10px] text-blue-500/80">
                 {codebook.detectedReverseItems.slice(0, 10).join(", ")}
                 {codebook.detectedReverseItems.length > 10 ? " ..." : ""}
               </p>
               <p className="text-[10px] text-blue-500/70 mt-1">
-                已在映射层自动完成反向变换 (max+min-val)
+                {en
+                  ? "Reverse transform already applied in mapping layer (max+min-val)"
+                  : "已在映射层自动完成反向变换 (max+min-val)"}
               </p>
             </div>
           )}
@@ -173,13 +179,15 @@ export function ReverseDetector() {
             <div className="flex items-center gap-1.5 px-2 py-2 text-[11px] text-muted-foreground">
               <Info className="w-3 h-3 shrink-0" strokeWidth={1.5} />
               {codebook && codebook.detectedReverseItems.length > 0
-                ? "编码簿已处理所有反向题，无需额外检测"
-                : "未检测到明显的反向题风险"}
+                ? (en ? "Codebook has processed all reverse items — no additional detection needed" : "编码簿已处理所有反向题，无需额外检测")
+                : (en ? "No significant reverse-item risks detected" : "未检测到明显的反向题风险")}
             </div>
           ) : (
             <>
               <p className="text-[10px] text-muted-foreground/70 px-1">
-                勾选确认为反向题的题项，重新分析时将自动反向计分
+                {en
+                  ? "Check items confirmed as reverse-coded — they will be automatically recoded on re-analysis"
+                  : "勾选确认为反向题的题项，重新分析时将自动反向计分"}
               </p>
               {highIssues.map((issue, i) => (
                 <label
@@ -194,7 +202,7 @@ export function ReverseDetector() {
                   />
                   <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-medium text-amber-700">
-                      {issue.column} 确认为反向题
+                      {issue.column} {en ? "confirmed as reverse-coded" : "确认为反向题"}
                     </p>
                     <p className="text-[10px] text-amber-600/80 mt-0.5">
                       {issue.detail}
@@ -215,7 +223,7 @@ export function ReverseDetector() {
                   />
                   <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-medium text-blue-600">
-                      {issue.column} 可能为反向题
+                      {issue.column} {en ? "may be reverse-coded" : "可能为反向题"}
                     </p>
                     <p className="text-[10px] text-blue-500/80 mt-0.5">
                       {issue.detail}
@@ -235,7 +243,9 @@ export function ReverseDetector() {
               }}
               className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
             >
-              应用反向计分（{confirmedCount} 个题项）
+              {en
+                ? `Apply reverse coding (${confirmedCount} item(s))`
+                : `应用反向计分（${confirmedCount} 个题项）`}
             </button>
           )}
           {repair.appliedFixes.reverse && (
@@ -243,10 +253,14 @@ export function ReverseDetector() {
               <RefreshCw className="w-3.5 h-3.5 text-emerald-500 shrink-0" strokeWidth={1.5} />
               <div>
                 <p className="text-[11px] font-medium text-emerald-700">
-                  已应用反向计分（{confirmedCount} 个题项）
+                  {en
+                    ? `Reverse coding applied (${confirmedCount} item(s))`
+                    : `已应用反向计分（${confirmedCount} 个题项）`}
                 </p>
                 <p className="text-[10px] text-emerald-600/80">
-                  返回“概览”点击“应用修复后重新分析”
+                  {en
+                    ? "Go to Overview and click \"Re-run analysis with fixes applied\""
+                    : "返回\"概览\"点击\"应用修复后重新分析\""}
                 </p>
               </div>
             </div>
@@ -256,7 +270,9 @@ export function ReverseDetector() {
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50/60 border border-emerald-100">
               <RefreshCw className="w-3.5 h-3.5 text-emerald-500 shrink-0" strokeWidth={1.5} />
               <p className="text-[11px] text-emerald-700">
-                已标记 {confirmedCount} 个反向题。在“风险与修复建议”中点击“核实题项”完成应用。
+                {en
+                  ? `${confirmedCount} reverse item(s) marked. In Risk & Recommendations, click "Verify items" to apply.`
+                  : `已标记 ${confirmedCount} 个反向题。在"风险与修复建议"中点击"核实题项"完成应用。`}
               </p>
             </div>
           )}
