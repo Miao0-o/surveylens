@@ -498,8 +498,8 @@ export function OverviewDashboard({ results }: Props) {
         <div className="flex flex-wrap gap-1 mt-1.5">
           <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100">
             {scope.hasUserSelection
-              ? (en ? "Curated — user-defined design" : "策划模式 — 用户定义研究设计")
-              : (en ? "Automatic — all non-metadata Likert/numeric" : "自动模式 — 非元数据 Likert/数值列")}
+              ? (en ? "Custom Mode — based on selected variables and defined scales" : "自定义模式 — 基于已选变量与定义的量表")
+              : (en ? "Quick Mode — auto-detected survey items, metadata excluded" : "快速模式 — 自动识别问卷题项，已排除元数据列")}
           </span>
           {scope.excludedColumns.length > 0 && (
             <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100" title={scope.excludedColumns.slice(0, 10).join(", ")}>
