@@ -5,7 +5,7 @@ import { Download, Printer, Loader2, CheckCircle2, FileText, ChevronDown, Clipbo
 import { useAppStore } from "@/lib/store";
 import { downloadExcel } from "@/lib/export/excel-generator";
 import { printPDF } from "@/lib/export/pdf-generator";
-import { downloadAPAResults, downloadMarkdownReport, downloadQuartoReport } from "@/lib/export/report-generators";
+import { downloadAPAResults, downloadMarkdownReport, downloadQuartoReport, apaResultsText } from "@/lib/export/report-generators";
 
 export function ExportBar() {
   const results = useAppStore((s) => s.results);
@@ -36,7 +36,13 @@ export function ExportBar() {
       action: () => { printPDF(results, aiResults, researchGoal, lang); done("pdf"); },
     },
     {
-      key: "apa", label: en ? "APA Results" : "APA 结果", icon: Clipboard,
+      key: "apa-copy", label: en ? "Copy APA to Clipboard" : "复制 APA 到剪贴板", icon: Clipboard,
+      action: () => {
+        navigator.clipboard.writeText(apaResultsText(results, lang)).then(() => done("apa-copy"));
+      },
+    },
+    {
+      key: "apa", label: en ? "Download APA (.txt)" : "下载 APA (.txt)", icon: Download,
       action: () => { downloadAPAResults(results, lang); done("apa"); },
     },
     {
@@ -60,6 +66,22 @@ export function ExportBar() {
   return (
     <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary/30 border border-border/50">
       <span className="text-[11px] text-muted-foreground mr-1">{en ? "Export" : "导出"}</span>
+
+      {/* Quick Copy APA — most common academic workflow */}
+      <button
+        onClick={() => {
+          navigator.clipboard.writeText(apaResultsText(results, lang)).then(() => done("apa-quick"));
+        }}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-card border border-border text-xs text-foreground hover:bg-secondary/50 transition-colors"
+        title={en ? "Copy APA results to clipboard" : "复制 APA 结果到剪贴板"}
+      >
+        {status === "apa-quick" ? (
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" strokeWidth={1.5} />
+        ) : (
+          <Clipboard className="w-3.5 h-3.5" strokeWidth={1.5} />
+        )}
+        {en ? "Copy APA" : "复制 APA"}
+      </button>
 
       <div ref={menuRef} className="relative">
         <button
