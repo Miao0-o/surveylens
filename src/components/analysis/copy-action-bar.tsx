@@ -12,9 +12,24 @@ interface CopyAction {
 
 interface Props {
   actions: CopyAction[];
-  /** Optional ref to the DOM element to capture as image */
   captureRef?: React.RefObject<HTMLElement | null>;
 }
+
+/** Wrap plain text in clean HTML for Word/Docs paste — no card styling */
+function wrapCleanHtml(text: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="background:#fff;color:#111;font-family:Arial,sans-serif;font-size:11pt;line-height:1.5;max-width:700px;margin:20px auto;padding:0">
+${text
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  .replace(/^## (.+)$/gm, '<h2 style="color:#111;margin:16px 0 6px;font-size:14pt;border-bottom:1px solid #e0e0e0;padding-bottom:4px">$1</h2>')
+  .replace(/^### (.+)$/gm, '<h3 style="color:#333;margin:12px 0 4px;font-size:12pt">$1</h3>')
+  .replace(/^- (.+)$/gm, '<li style="margin:2px 0">$1</li>')
+  .replace(/\n\n/g, '</p><p style="margin:6px 0">')
+  .replace(/\n/g, '<br>')}
+</body>
+</html>`;}
 
 export function CopyActionBar({ actions, captureRef }: Props) {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -35,7 +50,16 @@ export function CopyActionBar({ actions, captureRef }: Props) {
       } else {
         const content = await action.getContent();
         if (typeof content === "string") {
-          await navigator.clipboard.writeText(content);
+          try {
+            const html = wrapCleanHtml(content);
+            const blob = new Blob([html], { type: "text/html" });
+            await navigator.clipboard.write([
+              new ClipboardItem({ "text/html": blob, "text/plain": new Blob([content], { type: "text/plain" }) }),
+            ]);
+          } catch {
+            // Fallback: plain text only
+            await navigator.clipboard.writeText(content);
+          }
         }
       }
       setCopiedIdx(idx);
