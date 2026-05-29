@@ -108,6 +108,28 @@ export function ProblematicItemsCard({ results, columns }: Props) {
               </div>
             )}
 
+            {/* Risk score breakdown — "Why was this flagged?" */}
+            <details className="text-[10px]">
+              <summary className="text-muted-foreground/50 cursor-pointer hover:text-muted-foreground">
+                {en ? "Why was this flagged?" : "为什么被标记？"} ({en ? "score:" : "得分："} {r.score})
+              </summary>
+              <div className="mt-1.5 ml-2 space-y-0.5">
+                {r.sources.sort((a, b) => b.weight - a.weight).map((s, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground/40 w-8 text-right tabular-nums">{s.weight}</span>
+                    <span className="text-muted-foreground/50">{en ? "pts" : "分"}</span>
+                    <span className="text-muted-foreground/60">—</span>
+                    <span className="text-muted-foreground">{s.label}</span>
+                    <span className="text-muted-foreground/40">({s.detail})</span>
+                  </div>
+                ))}
+                <div className="flex items-center gap-1.5 border-t border-border/30 pt-0.5 mt-0.5">
+                  <span className="text-foreground/70 font-medium w-8 text-right tabular-nums">{r.score}</span>
+                  <span className="text-foreground/70 font-medium">{en ? "total" : "合计"}</span>
+                </div>
+              </div>
+            </details>
+
             {/* Suggested action */}
             <div className="flex items-start gap-2">
               <Lightbulb className="w-3 h-3 text-blue-400 shrink-0 mt-0.5" strokeWidth={1.5} />

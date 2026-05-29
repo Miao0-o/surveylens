@@ -475,6 +475,48 @@ export function OverviewDashboard({ results }: Props) {
         </div>
       )}
 
+      {/* Readiness Decision Transparency */}
+      <details className="rounded-lg bg-card border border-border p-3 text-xs">
+        <summary className="cursor-pointer font-medium text-foreground">
+          {en ? "Why is this dataset " : "为什么数据是 "}
+          <span className={`font-semibold ${status.level === "ready" ? "text-emerald-600" : status.level === "review" ? "text-amber-600" : "text-red-500"}`}>
+            {status.label}
+          </span>
+          ?
+        </summary>
+        <div className="mt-2 space-y-1.5 text-[11px]">
+          {gates.map(g => (
+            <div key={g.name} className="flex items-center gap-2">
+              {g.passed ? (
+                <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" strokeWidth={1.5} />
+              ) : (
+                <XCircle className="w-3 h-3 text-red-500 shrink-0" strokeWidth={1.5} />
+              )}
+              <span className={g.passed ? "text-emerald-600" : "text-red-600"}>
+                {en ? g.labelEn : g.labelZh}: {g.passed ? (en ? "Passed" : "通过") : (en ? "Failed" : "未通过")}
+              </span>
+              <span className="text-muted-foreground/60">— {severityLabel(g.severity, en)}</span>
+            </div>
+          ))}
+          <div className="border-t border-border/30 pt-1.5 mt-1.5">
+            <span className="text-muted-foreground">
+              {en ? "Readiness Score: " : "准备度分数: "}
+            </span>
+            <span className="font-semibold">{readinessScore}</span>
+            <span className="text-muted-foreground/60"> — {sc}</span>
+          </div>
+          <p className="text-muted-foreground/70">
+            {!allPassed
+              ? (en
+                ? `Status downgraded because ${failedGates.length} gate(s) did not pass. Score alone (${readinessScore}) cannot override failed gates.`
+                : `状态因 ${failedGates.length} 个门槛未通过而降级。分数 (${readinessScore}) 不能覆盖未通过的门槛。`)
+              : (en
+                ? `All quality gates passed. Final status based on readiness score (${readinessScore}).`
+                : `所有质量门槛已通过。最终状态基于准备度分数 (${readinessScore})。`)}
+          </p>
+        </div>
+      </details>
+
       {/* Analysis Scope Transparency Card */}
       <div className="rounded-lg bg-card border border-border p-3">
         <div className="flex items-center gap-1.5 mb-2">
