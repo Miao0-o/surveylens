@@ -867,6 +867,19 @@ function buildResults(raw: Record<string, Record<string, unknown>>, labels: stri
           ? { value: null, status: "insufficient_data" as const, reason: "Validity analysis returned KMO=0; insufficient inter-item correlation", confidence: 0.7 }
           : { value: null, status: "not_applicable" as const, reason: "Requires ≥2 correlated items with sufficient variance", confidence: 1.0 },
     };
+
+    // Override with scale-level correlation matrix from correlation step (Construct Validity)
+    const corr = raw.correlation;
+    if (corr && !corr.error) {
+      const rMatrix = corr.rMatrix as number[][] | undefined;
+      if (rMatrix && rMatrix.length > 0) {
+        results.validity.correlationMatrix = rMatrix;
+        // Use scale-level column labels when available
+        if (rMatrix.length === labels.length) {
+          results.validity.columnLabels = labels;
+        }
+      }
+    }
   }
 
   const e = raw.efa;
