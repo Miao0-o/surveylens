@@ -20,9 +20,9 @@ export function generateAllSnippets(results: AnalysisResults): APASnippet[] {
     const level = alpha >= 0.90 ? "excellent" : alpha >= 0.80 ? "good" : alpha >= 0.70 ? "acceptable" : "low";
     snippets.push({
       section: "信度",
-      text: `Cronbach's alpha indicated ${level} internal consistency (α = ${alpha.toFixed(2)}${reliability.standardizedAlpha > 0 ? `, standardized α = ${reliability.standardizedAlpha.toFixed(2)}` : ""}).`,
+      text: `Cronbach's alpha indicated ${level} internal consistency (α = ${alpha.toFixed(2)}${reliability.standardizedAlpha != null && reliability.standardizedAlpha > 0 ? `, standardized α = ${reliability.standardizedAlpha.toFixed(2)}` : ""}).`,
     });
-    if (reliability.mcdonaldsOmega > 0) {
+    if (reliability.mcdonaldsOmega != null && reliability.mcdonaldsOmega > 0) {
       snippets.push({
         section: "信度",
         text: `McDonald's omega was ${reliability.mcdonaldsOmega.toFixed(2)}, supporting the factor-based reliability estimate.`,

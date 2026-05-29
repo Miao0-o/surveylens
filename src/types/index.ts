@@ -208,15 +208,15 @@ export interface DimensionReliability {
   name: string;
   items: string[];
   cronbachsAlpha: number;
-  standardizedAlpha: number;
+  standardizedAlpha: number | null;
   itemTotalCorrelation: Record<string, number>;
   alphaIfItemDeleted: Record<string, number>;
 }
 
 export interface ReliabilityResult {
   cronbachsAlpha: number;
-  standardizedAlpha: number;
-  mcdonaldsOmega: number;
+  standardizedAlpha: number | null;
+  mcdonaldsOmega: number | null;
   itemTotalCorrelation: Record<string, number>;
   alphaIfItemDeleted: Record<string, number>;
   /** Per-dimension subscale reliability */
@@ -324,7 +324,7 @@ export interface ValidationReport {
 // ---- AI Compressed Input (Result Reducer output) ----
 export interface AICompressedInput {
   alpha: number;
-  standardizedAlpha: number;
+  standardizedAlpha: number | null;
   lowItems: string[];
   itemTotalCorrelations: { item: string; corr: number }[];
   kmo: number;

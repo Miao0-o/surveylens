@@ -25,7 +25,7 @@ export async function downloadExcel(
     ["Analysis Duration (ms)", results.meta.analysisDurationMs],
     [""],
     ["Cronbach's α", results.reliability.cronbachsAlpha],
-    ["Standardized α", results.reliability.standardizedAlpha],
+    ["Standardized α", results.reliability.standardizedAlpha ?? "—"],
     ["KMO", results.validity.kmo],
     ["Bartlett χ²", results.validity.bartlettChiSquare],
     ["Bartlett df", results.validity.bartlettDf],

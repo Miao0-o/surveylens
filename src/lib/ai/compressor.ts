@@ -99,7 +99,7 @@ export function compressResults(
 
   return {
     alpha: Math.round(baseAlpha * 1000) / 1000,
-    standardizedAlpha: Math.round(reliability.standardizedAlpha * 1000) / 1000,
+    standardizedAlpha: reliability.standardizedAlpha != null ? Math.round(reliability.standardizedAlpha * 1000) / 1000 : null,
     lowItems,
     itemTotalCorrelations,
     kmo: Math.round(validity.kmo * 1000) / 1000,

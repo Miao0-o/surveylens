@@ -806,7 +806,7 @@ export function usePyodide() {
 function buildResults(raw: Record<string, Record<string, unknown>>, labels: string[]): AnalysisResults {
   const results: AnalysisResults = {
     meta: { schemaVersion: "1.0.0", sampleSize: 0, itemCount: labels.length, dimensionCount: 1, timestamp: Date.now(), analysisDurationMs: 0, datasetVersion: 0, inputSnapshot: "" },
-    reliability: { cronbachsAlpha: 0, standardizedAlpha: 0, mcdonaldsOmega: 0, itemTotalCorrelation: {}, alphaIfItemDeleted: {}, _meta: { value: null, status: "not_applicable" as const, reason: "Analysis not yet executed", confidence: 1.0 } },
+    reliability: { cronbachsAlpha: 0, standardizedAlpha: null, mcdonaldsOmega: null, itemTotalCorrelation: {}, alphaIfItemDeleted: {}, _meta: { value: null, status: "not_applicable" as const, reason: "Analysis not yet executed", confidence: 1.0 } },
     validity: { kmo: 0, kmoPerItem: {}, bartlettChiSquare: 0, bartlettDf: 0, bartlettPValue: 0, correlationMatrix: [], columnLabels: labels, _meta: { value: null, status: "not_applicable" as const, reason: "Analysis not yet executed", confidence: 1.0 } },
     efa: { eigenvalues: [], loadings: [], communalities: [], varianceExplained: [], rotation: "varimax", suggestedFactors: 0, itemLabels: labels, metadata: { raw_factor_estimation: { kaiser_n: 0, scree_suggestion: null, parallel_analysis_n: null }, factor_stability: { risk_level: "low", too_many_factors: false, recommended_range: [1, 3], warnings: [] }, product_decision: { display_factor_n: 0, decision_rule: "", type: "presentation_constraint" } }, _meta: { value: null, status: "not_applicable" as const, reason: "Analysis not yet executed", confidence: 1.0 } },
     stability: { bootstrapSamples: 0, alphaCurve: [], stabilityLevel: "unstable", recommendedSampleSize: 0, elbowPoint: null, _meta: { value: null, status: "not_applicable" as const, reason: "Analysis not yet executed", confidence: 1.0 } },
@@ -825,15 +825,15 @@ function buildResults(raw: Record<string, Record<string, unknown>>, labels: stri
 
     results.reliability = {
       cronbachsAlpha: alpha,
-      standardizedAlpha: (r.standardizedAlpha as number) ?? 0,
-      mcdonaldsOmega: 0,
+      standardizedAlpha: r.standardizedAlpha != null ? (r.standardizedAlpha as number) : null,
+      mcdonaldsOmega: null as number | null,
       itemTotalCorrelation: remapKeys(r.itemTotalCorrelation as Record<string, number> ?? {}, labels),
       alphaIfItemDeleted: remapKeys(filterNulls(r.alphaIfItemDeleted as Record<string, number | null> ?? {}), labels),
       dimensions: dims?.map((d) => ({
         name: d.name as string,
         items: (d.items as number[])?.map((i) => labels[i] ?? String(i)) ?? [],
         cronbachsAlpha: (d.cronbachsAlpha as number) ?? 0,
-        standardizedAlpha: (d.standardizedAlpha as number) ?? 0,
+        standardizedAlpha: d.standardizedAlpha != null ? (d.standardizedAlpha as number) : null,
         itemTotalCorrelation: remapKeys(d.itemTotalCorrelation as Record<string, number> ?? {}, labels),
         alphaIfItemDeleted: remapKeys(filterNulls(d.alphaIfItemDeleted as Record<string, number | null> ?? {}), labels),
       })),
@@ -904,8 +904,9 @@ function buildResults(raw: Record<string, Record<string, unknown>>, labels: stri
           ? { value: null, status: "insufficient_data" as const, reason: "EFA could not extract factors; insufficient inter-item correlation or KMO too low", confidence: 0.7 }
           : { value: null, status: "not_applicable" as const, reason: "Requires adequate KMO and sufficient item inter-correlations", confidence: 1.0 },
     };
-    if ((e as Record<string, unknown>).omega !== undefined) {
-      results.reliability.mcdonaldsOmega = (e as Record<string, unknown>).omega as number;
+    const omegaVal = (e as Record<string, unknown>).omega as number | undefined;
+    if (omegaVal !== undefined && omegaVal !== null && omegaVal > 0) {
+      results.reliability.mcdonaldsOmega = omegaVal;
     }
   }
 

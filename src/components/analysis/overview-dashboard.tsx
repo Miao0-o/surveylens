@@ -213,38 +213,60 @@ export function OverviewDashboard({ results }: Props) {
         </div>
       )}
 
-      {/* Metric gauges */}
-      <div className="grid grid-cols-3 gap-3">
-        {metrics.map((metric) => {
-          const config = gradeConfig[metric.grade];
-          const Icon = config.icon;
-          const pct = metric.value * 100;
-          return (
-            <div
-              key={metric.label}
-              className={`px-3 py-3 rounded-xl border ${config.bg} ${config.ring} ring-1`}
-            >
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <Icon className={`w-3.5 h-3.5 ${config.color}`} strokeWidth={1.5} />
-                <span className="text-[11px] font-medium text-foreground">{metric.label}</span>
+      {/* Metric gauges — scale-level when available, question-level otherwise */}
+      {reliability.dimensions && reliability.dimensions.length > 0 ? (
+        <div className="px-3 py-3 rounded-xl border bg-card">
+          <p className="text-[11px] font-medium text-foreground mb-2">量表信度分布</p>
+          <div className="grid grid-cols-2 gap-2">
+            {reliability.dimensions
+              .sort((a, b) => b.cronbachsAlpha - a.cronbachsAlpha)
+              .map((dim) => {
+                const a = dim.cronbachsAlpha;
+                const grade = a >= 0.8 ? "good" : a >= 0.7 ? "moderate" : "poor";
+                const config = gradeConfig[grade];
+                return (
+                  <div key={dim.name} className="flex items-center justify-between px-2 py-1.5 rounded bg-secondary/20">
+                    <span className="text-[11px] text-foreground truncate flex-1">{dim.name}</span>
+                    <span className={`text-[11px] font-semibold tabular-nums ${a >= 0.8 ? "text-emerald-600" : a >= 0.7 ? "text-amber-600" : "text-red-500"}`}>
+                      α = {a.toFixed(2)}
+                    </span>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-3">
+          {metrics.map((metric) => {
+            const config = gradeConfig[metric.grade];
+            const Icon = config.icon;
+            const pct = metric.value * 100;
+            return (
+              <div
+                key={metric.label}
+                className={`px-3 py-3 rounded-xl border ${config.bg} ${config.ring} ring-1`}
+              >
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Icon className={`w-3.5 h-3.5 ${config.color}`} strokeWidth={1.5} />
+                  <span className="text-[11px] font-medium text-foreground">{metric.label}</span>
+                </div>
+                <p className="text-xl font-semibold text-foreground tracking-tight">
+                  {metric.label === "样本稳定性"
+                    ? metric.interpretation
+                    : metric.value.toFixed(3)}
+                </p>
+                <p className={`text-[10px] ${config.color}`}>{metric.interpretation}</p>
+                <div className="mt-2 h-1 rounded-full bg-secondary">
+                  <div
+                    className={`h-full rounded-full ${metric.grade === "good" ? "bg-emerald-400" : metric.grade === "moderate" ? "bg-amber-400" : "bg-red-400"}`}
+                    style={{ width: `${Math.min(100, pct)}%` }}
+                  />
+                </div>
               </div>
-              <p className="text-xl font-semibold text-foreground tracking-tight">
-                {metric.label === "样本稳定性"
-                  ? metric.interpretation
-                  : metric.value.toFixed(3)}
-              </p>
-              <p className={`text-[10px] ${config.color}`}>{metric.interpretation}</p>
-              {/* Mini bar */}
-              <div className="mt-2 h-1 rounded-full bg-secondary">
-                <div
-                  className={`h-full rounded-full ${metric.grade === "good" ? "bg-emerald-400" : metric.grade === "moderate" ? "bg-amber-400" : "bg-red-400"}`}
-                  style={{ width: `${Math.min(100, pct)}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Method recommendations */}
       {results.recommendedMethod && (

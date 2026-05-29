@@ -120,7 +120,7 @@ ${researchGoal ? `<p class="meta">${t("researchGoal")}: ${escapeHtml(researchGoa
 <h2>${t("reliability")}</h2>
 <table>
   <tr><td>${t("cronbachsAlpha")}</td><td class="stat">${reliability.cronbachsAlpha.toFixed(3)} <span class="${reliability.cronbachsAlpha >= 0.8 ? 'good' : reliability.cronbachsAlpha >= 0.7 ? 'warn' : 'bad'}">(${alphaLabel(reliability.cronbachsAlpha, lang)})</span></td></tr>
-  <tr><td>${t("standardizedAlpha")}</td><td class="stat">${reliability.standardizedAlpha.toFixed(3)}</td></tr>
+  <tr><td>${t("standardizedAlpha")}</td><td class="stat">${reliability.standardizedAlpha != null ? reliability.standardizedAlpha.toFixed(3) : "—"}</td></tr>
 </table>
 
 <h3>${t("itemTotal")}</h3>

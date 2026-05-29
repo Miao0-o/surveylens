@@ -485,7 +485,7 @@ function buildUserMessage(input: AICompressedInput, validation?: ValidationRepor
   lines.push("");
   lines.push("## Reliability");
   lines.push(`Cronbach's α: ${input.alpha.toFixed(3)}`);
-  lines.push(`Standardized α: ${input.standardizedAlpha.toFixed(3)}`);
+  if (input.standardizedAlpha != null) lines.push(`Standardized α: ${input.standardizedAlpha.toFixed(3)}`);
 
   if (input.lowItems.length > 0) {
     lines.push(`Items with α improvement if excluded: ${input.lowItems.join(", ")}`);

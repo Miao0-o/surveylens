@@ -34,10 +34,19 @@ export const analysisModules: AnalysisModule[] = [
     sourceStep: "reliability",
     isAvailable: (r) => r.reliability._meta.status === "ok",
     apaInsight: (r, lang) => {
+      const dims = r.reliability.dimensions;
+      if (dims && dims.length > 0) {
+        const parts = dims.map(d => {
+          const a = d.cronbachsAlpha;
+          const level = a >= 0.90 ? (lang === "zh" ? "优秀" : "excellent") : a >= 0.80 ? (lang === "zh" ? "良好" : "good") : a >= 0.70 ? (lang === "zh" ? "可接受" : "acceptable") : (lang === "zh" ? "偏低" : "low");
+          return lang === "zh" ? `${d.name} (α = ${a.toFixed(2)}，${level})` : `${d.name} (α = ${a.toFixed(2)}, ${level})`;
+        });
+        return lang === "zh" ? `各量表信度：${parts.join("；")}。` : `Scale reliabilities: ${parts.join("; ")}.`;
+      }
       const a = r.reliability.cronbachsAlpha;
       if (a <= 0) return null;
       if (lang === "zh") {
-        const level = a >= 0.90 ? "优秀" : a >= 0.80 ? "良好" : a >= 0.70 ? "尚可" : "偏低";
+        const level = a >= 0.90 ? "优秀" : a >= 0.80 ? "良好" : a >= 0.70 ? "可接受" : "偏低";
         return `Cronbach's α系数为${a.toFixed(2)}，内部一致性${level}。`;
       }
       return `Cronbach's α indicated ${alphaLabel(a)} internal consistency (α = ${a.toFixed(2)}).`;

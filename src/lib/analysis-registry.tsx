@@ -46,7 +46,7 @@ export const analysisRegistry: AnalysisModule[] = [
       const a = r.reliability.cronbachsAlpha;
       if (a <= 0) return null;
       let s = `Cronbach's alpha indicated ${alphaLabel(a)} internal consistency (α = ${a.toFixed(2)}).`;
-      if (r.reliability.mcdonaldsOmega > 0) {
+      if (r.reliability.mcdonaldsOmega != null && r.reliability.mcdonaldsOmega > 0) {
         s += ` McDonald's omega = ${r.reliability.mcdonaldsOmega.toFixed(2)}.`;
       }
       return s;
